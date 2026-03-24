@@ -1702,20 +1702,20 @@ class CompilationTargets(BasicCompilationTargets):
         rootfs_target=LINUX_MORELLO_PURECAP,
     )
 
-    # GCC-based Linux targets
+    # GCC-based Linux targets (only to be used for the linux-kernel classes for now!)
+    # In the future we may want to allow using it for other targets as well, but for now
+    # only the kernel builds are supported.
     LINUX_RISCV64_GCC = CrossCompileTarget("riscv64-gcc", CPUArchitecture.RISCV64, LinuxGccTargetInfo)
     LINUX_AARCH64_GCC = CrossCompileTarget("aarch64-gcc", CPUArchitecture.AARCH64, LinuxGccTargetInfo)
 
     ALL_LINUX_AARCH64_TARGETS = (
         LINUX_AARCH64,
         LINUX_MORELLO_PURECAP,
-        LINUX_AARCH64_GCC,
     )
 
     ALL_LINUX_RISCV_TARGETS = (
         LINUX_RISCV64,
         LINUX_RISCV64_PURECAP_093,
-        LINUX_RISCV64_GCC,
     )
     ALL_SUPPORTED_LINUX_TARGETS = ALL_LINUX_AARCH64_TARGETS + ALL_LINUX_RISCV_TARGETS
 
