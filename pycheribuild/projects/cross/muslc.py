@@ -36,6 +36,7 @@ from ..project import (
     MakeCommandKind,
     ReuseOtherProjectBuildDir,
 )
+from ..repository import ReuseOtherProjectRepository
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
@@ -107,6 +108,7 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
 class InstallMuslcHeaders(BuildMuslc):
     target = "muslc-headers"
     dependencies = ()
+    repository = ReuseOtherProjectRepository(BuildMuslc, do_update=True)
     _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildMuslc)
 
     def compile(self):
@@ -119,6 +121,7 @@ class InstallMuslcHeaders(BuildMuslc):
 class InstallAllianceMuslcHeaders(BuildAllianceLinuxMuslc):
     target = "cheri-std093-muslc-headers"
     dependencies = ()
+    repository = ReuseOtherProjectRepository(BuildAllianceLinuxMuslc, do_update=True)
     _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildAllianceLinuxMuslc)
 
     def compile(self):
@@ -131,6 +134,7 @@ class InstallAllianceMuslcHeaders(BuildAllianceLinuxMuslc):
 class InstallMorelloMuslcHeaders(BuildMorelloLinuxMuslc):
     target = "morello-muslc-headers"
     dependencies = ()
+    repository = ReuseOtherProjectRepository(BuildMorelloLinuxMuslc, do_update=True)
     _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildMorelloLinuxMuslc)
 
     def compile(self):
