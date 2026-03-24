@@ -52,8 +52,6 @@ class BuildMuslc(CrossCompileAutotoolsProject):
     _supported_architectures = (
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_RISCV64_GCC,
-        CompilationTargets.LINUX_AARCH64_GCC,
     )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
@@ -86,7 +84,6 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
     _supported_architectures = (
         CompilationTargets.LINUX_MORELLO_PURECAP,
         CompilationTargets.LINUX_AARCH64,
-        CompilationTargets.LINUX_AARCH64_GCC,
     )
     _default_architecture = CompilationTargets.LINUX_MORELLO_PURECAP
     dependencies = ("morello-compiler-rt-builtins", "morello-linux-kernel")
@@ -109,8 +106,6 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
         CompilationTargets.LINUX_MORELLO_PURECAP,
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_RISCV64_GCC,
-        CompilationTargets.LINUX_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
     dependencies = ("cheri-std093-compiler-rt-builtins", "cheri-std093-linux-kernel")
