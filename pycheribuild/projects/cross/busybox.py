@@ -53,8 +53,6 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         return DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self) -> None:
-        if self.config.verbose:
-            self.make_args.set(V=True)
         super().setup()
 
         if self.crosscompile_target.is_riscv(include_purecap=True):
