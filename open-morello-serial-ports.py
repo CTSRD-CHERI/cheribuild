@@ -101,7 +101,11 @@ def open_tmux_windows(morello_ports: "list[ListPortInfo]", force: bool, pretend:
     except libtmux.exc.TmuxSessionExists:
         sys.exit("tmux session already exists, if you would like to replace it re-run with `--force`")
     # ensure we get advanced colour/font features
-    session.set_option("default-terminal", "tmux-256color", _global=True)
+    try:
+        session.set_option("default-terminal", "tmux-256color", _global=True)
+    except TypeError:
+        # Likely using libtmux pre 0.4.0 where global_ was named _global
+        session.set_option("default-terminal", "tmux-256color", global_=True)  # ty:ignore[unknown-argument]
 
     # We need 2 or 8 panes, create 1 or 2 windows with 4 80x24 panes -> 161x81 total tmux window size:
     if not minimal:
