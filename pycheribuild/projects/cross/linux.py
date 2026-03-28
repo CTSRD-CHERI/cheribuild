@@ -188,13 +188,15 @@ class BuildCheriAllianceLinux(BuildLinux):
 
     def configure(self, **kwargs):
         super().configure(**kwargs)
-        config = self.read_file(self.build_dir / ".config")
+        linux_config = self.read_file(self.build_dir / ".config")
         if self.compiling_for_cheri():
             valid_config = False
+            if self.config.pretend and not linux_config:
+                valid_config = True  # Avoid false-positive error with --pretend
             if self.compiling_for_riscv(include_purecap=True):
-                valid_config = "RISCV_CHERI=y\n" in config
+                valid_config = "RISCV_CHERI=y\n" in linux_config
             elif self.compiling_for_aarch64(include_purecap=True):
-                valid_config = "CONFIG_CHERI_PURECAP_UABI=y\n" in config
+                valid_config = "CONFIG_CHERI_PURECAP_UABI=y\n" in linux_config
             if not valid_config:
                 self.fatal("Invalid configuration selected? CHERI support not enabled!")
 
