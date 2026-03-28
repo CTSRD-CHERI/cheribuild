@@ -111,40 +111,29 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
         super().setup()
 
 
-class InstallMuslcHeaders(BuildMuslc):
-    target = "muslc-headers"
+class InstallMuslcHeadersMixin:
     dependencies = ()
+
+    def compile(self, **kwargs):
+        pass
+
+    def install(self, **kwargs):
+        self.run_make("install-headers")
+
+
+class InstallMuslcHeaders(InstallMuslcHeadersMixin, BuildMuslc):
+    target = "muslc-headers"
     repository = ReuseOtherProjectRepository(BuildMuslc, do_update=True)
     _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildMuslc)
 
-    def compile(self):
-        pass
 
-    def install(self):
-        self.run_make("install-headers")
-
-
-class InstallAllianceMuslcHeaders(BuildAllianceLinuxMuslc):
+class InstallAllianceMuslcHeaders(InstallMuslcHeadersMixin, BuildAllianceLinuxMuslc):
     target = "cheri-std093-muslc-headers"
-    dependencies = ()
     repository = ReuseOtherProjectRepository(BuildAllianceLinuxMuslc, do_update=True)
     _build_dir = ReuseOtherProjectBuildDir(build_project=BuildAllianceLinuxMuslc)
 
-    def compile(self):
-        pass
 
-    def install(self):
-        self.run_make("install-headers")
-
-
-class InstallMorelloMuslcHeaders(BuildMorelloLinuxMuslc):
+class InstallMorelloMuslcHeaders(InstallMuslcHeadersMixin, BuildMorelloLinuxMuslc):
     target = "morello-muslc-headers"
-    dependencies = ()
     repository = ReuseOtherProjectRepository(BuildMorelloLinuxMuslc, do_update=True)
     _build_dir = ReuseOtherProjectBuildDir(build_project=BuildMorelloLinuxMuslc)
-
-    def compile(self):
-        pass
-
-    def install(self):
-        self.run_make("install-headers")
