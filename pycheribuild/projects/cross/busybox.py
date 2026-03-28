@@ -45,8 +45,8 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     repository = GitRepository("https://git.busybox.net/busybox/")
     is_sdk_target = False
     _supported_architectures = (
-        CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.UPSTREAM_LINUX_RISCV64,
+        CompilationTargets.UPSTREAM_LINUX_AARCH64,
     )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
@@ -173,7 +173,10 @@ done
 class BuildMorelloBusyBox(BuildBusyBox):
     target = "morello-busybox"
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (
+        CompilationTargets.MORELLO_LINUX_AARCH64,
+        CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
+    )
 
     def setup(self) -> None:
         super().setup()
@@ -201,5 +204,10 @@ class BuildMorelloBusyBox(BuildBusyBox):
 class BuildAllianceBusyBox(BuildBusyBox):
     target = "cheri-std093-busybox"
     repository = GitRepository("https://github.com/CHERI-Alliance/busybox.git")
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = (
+        CompilationTargets.CHERI_LINUX_RISCV64,
+        CompilationTargets.CHERI_LINUX_AARCH64,
+        CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
+    )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093

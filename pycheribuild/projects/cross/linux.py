@@ -28,21 +28,22 @@
 # SUCH DAMAGE.
 #
 
+from abc import ABC
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject
 from ..project import (
-    CheriConfig,
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
 )
 from ..run_qemu import LaunchQEMUBase
 from ...config.chericonfig import RiscvCheriISA
-from ...config.compilation_targets import CompilationTargets, LinuxGccTargetInfo
+from ...config.compilation_targets import CompilationTargets, CrossCompileTarget, LinuxGccTargetInfo
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_compiler_info
 from ...utils import classproperty
+from pycheribuild.projects.simple_project import SimpleProject
 
 
 class BuildLinux(CrossCompileAutotoolsProject):
@@ -51,8 +52,8 @@ class BuildLinux(CrossCompileAutotoolsProject):
     _needs_sysroot = False
     is_sdk_target = False
     _supported_architectures = (
-        CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.UPSTREAM_LINUX_RISCV64,
+        CompilationTargets.UPSTREAM_LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64_GCC,
         CompilationTargets.LINUX_AARCH64_GCC,
     )
@@ -163,10 +164,10 @@ class BuildCheriAllianceLinux(BuildLinux):
     target = "cheri-std093-linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
     _supported_architectures = (
-        CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_RISCV64_PURECAP_093,
-        CompilationTargets.LINUX_AARCH64,
-        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.CHERI_LINUX_RISCV64,
+        CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.CHERI_LINUX_AARCH64,
+        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
         CompilationTargets.LINUX_RISCV64_GCC,
         CompilationTargets.LINUX_AARCH64_GCC,
     )
@@ -207,7 +208,10 @@ class BuildMorelloLinux(BuildLinux):
     # Morello Linux is actually built hybrid (at the moment), but in the future it will be purecap.
     # To avoid workarounds and long target names, mark it as LINUX_MORELLO_PURECAP here but it will
     # still be built as a hybrid kernel.
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (
+        CompilationTargets.MORELLO_LINUX_AARCH64,
+        CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
+    )
 
     @property
     def defconfig(self) -> str:
@@ -226,42 +230,20 @@ class BuildMorelloLinux(BuildLinux):
         self.run_make("oldconfig")  # regen dependencies
 
 
-class LaunchCheriLinux(LaunchQEMUBase):
-    target = "run-minimal"
-    _supported_architectures = (
-        CompilationTargets.LINUX_MORELLO_PURECAP,
-        CompilationTargets.LINUX_RISCV64_PURECAP_093,
-        CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_AARCH64,
-    )
+class LaunchLinuxBase(LaunchQEMUBase, ABC):
+    do_not_add_to_targets = True
+    _source_cls: type[SimpleProject]
+
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        # noinspection PyProtectedMember
+        return cls._source_cls.supported_architectures()
+
     forward_ssh_port = False
     qemu_user_networking = True
     _uses_disk_image = False
     _enable_smbfs_support = False
     _add_virtio_rng = True
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        result = super().dependencies(config)
-        if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-linux-kernel",)
-            result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
-            result += ("cheri-std093-compiler-rt-builtins",)
-            result += ("cheri-std093-busybox",)
-            result += ("cheri-std093-muslc",)
-            # TODO: Add more projects (eg busybox and muslc once released and is public)
-        elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            result += ("morello-linux-kernel",)
-            result += ("morello-muslc",)
-            result += ("morello-compiler-rt-builtins",)
-            result += ("morello-busybox",)
-        else:
-            result += ("linux-kernel",)
-            result += ("muslc",)
-            result += ("compiler-rt-builtins",)
-            result += ("busybox",)
-
-        return result
 
     def setup(self):
         super().setup()
@@ -278,3 +260,21 @@ class LaunchCheriLinux(LaunchQEMUBase):
         # This is not enabled by default for AArch64
         self.qemu_options.can_boot_kernel_directly = True
         self.current_kernel = Path(kernel)
+
+
+class LaunchUpstreamLinux(LaunchLinuxBase):
+    target = "run-minimal-upstream"
+    _source_cls = BuildLinux
+    dependencies = ("busybox",)
+
+
+class LaunchCheriAllianceLinux(LaunchLinuxBase):
+    target = "run-minimal-cheri-std093"
+    _source_cls = BuildCheriAllianceLinux
+    dependencies = ("cheri-std093-busybox",)
+
+
+class LaunchMorelloLinux(LaunchLinuxBase):
+    target = "run-minimal-morello"
+    _source_cls = BuildMorelloLinux
+    dependencies = ("morello-busybox",)

@@ -117,7 +117,11 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "upstream-compiler-rt"
     default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    _supported_architectures = (CompilationTargets.NATIVE,)
+    _supported_architectures = (
+        CompilationTargets.NATIVE,
+        CompilationTargets.UPSTREAM_LINUX_RISCV64,
+        CompilationTargets.UPSTREAM_LINUX_AARCH64,
+    )
 
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
@@ -132,7 +136,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     _needs_sysroot = False  # We don't need a complete sysroot
     _supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
-        + CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS
         + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
         + CompilationTargets.ALL_FREESTANDING_TARGETS
         + CompilationTargets.ALL_NATIVE
@@ -239,6 +242,11 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "upstream-compiler-rt-builtins"
     llvm_project = BuildUpstreamLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+    _supported_architectures = (
+        *BuildCompilerRtBuiltins._supported_architectures,
+        CompilationTargets.UPSTREAM_LINUX_AARCH64,
+        CompilationTargets.UPSTREAM_LINUX_RISCV64,
+    )
 
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
@@ -250,8 +258,10 @@ class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
         CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
         CompilationTargets.FREESTANDING_RISCV32,
         CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
-        CompilationTargets.NATIVE,
-        *CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS,
+        CompilationTargets.CHERI_LINUX_AARCH64,
+        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
+        CompilationTargets.CHERI_LINUX_RISCV64,
+        CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
     )
     llvm_project = BuildCheriAllianceLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
@@ -261,3 +271,8 @@ class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "morello-compiler-rt-builtins"
     llvm_project = BuildMorelloLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+    _supported_architectures = (
+        *BuildCompilerRtBuiltins._supported_architectures,
+        CompilationTargets.MORELLO_LINUX_AARCH64,
+        CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
+    )

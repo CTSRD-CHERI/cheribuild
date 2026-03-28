@@ -850,10 +850,7 @@ class NativeTargetInfo(TargetInfo):
         return result  # default host compiler should not need any extra flags
 
 
-TargetInfoSubclass = typing.TypeVar("TargetInfoSubclass", bound=TargetInfo)
-
-
-class CrossCompileTarget(typing.Generic[TargetInfoSubclass]):
+class CrossCompileTarget:
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS: str = "conservative"
 
@@ -861,7 +858,7 @@ class CrossCompileTarget(typing.Generic[TargetInfoSubclass]):
         self,
         arch_suffix: str,
         cpu_architecture: CPUArchitecture,
-        target_info_cls: "type[TargetInfoSubclass]",
+        target_info_cls: "type[TargetInfo]",
         *,
         is_cheri_purecap=False,
         is_cheri_hybrid=False,
