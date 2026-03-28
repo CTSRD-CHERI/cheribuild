@@ -856,8 +856,11 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
             assert False, "No support for building RTEMS for non RISC-V targets yet"
 
 
-class LinuxTargetInfo(_ClangBasedTargetInfo):
+class LinuxTargetInfoBase(_ClangBasedTargetInfo, ABC):
     shortname: str = "Linux"
+    kernel_target: str
+    musl_target: str
+    compiler_rt_target: str
 
     @classmethod
     def is_linux(cls) -> bool:
@@ -877,27 +880,8 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
             assert False, "No support for building Linux for this architecture"
         return result
 
-    @classmethod
-    def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        # Use upstream LLVM for non-CHERI targets since that is better supported than LLVM 17.
-        if not cls.uses_morello_llvm and not xtarget.is_hybrid_or_purecap_cheri():
-            return typing.cast(
-                "type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("upstream-llvm", None)
-            )
-        return super()._get_compiler_project(config, xtarget)
-
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
-        return SimpleProject.get_class_for_target_name("linux", xtarget)
-
-    @property
-    def sysroot_dir(self) -> Path:
-        if self.uses_morello_llvm:
-            sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
-        elif self.target.is_experimental_cheri093_std(self.config):
-            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
-        else:
-            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
-        return sysroot_dir / "linux" / self.target.get_rootfs_target().generic_arch_suffix
+        return SimpleProject.get_class_for_target_name(self.kernel_target, xtarget)
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
         if is_jenkins_build():
@@ -912,20 +896,40 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
-        # TODO unify the following codebases without the morello/cheri-std093 prefixes
-        if cls.uses_morello_llvm:
-            return ["morello-linux-kernel", "morello-muslc", "morello-compiler-rt-builtins"]
-        elif target.is_experimental_cheri093_std(config):
-            return ["cheri-std093-linux-kernel", "cheri-std093-muslc", "cheri-std093-compiler-rt-builtins"]
-        assert not target.is_cheri_purecap(), "Only RVY 0.9.3 and Morello are supported for purecap"
-        # Note: even when targetting non-CHERI Linux, we use the CHERI targets since the latest upstream
-        # LLVM does not build compiler-rt correctly for RISC-V with the current build setup.
-        return ["linux-kernel", "muslc", "compiler-rt-builtins"]
+        return [cls.kernel_target, cls.musl_target, cls.compiler_rt_target]
 
 
-class LinuxMorelloTargetInfo(LinuxTargetInfo):
-    shortname: str = "Linux"
+class UpstreamLinuxTargetInfo(LinuxTargetInfoBase):
+    uses_upstream_llvm: bool = True
+    kernel_target = "linux-kernel"
+    musl_target = "muslc"
+    compiler_rt_target = "upstream-compiler-rt-builtins"
+
+    @property
+    def sysroot_dir(self) -> Path:
+        return self.config.sysroot_output_root / "upstream-linux" / self.target.get_rootfs_target().generic_arch_suffix
+
+
+class CheriLinuxTargetInfo(LinuxTargetInfoBase):
+    kernel_target = "cheri-std093-linux-kernel"
+    musl_target = "cheri-std093-muslc"
+    compiler_rt_target = "cheri-std093-compiler-rt-builtins"
+
+    @property
+    def sysroot_dir(self) -> Path:
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
+        return sysroot_dir / "linux" / self.target.get_rootfs_target().generic_arch_suffix
+
+
+class CheriLinuxWithMorelloCompilerTargetInfo(CheriLinuxTargetInfo):
+    uses_morello_llvm = True
+
+
+class MorelloLinuxTargetInfo(LinuxTargetInfoBase):
     uses_morello_llvm: bool = True
+    kernel_target = "morello-linux-kernel"
+    musl_target = "morello-muslc"
+    compiler_rt_target = "morello-compiler-rt-builtins"
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
@@ -935,6 +939,11 @@ class LinuxMorelloTargetInfo(LinuxTargetInfo):
             ), "AArch64 is the only CHERI target supported with the Morello toolchain"
             return "aarch64-linux-musl_purecap"  # FIXME: this seems wrong for hybrid?
         return super().triple_for_target(target, config, include_version=include_version)
+
+    @property
+    def sysroot_dir(self) -> Path:
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
+        return sysroot_dir / "linux" / self.target.get_rootfs_target().generic_arch_suffix
 
 
 class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
@@ -1645,79 +1654,47 @@ class CompilationTargets(BasicCompilationTargets):
     )
 
     # Linux targets
-    LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, LinuxTargetInfo)
-    LINUX_RISCV64_PURECAP_093 = CrossCompileTarget(
+    UPSTREAM_LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, UpstreamLinuxTargetInfo)
+    CHERI_LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriLinuxTargetInfo)
+    CHERI_LINUX_RISCV64_PURECAP_093 = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
-        LinuxTargetInfo,
+        CheriLinuxTargetInfo,
         is_cheri_purecap=True,
         _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
-    LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, LinuxTargetInfo)
-    LINUX_MORELLO_NO_CHERI = CrossCompileTarget(
-        "morello-aarch64",
-        CPUArchitecture.AARCH64,
-        LinuxMorelloTargetInfo,
-    )
-    LINUX_MORELLO_HYBRID = CrossCompileTarget(
-        "morello-hybrid",
-        CPUArchitecture.AARCH64,
-        LinuxMorelloTargetInfo,
-        is_cheri_hybrid=True,
-        check_conflict_with=LINUX_MORELLO_NO_CHERI,
-        non_cheri_target=LINUX_MORELLO_NO_CHERI,
-    )
-    LINUX_MORELLO_PURECAP = CrossCompileTarget(
+    UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
+    CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
+    MORELLO_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
+    CHERI_LINUX_MORELLO_PURECAP = CrossCompileTarget(
         "morello-purecap",
         CPUArchitecture.AARCH64,
-        LinuxMorelloTargetInfo,
+        CheriLinuxWithMorelloCompilerTargetInfo,
         is_cheri_purecap=True,
-        check_conflict_with=LINUX_MORELLO_HYBRID,
-        hybrid_target=LINUX_MORELLO_HYBRID,
+        check_conflict_with=CHERI_LINUX_AARCH64,
+        non_cheri_target=CHERI_LINUX_AARCH64,
     )
-    LINUX_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS = CrossCompileTarget(
-        "morello-aarch64",
+    MORELLO_LINUX_MORELLO_PURECAP = CrossCompileTarget(
+        "morello-purecap",
         CPUArchitecture.AARCH64,
-        LinuxMorelloTargetInfo,
-        extra_target_suffix="-for-hybrid-rootfs",
-        rootfs_target=LINUX_MORELLO_HYBRID,
-        non_cheri_target=LINUX_MORELLO_NO_CHERI,
+        MorelloLinuxTargetInfo,
+        is_cheri_purecap=True,
+        check_conflict_with=MORELLO_LINUX_AARCH64,
     )
-    LINUX_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS = CrossCompileTarget(
-        "morello-aarch64",
-        CPUArchitecture.AARCH64,
-        LinuxMorelloTargetInfo,
-        extra_target_suffix="-for-purecap-rootfs",
-        rootfs_target=LINUX_MORELLO_PURECAP,
-        non_cheri_target=LINUX_MORELLO_NO_CHERI,
+    ALL_UPSTREAM_LINUX_TARGETS = (UPSTREAM_LINUX_AARCH64, UPSTREAM_LINUX_RISCV64)
+    ALL_CHERI_LINUX_TARGETS = (
+        CHERI_LINUX_RISCV64_PURECAP_093,
+        CHERI_LINUX_RISCV64,
+        CHERI_LINUX_AARCH64,
+        CHERI_LINUX_MORELLO_PURECAP,
     )
-    LINUX_MORELLO_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(
-        "morello-hybrid",
-        CPUArchitecture.AARCH64,
-        LinuxMorelloTargetInfo,
-        is_cheri_hybrid=True,
-        check_conflict_with=LINUX_MORELLO_NO_CHERI,
-        extra_target_suffix="-for-purecap-rootfs",
-        non_cheri_for_hybrid_rootfs_target=LINUX_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS,
-        rootfs_target=LINUX_MORELLO_PURECAP,
-    )
+    ALL_MORELLO_LINUX_TARGETS = (MORELLO_LINUX_MORELLO_PURECAP, MORELLO_LINUX_AARCH64)
 
     # GCC-based Linux targets (only to be used for the linux-kernel classes for now!)
     # In the future we may want to allow using it for other targets as well, but for now
     # only the kernel builds are supported.
-    LINUX_RISCV64_GCC = CrossCompileTarget("riscv64-gcc", CPUArchitecture.RISCV64, LinuxGccTargetInfo)
-    LINUX_AARCH64_GCC = CrossCompileTarget("aarch64-gcc", CPUArchitecture.AARCH64, LinuxGccTargetInfo)
-
-    ALL_LINUX_AARCH64_TARGETS = (
-        LINUX_AARCH64,
-        LINUX_MORELLO_PURECAP,
-    )
-
-    ALL_LINUX_RISCV_TARGETS = (
-        LINUX_RISCV64,
-        LINUX_RISCV64_PURECAP_093,
-    )
-    ALL_SUPPORTED_LINUX_TARGETS = ALL_LINUX_AARCH64_TARGETS + ALL_LINUX_RISCV_TARGETS
+    LINUX_KERNEL_RISCV64_GCC = CrossCompileTarget("riscv64-gcc", CPUArchitecture.RISCV64, LinuxGccTargetInfo)
+    LINUX_KERNEL_AARCH64_GCC = CrossCompileTarget("aarch64-gcc", CPUArchitecture.AARCH64, LinuxGccTargetInfo)
 
     ALL_CHERIBSD_RISCV_TARGETS = (CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI)
     ALL_CHERIBSD_NON_MORELLO_TARGETS = (*ALL_CHERIBSD_RISCV_TARGETS, CHERIBSD_AARCH64, CHERIBSD_X86_64)

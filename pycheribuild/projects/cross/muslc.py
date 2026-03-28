@@ -45,10 +45,8 @@ class BuildMuslc(CrossCompileAutotoolsProject):
     repository = GitRepository("https://git.musl-libc.org/git/musl")
     _needs_sysroot = False
     is_sdk_target = False
-    _supported_architectures = (
-        CompilationTargets.LINUX_AARCH64,
-        CompilationTargets.LINUX_RISCV64,
-    )
+    _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
+
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
 
@@ -73,7 +71,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
 class BuildMorelloLinuxMuslc(BuildMuslc):
     target = "morello-muslc"
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-morello"])
@@ -88,7 +86,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
 class BuildAllianceLinuxMuslc(BuildMuslc):
     target = "cheri-std093-muslc"
     repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     def setup(self) -> None:
