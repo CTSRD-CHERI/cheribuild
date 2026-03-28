@@ -41,8 +41,9 @@ class BuildCheriOS(CMakeProject):
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, p: config.output_root
-        / ("cherios" + p.crosscompile_target.build_suffix(config, include_os=False)),
+        function=lambda config, p: (
+            config.output_root / ("cherios" + p.crosscompile_target.build_suffix(config, include_os=False))
+        ),
         as_string="$OUTPUT_ROOT/cherios-{mips64,riscv64}",
     )
     _needs_sysroot = False

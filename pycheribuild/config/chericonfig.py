@@ -453,7 +453,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         self.skip_dependency_filters: "list[re.Pattern]" = loader.add_commandline_only_list_option(
             "skip-dependency-filter",
             group=loader.dependencies_group,
-            element_type=lambda s: re.compile(s),
+            element_type=re.compile,
             action="append",
             metavar="REGEX",
             help="A regular expression to match against to target names that should be skipped when using"
