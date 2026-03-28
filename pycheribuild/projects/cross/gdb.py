@@ -261,9 +261,9 @@ class BuildUpstreamGDB(BuildGDBBase):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, proj: config.output_root / "upstream-gdb" if proj._xtarget.is_native() else None,
         # NB: We set default_architecture so the unsuffixed target is native
-        as_string=lambda cls: "$INSTALL_ROOT/upstream-gdb"
-        if cls._xtarget is None or cls._xtarget.is_native()
-        else None,
+        as_string=lambda cls: (
+            "$INSTALL_ROOT/upstream-gdb" if cls._xtarget is None or cls._xtarget.is_native() else None
+        ),
         inherit=BuildGDBBase._default_install_dir_fn,
     )
 

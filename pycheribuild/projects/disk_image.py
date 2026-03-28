@@ -168,7 +168,7 @@ class BuildDiskImageBase(SimpleProject):
         cls.extra_files_dir = cls.add_path_option(
             "extra-files",
             show_help=True,
-            default=lambda config, project: (config.source_root / ("extra-files" + extra_files_suffix)),
+            default=lambda config, project: config.source_root / ("extra-files" + extra_files_suffix),
             help="A directory with additional files that will be added to the "
             "image (default: "
             "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",

@@ -207,13 +207,13 @@ class DefaultCheriConfig(CheriConfig):
         )
         self.output_root = loader.add_path_option(
             "output-root",
-            default=lambda p, cls: (p.source_root / "output"),
+            default=lambda p, cls: p.source_root / "output",
             group=loader.path_group,
             help="The directory to store all output (default: '<SOURCE_ROOT>/output')",
         )
         self.build_root = loader.add_path_option(
             "build-root",
-            default=lambda p, cls: (p.source_root / "build"),
+            default=lambda p, cls: p.source_root / "build",
             group=loader.path_group,
             help="The directory for all the builds (default: '<SOURCE_ROOT>/build')",
         )
@@ -224,7 +224,7 @@ class DefaultCheriConfig(CheriConfig):
             help="The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')",
         )
         default_morello_sdk = ComputedDefaultValue(
-            function=lambda p, cls: (p.tools_root / p.default_morello_sdk_directory_name),
+            function=lambda p, cls: p.tools_root / p.default_morello_sdk_directory_name,
             as_string="'<TOOLS_ROOT>/morello-sdk'",
         )
         self.morello_sdk_dir = loader.add_path_option(
@@ -234,7 +234,7 @@ class DefaultCheriConfig(CheriConfig):
             help="The directory to find/install the Morello SDK",
         )
         default_cheri_alliance_sdk = ComputedDefaultValue(
-            function=lambda p, cls: (p.tools_root / p.default_cheri_alliance_sdk_directory_name),
+            function=lambda p, cls: p.tools_root / p.default_cheri_alliance_sdk_directory_name,
             as_string="'<TOOLS_ROOT>/cheri-std093-sdk'",
         )
         self.cheri_alliance_sdk_dir = loader.add_path_option(
