@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import inspect
-import re
 import shutil
 import sys
 import typing
@@ -52,7 +51,6 @@ from .project import (
 from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
-from ..processutils import get_program_version
 from ..utils import OSInfo
 
 
@@ -199,6 +197,22 @@ class BuildQEMUBase(AutotoolsProject):
             self.info("Disabling LTO for ASAN instrumented builds")
         self.use_lto = False
 
+    def _find_non_venv_python_interpreter(self, python_bin: Path) -> Path:
+        # First, check if the python interpreter is a symlink to the real one:
+        if python_bin.is_symlink():
+            python_bin = python_bin.resolve()
+            if not str(python_bin).startswith(sys.prefix):
+                return python_bin  # No longer inside the venv
+        # Otherwise perform a path replacement to find the real one
+        python_bin = Path(sys.executable.replace(sys.prefix, sys.base_prefix))
+        if not python_bin.exists() and python_bin.stem == "python":
+            # If the venv is using python as the executable name, that might not exist
+            # in the real installation directory, but python3
+            python_bin = python_bin.with_stem("python3")
+        if not python_bin.exists():
+            self.fatal(f"Could not resolve venv interpreter {sys.executable}: missing {python_bin}")
+        return python_bin
+
     def setup(self):
         super().setup()
         # Disable some more unneeded things (we don't usually need the GUI frontends)
@@ -306,23 +320,18 @@ class BuildQEMUBase(AutotoolsProject):
                 "--make=" + self.make_args.command,
             ],
         )
-        python_bin = sys.executable
+        python_bin = Path(sys.executable)
         python_search_path = self.config.dollar_path_with_other_tools
         # Python from a venv cannot be used for QEMU builds, use the base installation instead.
         if sys.prefix != sys.base_prefix:
-            python_bin = sys.executable.replace(sys.prefix, sys.base_prefix)
+            python_bin = self._find_non_venv_python_interpreter(python_bin)
             python_search_path = python_search_path.replace(sys.prefix, sys.base_prefix)
-        py3_version = get_program_version(
-            Path(python_bin),
-            config=self.config,
-            regex=re.compile(rb"Python\s+(\d+)\.(\d+)\.?(\d+)?"),
-        )
         # QEMU tests are not compatible with 3.12 yet, try to use an older version in that case
-        if py3_version >= (3, 12, 0):
+        if sys.version_info >= (3, 12, 0):
             for minor_version in (11, 10, 9):
                 found = shutil.which(f"python3.{minor_version}", path=python_search_path)
                 if found:
-                    python_bin = found
+                    python_bin = Path(found)
                     break
         self.configure_args.append(f"--python={python_bin}")
 
