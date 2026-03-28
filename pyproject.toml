@@ -1,3 +1,19 @@
+[project]
+
+name = "cheribuild"
+version = "0.99.0"
+requires-python = ">=3.8"
+dependencies = []  # Should work without any packages installed.
+
+[project.optional-dependencies]
+extras = [
+    "argcomplete>=3.6.3",
+    "libtmux>=0.38.1",
+    "pyserial>=3.5",
+    # libtmux 0.40+ uses typing_extensions
+    "typing-extensions>=4.12.2",
+]
+
 [tool.ruff]
 # Ensure suggested fixes are compatible with our minimum supported version
 target-version = "py38"
@@ -73,3 +89,21 @@ invalid-inheritance = false
 read-only = false
 redundant-condition = true
 redundant-cast = false
+
+[dependency-groups]
+dev = [
+    "argcomplete>=3.6.3",
+    "flake8>=5.0.4",
+    "libtmux>=0.38.1",
+    "pre-commit>=4.0.0",
+    "pyserial>=3.5",
+    "pytest>=8.3.5",
+    "pytest-pycharm>=0.7.0",
+    "ruff>=0.15.8",
+    "ty>=0.0.26",
+]
+
+[tool.uv.dependency-groups]
+# Use a slightly newer minimum version for dev dependencies to allow resolving them.
+dev = {requires-python = ">=3.9"}
+
