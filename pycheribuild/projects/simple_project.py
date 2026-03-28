@@ -275,7 +275,14 @@ def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
     prefix = None
     try:
         prefix_str = (
-            run_command(command, capture_output=True, run_in_pretend_mode=True, print_verbose_only=False, config=config)
+            run_command(
+                command,
+                capture_output=True,
+                run_in_pretend_mode=True,
+                print_verbose_only=False,
+                config=config,
+                env=dict(HOMEBREW_NO_AUTO_UPDATE="1"),
+            )
             .stdout.decode("utf-8")
             .strip()
         )

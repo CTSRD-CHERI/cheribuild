@@ -46,7 +46,7 @@ class BuildBluespecCompiler(Project):
         self.check_required_system_tool("ghc", apt="ghc", homebrew="ghc")
         self.check_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         self.check_required_system_tool("gperf", homebrew="gperf", apt="gperf")
-        self.check_required_pkg_config("tcl", apt="tcl")
+        self.check_required_pkg_config("tcl", apt="tcl", homebrew="tcl-tk")
         for i in ("autoconf", "bison", "flex"):
             self.check_required_system_tool(i, homebrew=i)
 
