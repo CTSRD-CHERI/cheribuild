@@ -505,7 +505,7 @@ def run_host_command(cmd: "list[str]", **kwargs):
     subprocess.check_call(cmd, **kwargs)
 
 
-def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None) -> Path:
+def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd: "list[str]") -> Path:
     result = archive.with_suffix("")
     if result.exists() and not force_decompression:
         return result

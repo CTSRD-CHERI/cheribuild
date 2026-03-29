@@ -268,6 +268,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
 
             def monitor_output():
                 nonlocal found
+                assert proc.stdout is not None
                 for line in proc.stdout:
                     print(line, end="")
                     if expected_output[ex] in line:
