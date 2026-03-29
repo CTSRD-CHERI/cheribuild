@@ -155,9 +155,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
     def default_install_dir(self, install_dir: DefaultInstallDir) -> Path:
         if install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
             project = self.project
-            if hasattr(project, "path_in_rootfs"):
-                assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
-                return self._rootfs_path() / project.path_in_rootfs[1:]
+            path_in_rootfs: str = getattr(project, "path_in_rootfs", "")
+            if path_in_rootfs:
+                assert path_in_rootfs.startswith("/"), path_in_rootfs
+                return self._rootfs_path() / path_in_rootfs[1:]
             # noinspection PyUnresolvedReferences,PyProtectedMember
             return self._rootfs_path() / "opt" / self.install_prefix_dirname / project._rootfs_install_dir_name
         elif install_dir == DefaultInstallDir.KDE_PREFIX:

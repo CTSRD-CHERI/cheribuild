@@ -1336,6 +1336,7 @@ class SimpleProjectBase(AbstractProject, ABC):
                 target=self._handle_stderr, args=(logfile, proc.stderr, logfile_lock, self)
             )
             stderr_thread.start()
+        assert proc.stdout is not None
         for line in proc.stdout:
             with logfile_lock:  # make sure we don't interleave stdout and stderr lines
                 if logfile:

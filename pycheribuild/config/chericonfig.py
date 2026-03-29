@@ -673,7 +673,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "test suites on the remote board instead of QEMU.",
         )
 
-        self.targets: "Optional[list[str]]" = None
+        self.targets: "list[str]" = []
         self.__optional_properties = [
             "internet_connection_last_checked_at",
             "start_after",

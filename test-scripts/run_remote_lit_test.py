@@ -165,7 +165,7 @@ def run_remote_lit_tests(
 ) -> bool:
     try:
         # pyrefly: ignore[import-error]
-        import psutil  # noqa: F401
+        import psutil  # noqa: F401  # ty:ignore[unresolved-import]
     except ImportError:
         boot_cheribsd.failure("Cannot run lit without `psutil` python module installed", exit=True)
     try:

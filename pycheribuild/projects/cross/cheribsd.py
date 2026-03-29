@@ -2466,8 +2466,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     @property
     def cross_sysroot_path(self) -> Path:
         if self.install_dir_override is not None:
-            # Work around https://github.com/google/pytype/issues/1344 false positive
-            return typing.cast(Path, self.install_dir_override)
+            return self.install_dir_override  # pytype: disable=bad-return-type
         return super().cross_sysroot_path
 
     def copy_sysroot_from_remote_machine(self) -> None:

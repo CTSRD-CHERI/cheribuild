@@ -110,6 +110,7 @@ class ComputedDefaultValue(typing.Generic[T]):
                 val = as_readme_string(cls)
                 if val is not None:
                     return val
+                assert callable(as_string)
                 val = as_string(cls)
                 if val is not None:
                     return val

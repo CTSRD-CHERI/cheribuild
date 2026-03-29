@@ -194,6 +194,7 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
         self._setup_called = False
         self._setup_late_called = False
 
+    @abstractmethod
     def uses_softfloat_by_default(self) -> bool: ...
 
     def get_compiler_info(self, compiler: Path) -> CompilerInfo:
