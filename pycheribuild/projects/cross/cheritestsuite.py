@@ -144,7 +144,8 @@ class BuildRISCVCheriTestSuite(BuildCheriTestSuite):
         machine_headers = self.source_dir / "compat_headers" / "machine"
         if os.path.exists(machine_headers):
             shutil.rmtree(machine_headers)
-        shutil.copytree(self.source_dir / "compat_headers" / "riscv", 
+        os.makedirs(machine_headers)
+        shutil.copytree(self.source_dir / "compat_headers" / "riscv-std093", 
                     self.source_dir / "compat_headers" / "machine",
                     dirs_exist_ok=True)
         self.set_env_make_args(machine_cpuarch="rv64imafdczcherihybrid_zcherilevels",
