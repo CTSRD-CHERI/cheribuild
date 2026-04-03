@@ -109,7 +109,7 @@ def notify_main_process(
     cmdline_args: argparse.Namespace,
     stage: MultiprocessStages,
     mp_q: multiprocessing.Queue,
-    barrier: "Optional[multiprocessing.Barrier]" = None,  # pyrefly: ignore[not-a-type]
+    barrier: "Optional[threading.Barrier]" = None,
 ):
     if mp_q:
         global CURRENT_STAGE  # noqa: PLW0603
@@ -159,7 +159,7 @@ def run_remote_lit_tests(
     test_dirs: "list[str]",
     test_env: "Optional[dict[str, str]]" = None,
     mp_q: Optional[multiprocessing.Queue] = None,
-    barrier: Optional[multiprocessing.Barrier] = None,  # pyrefly: ignore[not-a-type]
+    barrier: Optional[threading.Barrier] = None,
     llvm_lit_path: "Optional[str]" = None,
     lit_extra_args: Optional[list] = None,
 ) -> bool:
@@ -202,8 +202,7 @@ def run_remote_lit_tests_impl(
     test_dirs: "list[str]",
     test_env: "Optional[dict[str, str]]",
     mp_q: Optional[multiprocessing.Queue] = None,
-    # pyrefly: ignore  # not-a-type
-    barrier: Optional[multiprocessing.Barrier] = None,
+    barrier: Optional[threading.Barrier] = None,
     llvm_lit_path: "Optional[str]" = None,
     lit_extra_args: Optional[list] = None,
 ) -> bool:

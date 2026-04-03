@@ -32,13 +32,15 @@
 import argparse
 import atexit
 import datetime
+import multiprocessing
 import os
 import signal
 import sys
 import tempfile
+import threading
 import time
 import traceback
-from multiprocessing import Barrier, Process, Queue
+from multiprocessing import Process, Queue
 from pathlib import Path
 from queue import Empty
 from typing import Optional
@@ -62,7 +64,7 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
 
 def run_shard(
     q: Queue,
-    barrier: Barrier,  # pyrefly: ignore[not-a-type]
+    barrier: threading.Barrier,
     num,
     total,
     ssh_port_queue,
@@ -96,7 +98,7 @@ def run_shard(
 
 
 def libcxx_main(
-    barrier: "Optional[Barrier]" = None,  # pyrefly: ignore[not-a-type]
+    barrier: "Optional[threading.Barrier]" = None,
     mp_queue: "Optional[Queue]" = None,
     ssh_port_queue: "Optional[Queue]" = None,
     shard_num: "Optional[int]" = None,
@@ -165,9 +167,9 @@ def run_parallel(args: argparse.Namespace):
         boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)
     boot_cheribsd.success("Running ", args.parallel_jobs, " parallel jobs")
     # to ensure that all threads have started lit
-    mp_barrier = Barrier(parties=args.parallel_jobs + 1, timeout=4 * 60 * 60)
-    mp_q = Queue()
-    ssh_port_queue = Queue()
+    mp_barrier = multiprocessing.Barrier(parties=args.parallel_jobs + 1, timeout=4 * 60 * 60)
+    mp_q = multiprocessing.Queue()
+    ssh_port_queue = multiprocessing.Queue()
     processes: "list[LitShardProcess]" = []
     # Extract the kernel + disk image in the main process to avoid race condition:
     kernel_path = (
@@ -297,7 +299,7 @@ def run_parallel_impl(
     args: argparse.Namespace,
     processes: "list[LitShardProcess]",
     mp_q: Queue,
-    mp_barrier: Barrier,  # pyrefly: ignore[not-a-type]
+    mp_barrier: threading.Barrier,
     ssh_port_queue: Queue,
 ):
     timed_out = False
