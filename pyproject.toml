@@ -128,6 +128,7 @@ dev = [
     "flake8>=5.0.4",
     "libtmux>=0.38.1",
     "pre-commit>=4.0.0",
+    "pyrefly>=0.59.1",
     "pyserial>=3.5",
     "pytest>=8.3.5",
     "pytest-pycharm>=0.7.0",
