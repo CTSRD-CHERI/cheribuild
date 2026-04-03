@@ -78,6 +78,14 @@ class BuildLinux(CrossCompileAutotoolsProject):
         if auto_value.stdout != b"undef":
             self.run_cmd(*auto_config_args, "--set-val", option, value)
 
+    @property
+    def linux_arch(self) -> str:
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            return "riscv"
+        elif self.crosscompile_target.is_aarch64(include_purecap=True):
+            return "arm64"
+        raise LookupError()
+
     def setup(self) -> None:
         super().setup()
         self.make_args.add_flags("-f", self.source_dir / "Makefile")
@@ -97,12 +105,6 @@ class BuildLinux(CrossCompileAutotoolsProject):
             self.make_args.set(HOSTCXX=self.host_CXX)
 
         self.make_args.set(KBUILD_ABS_SRCTREE=self.source_dir.absolute())
-
-        if self.crosscompile_target.is_riscv(include_purecap=True):
-            self.linux_arch = "riscv"
-        elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            self.linux_arch = "arm64"
-
         self.make_args.set(ARCH=self.linux_arch)
         self.make_args.set(O=self.build_dir)
 
