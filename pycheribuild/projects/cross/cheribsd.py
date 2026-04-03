@@ -918,7 +918,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.crosscompile_target.is_aarch64(include_purecap=True):
                 result["TARGET_CPUTYPE"] = "morello"
                 # FIXME: still needed?
-                result["WITH_CHERI"] = True
+                result["WITH_CHERI"] = "1"
             else:
                 if self.crosscompile_target.is_experimental_cheri093_std(self.config):
                     result["TARGET_CPUTYPE"] = "rvy"

@@ -841,7 +841,7 @@ def get_program_version(
     program: Path,
     command_args: "Optional[Iterable[str]]" = None,
     component_kind: "type[Type_T]" = int,
-    regex=None,
+    regex: "bytes | re.Pattern[bytes] | None" = None,
     program_name: Optional[bytes] = None,
     *,
     config: ConfigBase,
@@ -853,21 +853,18 @@ def get_program_version(
     except subprocess.CalledProcessError as e:
         fatal_error("Failed to determine version for", program, ":", e, pretend=config.pretend)
         return 0, 0, 0
-    return extract_version(stdout, component_kind, regex, program_name)
-
-
-# extract the version component from program output such as "git version 2.7.4"
-def extract_version(
-    output: bytes,
-    component_kind: "type[Type_T]" = int,
-    regex: "Optional[typing.Pattern]" = None,
-    program_name: bytes = b"",
-) -> "tuple[Type_T, ...]":
     if regex is None:
         prefix = re.escape(program_name) + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
     elif isinstance(regex, bytes):
         regex = re.compile(regex)
+    return extract_version(stdout, regex, component_kind)
+
+
+# extract the version component from program output such as "git version 2.7.4"
+def extract_version(
+    output: bytes, regex: "re.Pattern[bytes]", component_kind: "type[Type_T]" = int
+) -> "tuple[Type_T, ...]":
     match = regex.search(output)
     if not match:
         print(output)

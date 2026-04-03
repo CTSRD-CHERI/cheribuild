@@ -30,7 +30,7 @@ repos:
       - id: pyrefly-typecheck-specific-version
         name: Pyrefly (type checking)
         pass_filenames: false
-        additional_dependencies: ["pyrefly==0.40.0", "argcomplete", "libtmux"]
+        additional_dependencies: ["pyrefly==0.59.1", "argcomplete", "libtmux"]
   - repo: local
     hooks:
       - id: cheribuild-commit-messages
