@@ -38,7 +38,7 @@ from ..project import (
     MakeCommandKind,
 )
 from ..run_qemu import LaunchQEMUBase
-from ...config.chericonfig import RiscvCheriISA
+from ...config.chericonfig import CheriConfig, RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets, LinuxGccTargetInfo
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_compiler_info
@@ -249,16 +249,28 @@ class LaunchLinuxBase(LaunchQEMUBase, ABC):
 class LaunchUpstreamLinux(LaunchLinuxBase):
     target = "run-minimal-upstream"
     _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
-    dependencies = ("busybox",)
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "linux-kernel", "busybox"
 
 
 class LaunchCheriAllianceLinux(LaunchLinuxBase):
     target = "run-minimal-cheri-std093"
-    dependencies = ("cheri-std093-busybox",)
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+        return *result, "cheri-std093-linux-kernel", "cheri-std093-busybox"
 
 
 class LaunchMorelloLinux(LaunchLinuxBase):
     target = "run-minimal-morello"
-    dependencies = ("morello-busybox",)
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "morello-linux-kernel", "morello-busybox"
