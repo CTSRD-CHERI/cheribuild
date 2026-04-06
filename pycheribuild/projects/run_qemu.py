@@ -83,11 +83,13 @@ class ChosenQEMU:
     @property
     def binary(self) -> Path:
         assert self._setup, "Cannot get binary before LaunchQEMUBase has called our setup"
+        assert self._binary is not None
         return self._binary
 
     @property
     def can_provide_src_via_smb(self) -> bool:
         assert self._setup, "Cannot get SMBD status before LaunchQEMUBase has called our setup"
+        assert self._can_provide_src_via_smb is not None
         return self._can_provide_src_via_smb
 
     def setup(self, launch):
@@ -127,7 +129,6 @@ class ChosenQEMU:
 class LaunchQEMUBase(SimpleProject):
     do_not_add_to_targets = True
     forward_ssh_port = True
-    _can_provide_src_via_smb = False
     ssh_forwarding_port: Optional[int] = None
     custom_qemu_smb_mount = None
     _needs_sysroot = False
@@ -476,7 +477,9 @@ class LaunchQEMUBase(SimpleProject):
             and qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
         )
         # Only default to providing the smb mount if smbd exists
-        have_smbfs_support = self.chosen_qemu.can_provide_src_via_smb and shutil.which("smbd")
+        have_smbfs_support = (
+            self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.find_smbd_binary(self.config).exists()
+        )
 
         def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):
             if not directory:
