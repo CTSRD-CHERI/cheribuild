@@ -46,9 +46,9 @@ class BuildSamba(Project):
         build_in_source_dir = True
     # NB: We can't update beyond 4.13 due to https://bugzilla.samba.org/show_bug.cgi?id=15024
     repository = GitRepository(
-        "https://github.com/CTSRD-CHERI/samba.git",
-        old_urls=[b"https://github.com/samba-team/samba.git"],
-        default_branch="v4-13-stable",
+        "https://github.com/samba-team/samba.git",
+        old_urls=[b"https://github.com/CTSRD-CHERI/samba.git"],
+        default_branch="v4-23-stable",
         force_branch=True,
     )
 
@@ -85,6 +85,8 @@ class BuildSamba(Project):
                 "--without-syslog",
                 "--without-utmp",
                 "--without-winbind",
+                "--without-ldb-lmdb",
+                "--with-smb1-server",
                 # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
                 "--prefix=" + str(self.install_dir),
             ]
@@ -118,6 +120,11 @@ class BuildSamba(Project):
                 ]
             )
         super().configure(cwd=self.source_dir, **kwargs)
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_pkg_config("dbus-1", apt="libdbus-1-dev")
+        self.check_required_system_header("crypt.h", apt="libcrypt-dev")
 
     def compile(self, **kwargs):
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
