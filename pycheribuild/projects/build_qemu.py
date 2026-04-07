@@ -182,6 +182,10 @@ class BuildQEMUBase(AutotoolsProject):
             homebrew="gnu-sed",
             freebsd="gsed",
         )
+        if self.target_info.is_linux():
+            # For 9pfs support, we need libcap-ng-devel and libattr-devel
+            self.check_required_pkg_config("libattr", apt="libattr1-dev")
+            self.check_required_pkg_config("libcap-ng", apt="libcap-ng-dev")
 
     def add_asan_flags(self):
         self.configure_args.append("--enable-sanitizers")
@@ -245,7 +249,9 @@ class BuildQEMUBase(AutotoolsProject):
         # Having symbol information is useful for debugging and profiling
         self.configure_args.append("--disable-strip")
 
-        if not self.target_info.is_linux():
+        if self.target_info.is_linux() or self.target_info.is_macos():
+            self.configure_args.append("--enable-virtfs")  # TODO: enable for FreeBSD with QEMU 10.2
+        else:
             self.configure_args.extend(["--disable-linux-aio", "--disable-kvm"])
 
         compiler = self.CC
