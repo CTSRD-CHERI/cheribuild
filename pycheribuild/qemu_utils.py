@@ -230,13 +230,12 @@ def qemu_supports_9pfs(qemu: Path, *, config: ConfigBase) -> bool:
     if not qemu.is_file():
         return False
     prog = run_command(
-        [str(qemu), "-virtfs", "?"],
+        [str(qemu), "-device", "?"],
         stdin=subprocess.DEVNULL,
         capture_output=True,
         capture_error=True,
         run_in_pretend_mode=True,
-        expected_exit_code=1,
         print_verbose_only=True,
         config=config,
     )
-    return b"-virtfs ?: Usage: -virtfs" in prog.stderr
+    return b'name "virtio-9p' in prog.stdout
