@@ -470,12 +470,7 @@ class LaunchQEMUBase(SimpleProject):
 
         user_network_options = ""
         smb_dir_count = 0
-        # TODO: use 9pfs once kernel support is merged
-        have_9pfs_support = (
-            False
-            and (self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86())
-            and qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
-        )
+        have_9pfs_support = qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = (
             self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.find_smbd_binary(self.config).exists()
@@ -511,18 +506,16 @@ class LaunchQEMUBase(SimpleProject):
                     sep="",
                 )
             if have_9pfs_support:
-                if smb_dir_count > 1:
-                    return  # FIXME: 9pfs panics if there is more than one device
                 # Also provide it via virtfs:
+                ro = ",readonly=on" if readonly else ""
                 virtfs_args.append("-virtfs")
                 virtfs_args.append(
-                    "local,id=virtfs{n},mount_tag={tag},path={path},security_model=none{ro}".format(
-                        n=smb_dir_count, path=directory, tag=share_name, ro=",readonly" if readonly else ""
-                    )
+                    f"local,id=virtfs{smb_dir_count},mount_tag={share_name},path={directory},security_model=none{ro}"
                 )
                 guest_cmd = coloured(
                     AnsiColour.yellow,
-                    f"mkdir -p {target} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} {{tgt}}",
+                    f"mkdir -p {target} && kldload -n virtio_p9fs && "
+                    f"mount -t virtfs -o trans=virtio{',ro' if readonly else ''} {share_name} {target}",
                 )
                 self.info(
                     "Providing ",
