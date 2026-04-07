@@ -83,8 +83,8 @@ def run_cheribsdtest(
         if exit_code == 127 and optional:
             boot_cheribsd.info("Optional cheribsdtest binary " + binary_name + " not present")
             return True
-        if qemu.smb_failed:
-            boot_cheribsd.info("SMB mount has failed, performing normal scp")
+        if qemu.shared_mount_failed:
+            boot_cheribsd.info("Shared mount has failed, performing normal scp")
             host_path = Path(args.test_output_dir, binary_name + ".xml")
             qemu.scp_from_guest(f"/tmp/{binary_name}.xml", host_path)
         else:
@@ -184,8 +184,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             results_db = Path(f"/test-results/{result_name}")
             results_xml = results_db.with_suffix(".xml")
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
-            if qemu.smb_failed:
-                boot_cheribsd.info("SMB mount has failed, performing normal scp")
+            if qemu.shared_mount_failed:
+                boot_cheribsd.info("Shared mount has failed, performing normal scp")
                 qemu.scp_from_guest("/tmp/results.db", Path(args.test_output_dir, results_db.name))
             else:
                 try:
@@ -209,8 +209,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
                     "kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml",
                     timeout=200 * 60,
                 )
-                if qemu.smb_failed:
-                    boot_cheribsd.info("SMB mount has failed, performing normal scp")
+                if qemu.shared_mount_failed:
+                    boot_cheribsd.info("Shared mount has failed, performing normal scp")
                     qemu.scp_from_guest("/tmp/results.xml", Path(args.test_output_dir, results_xml.name))
                 else:
                     qemu.checked_run(f"cp -v /tmp/results.xml {results_xml}")
@@ -276,8 +276,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
         boot_cheribsd.failure("Timeout waiting for QEMU to exit after shutdown!", exit=False)
         return False
     boot_cheribsd.success("Poweroff took: ", datetime.datetime.now() - poweroff_start)
-    if tests_successful and qemu.smb_failed:
-        boot_cheribsd.info("Tests succeeded, but SMB mount failed -> marking tests as failed.")
+    if tests_successful and qemu.shared_mount_failed:
+        boot_cheribsd.info("Tests succeeded, but shared mount failed -> marking tests as failed.")
         tests_successful = False
     return tests_successful
 
@@ -309,8 +309,8 @@ def cheribsd_setup_args(args: argparse.Namespace):
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         if not get_global_config().pretend:
             (real_output_dir / "cmdline").write_text(str(sys.argv), encoding="utf-8")
-        args.smb_mount_directories.append(
-            boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/test-results"),
+        args.shared_mount_directories.append(
+            boot_cheribsd.SharedMount(real_output_dir, readonly=False, in_target="/test-results"),
         )
 
 

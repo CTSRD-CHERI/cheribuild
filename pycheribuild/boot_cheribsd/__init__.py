@@ -203,7 +203,7 @@ class CheriBSDMatchedErrorOutput(CheriBSDCommandFailed):
     pass
 
 
-class SmbMount:
+class SharedMount:
     def __init__(self, hostdir: str, readonly: bool, in_target: str):
         self.readonly = readonly
         self.hostdir = str(Path(hostdir).absolute())
@@ -227,7 +227,7 @@ def parse_smb_mount(arg: str):
     if host.endswith("@ro"):
         host = host[:-3]
         readonly = True
-    return SmbMount(host, readonly, target)
+    return SharedMount(host, readonly, target)
 
 
 if typing.TYPE_CHECKING:
@@ -348,7 +348,7 @@ class CheriBSDInstance(CheriBSDSpawnMixin, pexpect.spawn):
 
 class QemuCheriBSDInstance(CheriBSDInstance):
     EXIT_ON_KERNEL_PANIC = True
-    smb_dirs: "list[SmbMount]" = None
+    shared_dirs: "list[SharedMount]"
     flush_interval = None
 
     def __init__(self, qemu_config: QemuOptions, *args, ssh_port: Optional[int], ssh_pubkey: Optional[Path], **kwargs):
@@ -361,8 +361,8 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         # strip the .pub from the key file
         self._ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
         self.ssh_user = "root"
-        self.smb_dirs = []
-        self.smb_failed = False
+        self.shared_dirs = []
+        self.shared_mount_failed = False
 
     @property
     def ssh_private_key(self):
@@ -893,7 +893,7 @@ def boot_cheribsd(
     write_disk_image_changes: bool,
     expected_kernel_abi: str,
     smp_args: "list[str]",
-    smb_dirs: "Optional[list[SmbMount]]" = None,
+    shared_dirs: "Optional[list[SharedMount]]" = None,
     kernel_init_only=False,
     trap_on_unrepresentable=False,
     skip_ssh_setup=False,
@@ -901,13 +901,13 @@ def boot_cheribsd(
     boot_alternate_kernel_dir: "Optional[Path]" = None,
 ) -> QemuCheriBSDInstance:
     user_network_args = ""
-    if smb_dirs is None:
-        smb_dirs = []
-    if smb_dirs:
-        for d in smb_dirs:
+    if shared_dirs is None:
+        shared_dirs = []
+    if shared_dirs:
+        for d in shared_dirs:
             if not Path(d.hostdir).exists():
                 failure("SMB share directory ", d.hostdir, " doesn't exist!", exit=True)
-        user_network_args += ",smb=" + ":".join(d.qemu_arg for d in smb_dirs)
+        user_network_args += ",smb=" + ":".join(d.qemu_arg for d in shared_dirs)
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
 
@@ -966,7 +966,7 @@ def boot_cheribsd(
         timeout=60,
     )
     # child.logfile=sys.stdout.buffer
-    child.smb_dirs = smb_dirs
+    child.shared_dirs = shared_dirs
     if QEMU_LOGFILE:
         child.logfile = QEMU_LOGFILE.open("w", encoding="utf-8")
     else:
@@ -1154,17 +1154,17 @@ def _do_test_setup(
     test_ld_preload_files: "list[Path]",
     test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
 ):
-    smb_dirs = qemu.smb_dirs
+    shared_dirs = qemu.shared_dirs
     setup_tests_starttime = datetime.datetime.now()
     # Print a backtrace and drop into the debugger on panic
     qemu.run("sysctl debug.debugger_on_panic=1; sysctl debug.trace_on_panic=1")
     # Enable userspace CHERI exception logging to aid debugging
     qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
     if args.enable_coredumps:
-        for smb_dir in smb_dirs:
+        for shared_dir in shared_dirs:
             # If we are mounting /build or /test-results then set kern.corefile to point there:
-            if not smb_dir.readonly and smb_dir.in_target in ["/build", "/test-results"]:
-                qemu.run("sysctl kern.corefile=" + smb_dir.in_target + "/%N.%P.core")
+            if not shared_dir.readonly and shared_dir.in_target in ["/build", "/test-results"]:
+                qemu.run("sysctl kern.corefile=" + shared_dir.in_target + "/%N.%P.core")
                 break
             else:
                 # Otherwise, place coredumps on tmpfs to avoid slowing down the tests.
@@ -1209,8 +1209,8 @@ def _do_test_setup(
         run_host_command(scp_cmd, cwd=str(src))
 
     for archive in test_archives:
-        if smb_dirs:
-            run_host_command(["tar", "xf", str(archive), "-C", str(smb_dirs[0].hostdir)])
+        if shared_dirs:
+            run_host_command(["tar", "xf", str(archive), "-C", str(shared_dirs[0].hostdir)])
         else:
             # Extract to temporary directory and scp over
             with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
@@ -1220,24 +1220,27 @@ def _do_test_setup(
     ld_preload_target_paths = []
     for lib in test_ld_preload_files:
         assert isinstance(lib, Path)
-        if smb_dirs:
-            run_host_command(["mkdir", "-p", str(smb_dirs[0].hostdir) + "/preload"])
-            run_host_command(["cp", "-v", str(lib.absolute()), str(smb_dirs[0].hostdir) + "/preload"])
-            ld_preload_target_paths.append(str(Path(smb_dirs[0].in_target, "preload", lib.name)))
+        if shared_dirs:
+            run_host_command(["mkdir", "-p", str(shared_dirs[0].hostdir) + "/preload"])
+            run_host_command(["cp", "-v", str(lib.absolute()), str(shared_dirs[0].hostdir) + "/preload"])
+            ld_preload_target_paths.append(str(Path(shared_dirs[0].in_target, "preload", lib.name)))
         else:
             qemu.run("mkdir -p /tmp/preload")
             do_scp(str(lib), "/tmp/preload/" + lib.name)
             ld_preload_target_paths.append(str(Path("/tmp/preload", lib.name)))
 
-    for index, d in enumerate(smb_dirs):
+    for index, d in enumerate(shared_dirs):
         qemu.run(f"mkdir -p '{d.in_target}'")
-        mount_command = f"mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{index + 1} '{d.in_target}'"
+        share_name = f"qemu{index + 1}"
         for trial in range(MAX_SMBFS_RETRY if not get_global_config().pretend else 1):  # maximum of 3 trials
             try:
                 checked_run_cheribsd_command(
-                    qemu, mount_command, error_output="unable to open connection: syserr = ", pretend_result=0
+                    qemu,
+                    f"mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name} '{d.in_target}'",
+                    error_output="unable to open connection: syserr = ",
+                    pretend_result=0,
                 )
-                qemu.smb_failed = False
+                qemu.shared_mount_failed = False
                 break
             except CheriBSDMatchedErrorOutput as e:
                 # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
@@ -1252,8 +1255,8 @@ def _do_test_setup(
                     " more time(s)",
                     exit=False,
                 )
-                qemu.smb_failed = True
-                info("Waiting for 2-10 seconds before retrying mount_smbfs...")
+                qemu.shared_mount_failed = True
+                info("Waiting for 2-10 seconds before retrying mount...")
                 if not get_global_config().pretend:
                     time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
 
@@ -1390,16 +1393,15 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument(
+        "--shared-mount-directory",
         "--smb-mount-directory",
         metavar="HOST_PATH:IN_TARGET",
-        help="Share a host directory with the QEMU guest via smb. This option can be passed multiple "
-        "times "
-        "to share more than one directory. The argument should be colon-separated as follows: "
-        "'<HOST_PATH>:<EXPECTED_PATH_IN_TARGET>'. Appending '@ro' to HOST_PATH will cause the "
-        "directory "
-        "to be mapped as a read-only smb share",
+        help="Share a host directory with the QEMU guest via 9pfs/smb. This option can be passed multiple "
+        "times to share more than one directory. The argument should be colon-separated as follows: "
+        "'<HOST_PATH>:<EXPECTED_PATH_IN_TARGET>'. Appending '@ro' to HOST_PATH will cause the directory "
+        "to be mapped as a read-only share.",
         action="append",
-        dest="smb_mount_directories",
+        dest="shared_mount_directories",
         type=parse_smb_mount,
         default=[],
     )
@@ -1547,8 +1549,8 @@ def _main(
         if Path(args.ssh_key).suffix != ".pub":
             failure("--ssh-key should point to the public key and not ", args.ssh_key, exit=True)
     if args.test_archive or args.test_ld_preload:
-        if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
-            failure("--smb-mount-directory is required if ssh is disabled", exit=True)
+        if args.use_smb_instead_of_ssh and not args.shared_mount_directories:
+            failure("--shared-mount-directory is required if ssh is disabled", exit=True)
 
         if args.test_archive:
             info("Using the following test archives: ", args.test_archive)
@@ -1614,7 +1616,7 @@ def _main(
         disk_image=diskimg,
         ssh_port=args.ssh_port,
         ssh_pubkey=Path(args.ssh_key) if args.ssh_key is not None else None,
-        smb_dirs=args.smb_mount_directories,
+        shared_dirs=args.shared_mount_directories,
         kernel_init_only=args.test_kernel_init_only,
         smp_args=["-smp", str(args.qemu_smp)] if args.qemu_smp else [],
         trap_on_unrepresentable=args.trap_on_unrepresentable,

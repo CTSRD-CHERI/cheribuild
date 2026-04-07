@@ -182,24 +182,24 @@ def run_tests_main(
             # We previously mounted the build dir under /build and added a symlink but that breaks tests that try to
             # get at the source directory using a relative path (../../my-srcdir ends up resolving to /my-srcdir).
             path_in_target = build_dir_in_target if build_dir_in_target is not None else args.build_dir
-            args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=path_in_target),
+            args.shared_mount_directories.append(
+                boot_cheribsd.SharedMount(args.build_dir, readonly=False, in_target=path_in_target),
             )
         if should_mount_srcdir or args.source_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
-            args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"),
+            args.shared_mount_directories.append(
+                boot_cheribsd.SharedMount(args.source_dir, readonly=True, in_target="/source"),
             )
         if should_mount_sysroot or args.sysroot_dir:
             args.sysroot_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.sysroot_dir)))
-            args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"),
+            args.shared_mount_directories.append(
+                boot_cheribsd.SharedMount(args.sysroot_dir, readonly=True, in_target="/sysroot"),
             )
         if should_mount_installdir or args.install_destdir:
             args.install_destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.install_destdir)))
             assert args.install_prefix and args.install_prefix[0] == "/"
-            args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(
+            args.shared_mount_directories.append(
+                boot_cheribsd.SharedMount(
                     args.install_destdir + args.install_prefix,
                     readonly=True,
                     in_target=args.install_prefix,
