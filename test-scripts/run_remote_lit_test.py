@@ -95,8 +95,8 @@ def adjust_common_cmdline_args(args: argparse.Namespace):
         shared_tmpdir = Path(args.build_dir, tmpdir_name)
         shared_tmpdir.mkdir(parents=True, exist_ok=True)
         args.shared_tmpdir_local = shared_tmpdir
-        args.smb_mount_directories.append(
-            boot_cheribsd.SmbMount(str(shared_tmpdir), readonly=False, in_target="/shared-tmpdir"),
+        args.shared_mount_directories.append(
+            boot_cheribsd.SharedMount(str(shared_tmpdir), readonly=False, in_target="/shared-tmpdir"),
         )
 
 

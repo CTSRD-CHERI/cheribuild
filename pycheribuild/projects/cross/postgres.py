@@ -133,7 +133,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             locale_dir = self.rootfs_dir / "usr/share/locale"
             self.target_info.run_cheribsd_test_script(
                 "run_postgres_tests.py",
-                "--smb-mount-directory",
+                "--shared-mount-directory",
                 str(self.install_dir) + ":" + str(self.install_prefix),
                 "--locale-files-dir",
                 locale_dir,

@@ -117,7 +117,9 @@ def add_args(parser: argparse.ArgumentParser):
 
 
 def adjust_args(args: argparse.Namespace):
-    args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.cmake_install_dir, readonly=True, in_target="/cmake"))
+    args.shared_mount_directories.append(
+        boot_cheribsd.SharedMount(args.cmake_install_dir, readonly=True, in_target="/cmake")
+    )
     args.junit_xml = get_default_junit_xml_name(args.junit_xml, args.build_dir)
 
 
