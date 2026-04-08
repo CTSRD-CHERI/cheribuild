@@ -45,7 +45,7 @@ import os
 class BuildCheriTestSuite(CrossCompileMakefileProject):
     _always_add_suffixed_targets = True
     _needs_sysroot = True
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)
     dependencies = ("libxo", "morello-muslc", "morello-compiler-rt-builtins")
     make_kind = MakeCommandKind.BsdMake
     repository = GitRepository("git@github.com:CTSRD-CHERI/pffm2-cheritest-wip.git")
@@ -60,7 +60,7 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
         compiler_rt_builtins_build_dir = None
         for d in self.cached_full_dependencies():
             if d.name == "morello-compiler-rt-builtins-linux-morello-purecap":
-                compiler_rt_builtins_build_dir = d.get_or_create_project(CompilationTargets.LINUX_MORELLO_PURECAP, 
+                compiler_rt_builtins_build_dir = d.get_or_create_project(CompilationTargets.CHERI_LINUX_MORELLO_PURECAP, 
                                                                          self.config, self).get_build_dir(self)
                 break
         

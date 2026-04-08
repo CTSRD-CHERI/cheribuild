@@ -40,7 +40,7 @@ from ...utils import classproperty
 
 class BuildLibmd(CrossCompileAutotoolsProject):
     _always_add_suffixed_targets = True
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)
     _can_use_autogen_sh = True
     dependencies = ("morello-muslc",)
     make_kind = MakeCommandKind.GnuMake
