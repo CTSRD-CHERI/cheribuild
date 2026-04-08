@@ -54,6 +54,7 @@ from .project import (
 from .simple_project import BoolConfigOption, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile, MtreePath
+from ..qemu_utils import QemuOptions
 from ..utils import AnsiColour, coloured, include_file, include_local_file
 
 # Notes:
@@ -1091,12 +1092,14 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     target = "disk-image-minimal"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
-    include_boot_kernel = True
-    include_boot_files = True
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_rc_conf_template(self):
             return include_local_file("files/minimal-image/etc/rc.conf.in")
+
+    @property
+    def include_boot_kernel(self) -> bool:
+        return not QemuOptions(self.crosscompile_target).can_boot_kernel_directly
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -1164,10 +1167,6 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
 
         kernel_dir_files = []
-        if self.include_boot_kernel:
-            kernel_dir_files.append("kernel")
-        if self.include_pmc:
-            kernel_dir_files.append("hwpmc.ko")
         if kernel_dir_files:
             for k in self.kernels:
                 kernel_dir = "kernel" if k in ("", "/") else f"kernel.{k}"
@@ -1221,33 +1220,47 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             for test_script in self.ref_mtree.glob("usr/share/examples/cheribsdtest/*"):
                 self.add_from_mtree(self.ref_mtree, test_script)
 
+        self.add_from_mtree(self.ref_mtree, "sbin/kldload")
         if self.include_pmc:
-            self.add_from_mtree(self.ref_mtree, "sbin/kldload")
             self.add_from_mtree(self.ref_mtree, "usr/sbin/pmcstat")
 
         # These dirs seem to be needed
         self.add_from_mtree(self.ref_mtree, "var/db", print_status=self.config.verbose)
         self.add_from_mtree(self.ref_mtree, "var/empty", print_status=self.config.verbose)
 
-        if self.include_boot_files and (self.is_x86 or self.compiling_for_aarch64(include_purecap=True)):
-            # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
-            extra_files = []
-            for root, dirnames, filenames in self.ref_mtree.walk("boot"):
-                for filename in filenames:
-                    new_file = Path(root, filename)
-                    # Don't add kernel modules
-                    if new_file.suffix == ".ko":
-                        # Except for those needed to run tests
-                        if new_file.name not in ("tmpfs.ko", "smbfs.ko", "libiconv.ko", "libmchain.ko", "if_vtnet.ko"):
-                            continue
-                    # Also don't add the kernel with debug info
-                    if new_file.suffix == ".full" and new_file.name.startswith("kernel"):
+        # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit most modules.
+        extra_files = []
+        needed_kernel_modules = [
+            "tmpfs.ko",
+            "smbfs.ko",
+            "libiconv.ko",
+            "libmchain.ko",
+            "if_vtnet.ko",
+            "p9fs.ko",
+            "virtio_p9fs.ko",
+        ]
+        if self.include_pmc:
+            needed_kernel_modules.append("hwpmc.ko")
+        for root, dirnames, filenames in self.ref_mtree.walk("boot"):
+            for filename in filenames:
+                new_file = Path(root, filename)
+                # Don't add kernel modules
+                if new_file.suffix == ".ko":
+                    # Except for those needed to run tests
+                    if new_file.name not in needed_kernel_modules:
                         continue
-                    extra_files.append(new_file)
-                    # Stripping kernel modules makes them unloadable:
-                    # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
-                    self.add_from_mtree(self.ref_mtree, new_file, strip_binaries=False)
-            self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
+                elif not self.include_boot_kernel:
+                    continue  # Kernel/loader not needed for architectures that can boot kernel directly
+                # Also don't add the files with debug info
+                elif new_file.suffix in (".full", ".debug"):
+                    continue
+                extra_files.append(new_file)
+                # Stripping kernel modules makes them unloadable:
+                # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
+                if new_file.parent not in self.ref_mtree:
+                    self.mtree.add_dir(new_file.parent)
+                self.add_from_mtree(self.ref_mtree, new_file, strip_binaries=False)
+        self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))), sep="")
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
     def add_required_libraries(self, libdirs: "list[str]", ignore_required: bool = False):
@@ -1432,12 +1445,6 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
     target = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
     include_boot_kernel = False
-    include_boot_files = False
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.include_boot_kernel = cls.add_bool_option("include-kernel", help="Include /boot/kernel/kernel in MFS")
 
     @property
     def rootfs_only(self):
