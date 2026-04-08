@@ -46,9 +46,6 @@ from .gmp import BuildGmp
 from .mpfr import BuildMpfr
 from ..project import ComputedDefaultValue
 from ...config.target_info import AbstractProject
-from ...utils import OSInfo
-
-
 class BuildGDBBase(CrossCompileAutotoolsProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     repository = GitRepository("git://sourceware.org/git/binutils-gdb.git")
@@ -153,6 +150,29 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             else:
                 self.native_target_prefix = None
 
+            if self.target_info.is_macos():
+                gmp_prefix = self.get_homebrew_prefix("gmp")
+                mpfr_prefix = self.get_homebrew_prefix("mpfr")
+                homebrew_dirs = [gmp_prefix, mpfr_prefix]
+                expat_prefix = self.get_homebrew_prefix("expat", optional=True)
+                if expat_prefix is not None:
+                    homebrew_dirs.append(expat_prefix)
+                self.configure_args.append(f"--with-gmp={gmp_prefix}")
+                self.configure_args.append(f"--with-mpfr={mpfr_prefix}")
+                self.COMMON_FLAGS.extend(["-I" + str(x / "include") for x in homebrew_dirs])
+                self.LDFLAGS.extend(["-L" + str(x / "lib") for x in homebrew_dirs])
+                self.configure_environment["PKG_CONFIG_PATH"] = (
+                    ":".join(str(x / "lib/pkgconfig") for x in homebrew_dirs)
+                    + ":"
+                    + os.getenv("PKG_CONFIG_PATH", "")
+                )
+                # The bundled zlib still treats modern Apple targets like classic Mac OS and
+                # replaces fdopen() with NULL, which breaks when stdio.h later declares fdopen.
+                self.replace_in_file(
+                    self.source_dir / "zlib/zutil.h",
+                    {"#if defined(MACOS) || defined(TARGET_OS_MAC)": "#if defined(MACOS) && !defined(__APPLE__)"},
+                )
+
             if self.target_info.is_freebsd():
                 self.LDFLAGS.append(f"-L{self.target_info.localbase}/lib")  # Expat/GMP are in $LOCALBASE
                 if self.compiling_for_cheri_hybrid():
@@ -211,10 +231,6 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         self.make_args.set_env(**self.configure_environment)
 
     def configure(self, **kwargs):
-        if self.compiling_for_host() and OSInfo.IS_MAC:
-            self.configure_environment.clear()
-            print(self.configure_args)
-            # self.configure_args.clear()
         super().configure()
 
     def compile(self, **kwargs):
