@@ -1248,6 +1248,17 @@ class Project(SimpleProject):
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--append", "--", make_command]
+                # Bear 4.x on macOS uses PATH wrapper executables instead of DYLD_INSERT_LIBRARIES,
+                # so it can only intercept compilers called by bare name (not full path).
+                # Rewrite full-path CC/CXX/CPP env vars to bare names and add their parent dirs to PATH,
+                # so bear's wrappers are used and compiler calls are captured correctly.
+                if OSInfo.IS_MAC:
+                    for var in ("CC", "CXX", "CPP"):
+                        val = options.env_vars.get(var)
+                        if val and Path(val).is_absolute():
+                            compiler_path = Path(val)
+                            options.set_env(PATH=str(compiler_path.parent) + ":" + os.environ.get("PATH", ""))
+                            options.set_env(**{var: compiler_path.name})
             elif self._compiledb_tool == "compiledb":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "make", "--cmd", make_command]
             else:
