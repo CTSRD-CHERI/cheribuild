@@ -1312,7 +1312,18 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libnv.so.1",  # used by libcasper in the service interface
         ]
         # Add the required PAM libraries for su(1)/login(1)
-        for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog", "login_access"):
+        for i in (
+            "group",
+            "lastlog",
+            "login_access",
+            "nologin",
+            "permit",
+            "rootok",
+            "securetty",
+            "self",
+            "unix",
+            "xdg",
+        ):
             required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
 
         # Libraries to include if they exist
@@ -1369,13 +1380,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             else:
                 self.fatal("Could not find required reference mtree file", metalog)
 
-        # Add the additional sysctl configs
-        self.create_file_for_image(
-            "/etc/pam.d/system",
-            mode=0o644,
-            show_contents_non_verbose=False,
-            contents=include_local_file("files/minimal-image/pam.d/system"),
-        )
+        # Add the additional sysctl configs:
         # disable coredumps (since there is almost no space on the image)
         self.create_file_for_image(
             "/etc/sysctl.conf",
