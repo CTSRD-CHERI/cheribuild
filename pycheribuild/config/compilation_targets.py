@@ -927,15 +927,6 @@ class MorelloLinuxTargetInfo(LinuxTargetInfoBase):
     musl_target = "morello-muslc"
     compiler_rt_target = "morello-compiler-rt-builtins"
 
-    @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
-        if target.is_hybrid_or_purecap_cheri():
-            assert target.is_aarch64(
-                include_purecap=True,
-            ), "AArch64 is the only CHERI target supported with the Morello toolchain"
-            return "aarch64-linux-musl_purecap"  # FIXME: this seems wrong for hybrid?
-        return super().triple_for_target(target, config, include_version=include_version)
-
     @property
     def sysroot_dir(self) -> Path:
         sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
