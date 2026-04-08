@@ -95,12 +95,14 @@ set -x
 PATH=/usr/sbin:/bin:/sbin
 export PATH
 
+# Mount devtmpfs before creating subdirectories in /dev
+mount -t devtmpfs none /dev
+
 # Ensure required mount points exist
 mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp /dev
 ln -sf /proc/mounts /etc/mtab
 
 # Mount essential filesystems
-mount -t devtmpfs none /dev
 mount -t proc none /proc
 mount -t devpts none /dev/pts
 mount -t mqueue none /dev/mqueue
