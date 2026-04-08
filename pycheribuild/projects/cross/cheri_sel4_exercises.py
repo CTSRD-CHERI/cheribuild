@@ -317,7 +317,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
             "-M",
             machine,
             "-cpu",
-            "codasip-a730,cheri_levels=2",
+            "codasip-a730",
             "-smp",
             "1",
             *bios_args,

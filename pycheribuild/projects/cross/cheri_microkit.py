@@ -233,7 +233,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
             qemu_cmd += [
                 qemu,
                 "-cpu",
-                "codasip-a730,cheri_pte=on,cheri_levels=2",
+                "codasip-a730",
                 "-m",
                 "2G",
                 "-smp",
