@@ -99,7 +99,7 @@ export PATH
 mount -t devtmpfs none /dev
 
 # Ensure required mount points exist
-mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp /dev
+mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp
 ln -sf /proc/mounts /etc/mtab
 
 # Mount essential filesystems
