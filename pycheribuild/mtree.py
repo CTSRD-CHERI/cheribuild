@@ -206,16 +206,16 @@ class MtreeSubtree(collections.abc.MutableMapping):
             return
         if self.entry is not None and self.entry.attributes["type"] != "dir":
             return
-        files: "list[tuple[str, MtreeSubtree]]" = []
+        files: "list[str]" = []
         dirs: "list[tuple[str, MtreeSubtree]]" = []
         for k, v in self.children.items():
             if v.entry is not None and v.entry.attributes["type"] != "dir":
-                files.append((k, v))
+                files.append(k)
             else:
                 dirs.append((k, v))
-        yield prefix, list([k for k, _ in dirs]), list([k for k, _ in files])
-        for _, v in dirs:
-            yield from v._walk(MtreePath(), prefix)
+        yield prefix, list(k for k, _ in dirs), files
+        for subdir, v in dirs:
+            yield from v._walk(MtreePath(), prefix / subdir)
 
     def walk(self, top) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
         return self._walk(top, MtreePath())
