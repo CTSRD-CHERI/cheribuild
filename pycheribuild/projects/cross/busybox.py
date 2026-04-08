@@ -110,8 +110,8 @@ mount -t cgroup none /sys/fs/cgroup
 mount -t tmpfs none /tmp
 
 # Create special character devices
-mknod -m 600 dev/console c 5 1
-mknod -m 666 dev/null    c 1 3
+mknod -m 600 /dev/console c 5 1
+mknod -m 666 /dev/null    c 1 3
 mknod -m 666 /dev/zero c 1 5
 mknod -m 666 /dev/random c 1 8
 mknod -m 666 /dev/urandom c 1 9
