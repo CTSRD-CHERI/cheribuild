@@ -104,7 +104,7 @@ class BuildLibxo(CrossCompileAutotoolsProject):
 
 
 class BuildRISCVLibxo(BuildLibxo):
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,)
     compiler_rt_dependency = "cheri-std093-compiler-rt-builtins"
     dependencies = ("cheri-std093-libbsd", "cheri-std093-libmd",  
                     "cheri-std093-compiler-rt-builtins", "cheri-std093-muslc")
@@ -112,7 +112,7 @@ class BuildRISCVLibxo(BuildLibxo):
 
 
 class BuildMorelloLibxo(BuildLibxo):
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)
     compiler_rt_dependency = "morello-compiler-rt-builtins"
     dependencies = ("morello-libbsd", "morello-libmd",  
                     "morello-compiler-rt-builtins", "morello-muslc")

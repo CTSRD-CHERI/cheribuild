@@ -133,7 +133,7 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
 
 
 class BuildRISCVCheriTestSuite(BuildCheriTestSuite):
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093, )
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093, )
     compiler_rt_dependency = "cheri-std093-compiler-rt-builtins"
     dependencies = ("cheri-std093-libxo", "cheri-std093-muslc", "cheri-std093-compiler-rt-builtins")
     target = "cheritestsuite"
@@ -155,7 +155,7 @@ class BuildRISCVCheriTestSuite(BuildCheriTestSuite):
 
 
 class BuildMorelloCheriTestSuite(BuildCheriTestSuite):
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)
     compiler_rt_dependency = "morello-compiler-rt-builtins"
     dependencies = ("morello-libxo", "morello-muslc", "morello-compiler-rt-builtins")
     target = "cheritestsuite"

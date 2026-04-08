@@ -101,12 +101,12 @@ index 3f1b3fb..f8cb602 100644
 
 
 class BuildRISCVLibbsd(BuildLibbsd):
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,)
     dependencies = ("cheri-std093-muslc", "cheri-std093-libmd")
     target = 'cheri-std093-libbsd'
 
 
 class BuildMorelloLibbsd(BuildLibbsd):
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)
     dependencies = ("morello-muslc", "morello-libmd")
     target = 'morello-libbsd'
