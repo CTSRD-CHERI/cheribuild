@@ -95,12 +95,14 @@ set -x
 PATH=/usr/sbin:/bin:/sbin
 export PATH
 
+# Mount devtmpfs before creating subdirectories in /dev
+mount -t devtmpfs none /dev
+
 # Ensure required mount points exist
-mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp /dev
+mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp
 ln -sf /proc/mounts /etc/mtab
 
 # Mount essential filesystems
-mount -t devtmpfs none /dev
 mount -t proc none /proc
 mount -t devpts none /dev/pts
 mount -t mqueue none /dev/mqueue
@@ -110,8 +112,8 @@ mount -t cgroup none /sys/fs/cgroup
 mount -t tmpfs none /tmp
 
 # Create special character devices
-mknod -m 600 dev/console c 5 1
-mknod -m 666 dev/null    c 1 3
+mknod -m 600 /dev/console c 5 1
+mknod -m 666 /dev/null    c 1 3
 mknod -m 666 /dev/zero c 1 5
 mknod -m 666 /dev/random c 1 8
 mknod -m 666 /dev/urandom c 1 9

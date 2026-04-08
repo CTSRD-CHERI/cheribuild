@@ -71,9 +71,8 @@ class QemuOptions:
             self.machine_flags = ["-M", "virt"]
             if riscv_cheri_isa is RiscvCheriISA.EXPERIMENTAL_STD093:
                 self._qemu_arch_suffix = self._qemu_arch_suffix = f"riscv{xlen}cheristd"
-                # cheri_levels=2 enables local/global, cheri_pte enables the UCRG feature.
                 cpu_model = "codasip-l730" if xlen == 32 else "codasip-a730"
-                self.machine_flags.extend(["-cpu", f"{cpu_model},cheri_pte=on,cheri_levels=2"])
+                self.machine_flags.extend(["-cpu", f"{cpu_model}"])
             else:
                 self._qemu_arch_suffix = f"riscv{xlen}cheri"
             self.can_boot_kernel_directly = True
