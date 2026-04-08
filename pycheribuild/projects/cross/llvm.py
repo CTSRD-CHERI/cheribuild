@@ -42,7 +42,7 @@ from ...config.compilation_targets import (
     CheriBSDTargetInfo,
     CompilationTargets,
     FreeBSDTargetInfo,
-    LinuxMorelloTargetInfo,
+    MorelloLinuxTargetInfo,
 )
 from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
@@ -402,7 +402,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             self.info(
                 f"Compiler is apple clang {version_str} -- assuming it matches required version {major}.{minor}",
             )
-        elif info.compiler == "gcc":
+        elif info.is_gcc():
             if info.version < (5, 0, 0):
                 self.warning("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
@@ -592,7 +592,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
 
         prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:
-        tgt_info = target.target_info_cls(target, MockProject(self.config, target))
+        tgt_info = target.target_info_cls(target, MockProject(self.config, target))  # pytype: disable=not-instantiable
         assert isinstance(tgt_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
         flags = tgt_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False, default_flags_only=True)
@@ -752,8 +752,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
                 self.config,
                 include_version=False,
             ),
-            LinuxMorelloTargetInfo.triple_for_target(
-                CompilationTargets.LINUX_MORELLO_PURECAP,
+            MorelloLinuxTargetInfo.triple_for_target(
+                CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
                 self.config,
                 include_version=False,
             ),
@@ -790,11 +790,12 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/llvm-project.git",
-        default_branch="codasip-rebased",
         # TODO: Use the previous default once it can build CheriBSD:
         # default_branch="codasip-cheri-riscv",
+        # https://github.com/CHERI-Alliance/llvm-project/pull/18
+        default_branch="cheribsd-rvy-intrinsics-19",
         force_branch=True,
-        temporary_url_override="https://github.com/veselypeta/cherillvm",
+        temporary_url_override="https://github.com/qwattash/cheri-alliance-llvm-project.git",
     )
     default_directory_basename = "cheri-std093-llvm-project"
     target = "cheri-std093-llvm"

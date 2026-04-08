@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 import inspect
-import os
-import re
 import shutil
 import sys
 import typing
@@ -53,7 +51,6 @@ from .project import (
 from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
-from ..processutils import get_program_version
 from ..utils import OSInfo
 
 
@@ -68,6 +65,9 @@ class BuildQEMUBase(AutotoolsProject):
     default_targets: str = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
+    # Work around https://github.com/mesonbuild/meson/issues/6377 in vendored
+    # meson (fixed in meson 0.64.0)
+    lto_compiler_flags_need_linker_flags = True
     smbd_path: Optional[Path]
     qemu_targets: "str"
 
@@ -197,6 +197,22 @@ class BuildQEMUBase(AutotoolsProject):
             self.info("Disabling LTO for ASAN instrumented builds")
         self.use_lto = False
 
+    def _find_non_venv_python_interpreter(self, python_bin: Path) -> Path:
+        # First, check if the python interpreter is a symlink to the real one:
+        if python_bin.is_symlink():
+            python_bin = python_bin.resolve()
+            if not str(python_bin).startswith(sys.prefix):
+                return python_bin  # No longer inside the venv
+        # Otherwise perform a path replacement to find the real one
+        python_bin = Path(sys.executable.replace(sys.prefix, sys.base_prefix))
+        if not python_bin.exists() and python_bin.stem == "python":
+            # If the venv is using python as the executable name, that might not exist
+            # in the real installation directory, but python3
+            python_bin = python_bin.with_stem("python3")
+        if not python_bin.exists():
+            self.fatal(f"Could not resolve venv interpreter {sys.executable}: missing {python_bin}")
+        return python_bin
+
     def setup(self):
         super().setup()
         # Disable some more unneeded things (we don't usually need the GUI frontends)
@@ -233,9 +249,6 @@ class BuildQEMUBase(AutotoolsProject):
         if not self.target_info.is_linux():
             self.configure_args.extend(["--disable-linux-aio", "--disable-kvm"])
 
-        if self.config.verbose:
-            self.make_args.set(V=1)
-
         compiler = self.CC
         ccinfo = self.get_compiler_info(compiler)
         # Turn implicit function declaration into an error and silence some upstream warnings
@@ -247,13 +260,6 @@ class BuildQEMUBase(AutotoolsProject):
                 "-Wno-missing-field-initializers",
             ]
         )
-        if ccinfo.compiler == "gcc":
-            self.common_warning_flags.extend(
-                [
-                    # "-Wno-redundant-decls",  # lots of upstream issues
-                    "-Wno-maybe-uninitialized",  # lots of false positives
-                ]
-            )
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
             self.common_warning_flags.extend(
                 [
@@ -314,23 +320,18 @@ class BuildQEMUBase(AutotoolsProject):
                 "--make=" + self.make_args.command,
             ],
         )
-        python_bin = sys.executable
+        python_bin = Path(sys.executable)
         python_search_path = self.config.dollar_path_with_other_tools
         # Python from a venv cannot be used for QEMU builds, use the base installation instead.
         if sys.prefix != sys.base_prefix:
-            python_bin = sys.executable.replace(sys.prefix, sys.base_prefix)
+            python_bin = self._find_non_venv_python_interpreter(python_bin)
             python_search_path = python_search_path.replace(sys.prefix, sys.base_prefix)
-        py3_version = get_program_version(
-            Path(python_bin),
-            config=self.config,
-            regex=re.compile(rb"Python\s+(\d+)\.(\d+)\.?(\d+)?"),
-        )
         # QEMU tests are not compatible with 3.12 yet, try to use an older version in that case
-        if py3_version >= (3, 12, 0):
+        if sys.version_info >= (3, 12, 0):
             for minor_version in (11, 10, 9):
                 found = shutil.which(f"python3.{minor_version}", path=python_search_path)
                 if found:
-                    python_bin = found
+                    python_bin = Path(found)
                     break
         self.configure_args.append(f"--python={python_bin}")
 
@@ -340,13 +341,17 @@ class BuildQEMUBase(AutotoolsProject):
             # QEMU is not LeakSan clean, disable those checks.
             self.make_args.set_env(UBSAN_OPTIONS="print_stacktrace=1,halt_on_error=1", ASAN_OPTIONS="detect_leaks=0")
         cflags = self.default_compiler_flags("c") + self.CFLAGS
-        cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
+        if ccinfo.compiler != "gcc":
+            # QEMU's configure script adds --extra-cflags to CXXFLAGS and these flags are rejected by g++
+            cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
         self.configure_args.append("--extra-cflags=" + self.commandline_to_str(cflags))
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
             self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
         cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
         cxxflags = self.default_compiler_flags("c++") + self.CXXFLAGS
+        # QEMU's configure script adds --extra-cflags to CXXFLAGS so remove duplicates
+        cxxflags = [flag for flag in cxxflags if flag not in cflags]
         if cxxflags:
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 
@@ -364,7 +369,10 @@ class BuildQEMUBase(AutotoolsProject):
         qemu_targets_option = typing.cast(ConfigOptionHandle, inspect.getattr_static(self, "qemu_targets"))
         if qemu_targets_option.is_default_value:
             if (self.source_dir / "configs/targets/riscv32cheristd-softmmu.mak").exists():
-                chosen_targets += ",riscv32cheristd-softmmu,riscv64cheristd-softmmu"
+                if "riscv32cheristd-softmmu" not in chosen_targets:
+                    chosen_targets += ",riscv32cheristd-softmmu"
+                if "riscv64cheristd-softmmu" not in chosen_targets:
+                    chosen_targets += ",riscv64cheristd-softmmu"
             # Use the new xcheri targets if available:
             if (self.source_dir / "configs/targets/riscv32xcheri-softmmu.mak").exists():
                 chosen_targets = chosen_targets.replace("riscv32cheri-softmmu", "riscv32xcheri-softmmu")
@@ -537,6 +545,10 @@ class BuildQEMU(BuildCheriQEMUBase):
     unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
 
     @classmethod
+    def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        return config.qemu_bindir
+
+    @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         # Always use the CHERI qemu even for plain riscv:
         if xtarget.is_riscv(include_purecap=True):
@@ -563,7 +575,8 @@ class BuildQEMU(BuildCheriQEMUBase):
             binary_name = "qemu-system-arm"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
+
+        return cls.qemu_bindir_for_target(xtarget, config) / binary_name
 
     def setup(self):
         super().setup()
@@ -587,22 +600,17 @@ class BuildQEMU(BuildCheriQEMUBase):
         )
 
 
-class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
+class BuildCheriAllianceQEMU(BuildQEMU):
     target = "cheri-std093-qemu"
-    repository = GitRepository(
-        "https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv.25-03-31", force_branch=True
-    )
+    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
-    default_targets = "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+    default_targets = (
+        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
+        "riscv64-softmmu,riscv64xcheri-softmmu,riscv64cheristd-softmmu,"
+        "riscv32-softmmu,riscv32xcheri-softmmu,riscv32cheristd-softmmu,"
+        "x86_64-softmmu"
+    )
 
     @classmethod
-    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
-        assert xtarget.is_experimental_cheri093_std(config), "Should not be called otherwise"
-        # Always use the CHERI qemu even for plain riscv:
-        if xtarget.is_riscv64(include_purecap=True):
-            binary_name = "qemu-system-riscv64cheri"
-        elif xtarget.is_riscv32(include_purecap=True):
-            binary_name = "qemu-system-riscv32cheri"
-        else:
-            raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.cheri_alliance_qemu_bindir / binary_name
+    def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        return config.cheri_alliance_qemu_bindir

@@ -63,6 +63,7 @@ __all__ = [
     "find_free_port",
     "get_global_config",
     "have_working_internet_connection",
+    "include_file",
     "include_local_file",
     "init_global_config",
     "is_case_sensitive_dir",
@@ -270,13 +271,18 @@ def query_yes_no(
     return str(result).lower().startswith("y")  # anything but y will be treated as false
 
 
+def include_file(file: Path, pretend: bool = True) -> str:
+    if not file.is_file():
+        fatal_error(file, "is missing!", pretend=pretend)
+        return ""
+    with file.open("r", encoding="utf-8") as f:
+        return f.read()
+
+
 @functools.lru_cache(maxsize=20)
 def include_local_file(path: str) -> str:
     file = Path(__file__).parent / path
-    if not file.is_file():
-        fatal_error(file, "is missing!", pretend=False)
-    with file.open("r", encoding="utf-8") as f:
-        return f.read()
+    return include_file(file, pretend=False)
 
 
 def have_working_internet_connection(config: ConfigBase) -> bool:

@@ -661,7 +661,7 @@ class CompilerInfo:
 
     # noinspection PyPep8Naming
     def supports_Og_flag(self) -> bool:  # noqa: N802
-        if self.compiler == "gcc" and self.version > (4, 8, 0):
+        if self.is_gcc() and self.version > (4, 8, 0):
             return True
         if self.compiler == "clang" and self.version > (4, 0, 0):
             return True
@@ -669,24 +669,32 @@ class CompilerInfo:
             return True  # assume version is new enough to be based on clang 4
         return False
 
-    def linker_override_flags(self, linker: Path, linker_type: "Optional[str]" = None) -> "list[str]":
+    def linker_override_flags(self, linker: Path, linker_type: "Optional[str]" = None, for_cflags=False) -> "list[str]":
         if not self.is_clang:
             # GCC only allows you to set the linker type, and doesn't allow absolute paths.
             warning_message("Cannot set absolute path to linker", linker, "when compiling with", self.path)
             return []
         # Clang 12.0 uses --ld-path for absolute paths instead of -fuse-ld (which determines the linker type)
         if self.version < (12, 0, 0):
-            return ["-fuse-ld=" + str(linker)]
-        result = []
-        if linker_type:
-            result.append("-fuse-ld=" + linker_type)
-        if linker.suffix.startswith(".lld"):
-            result.append("-fuse-ld=lld")
-        elif linker.suffix.startswith(".bfd"):
-            result.append("-fuse-ld=bfd")
-        elif linker.suffix.startswith(".gold"):
-            result.append("-fuse-ld=gold")
-        result.append("--ld-path=" + str(linker))
+            result = ["-fuse-ld=" + str(linker)]
+        else:
+            result = []
+            if linker_type:
+                result.append("-fuse-ld=" + linker_type)
+            if linker.suffix.startswith(".lld"):
+                result.append("-fuse-ld=lld")
+            elif linker.suffix.startswith(".bfd"):
+                result.append("-fuse-ld=bfd")
+            elif linker.suffix.startswith(".gold"):
+                result.append("-fuse-ld=gold")
+            result.append("--ld-path=" + str(linker))
+        # Make sure these don't affect -Werror nor configure scripts probing warnings
+        if for_cflags:
+            # Clang 14 introduced --start/end-no-unused-arguments to scope the suppression
+            if self.version < (14, 0, 0):
+                result.append("-Qunused-arguments")
+            else:
+                result = ["--start-no-unused-arguments", *result, "--end-no-unused-arguments"]
         return result
 
     def get_matching_binutil(self, binutil) -> Optional[Path]:
@@ -720,6 +728,9 @@ class CompilerInfo:
     @property
     def is_apple_clang(self):
         return self.compiler == "apple-clang"
+
+    def is_gcc(self):
+        return self.compiler == "gcc"
 
     def __repr__(self) -> str:
         return "{} ({} {})".format(self.path, self.compiler, ".".join(map(str, self.version)))
@@ -830,7 +841,7 @@ def get_program_version(
     program: Path,
     command_args: "Optional[Iterable[str]]" = None,
     component_kind: "type[Type_T]" = int,
-    regex=None,
+    regex: "bytes | re.Pattern[bytes] | None" = None,
     program_name: Optional[bytes] = None,
     *,
     config: ConfigBase,
@@ -842,21 +853,18 @@ def get_program_version(
     except subprocess.CalledProcessError as e:
         fatal_error("Failed to determine version for", program, ":", e, pretend=config.pretend)
         return 0, 0, 0
-    return extract_version(stdout, component_kind, regex, program_name)
-
-
-# extract the version component from program output such as "git version 2.7.4"
-def extract_version(
-    output: bytes,
-    component_kind: "type[Type_T]" = int,
-    regex: "Optional[typing.Pattern]" = None,
-    program_name: bytes = b"",
-) -> "tuple[Type_T, ...]":
     if regex is None:
         prefix = re.escape(program_name) + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
     elif isinstance(regex, bytes):
         regex = re.compile(regex)
+    return extract_version(stdout, regex, component_kind)
+
+
+# extract the version component from program output such as "git version 2.7.4"
+def extract_version(
+    output: bytes, regex: "re.Pattern[bytes]", component_kind: "type[Type_T]" = int
+) -> "tuple[Type_T, ...]":
     match = regex.search(output)
     if not match:
         print(output)

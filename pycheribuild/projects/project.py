@@ -606,7 +606,7 @@ class Project(SimpleProject):
             not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))
         ):
             return True
-        return self.compiling_for_host() and ccinfo.compiler == "gcc"
+        return self.compiling_for_host() and ccinfo.is_gcc()
 
     def can_use_thinlto(self, ccinfo: CompilerInfo) -> bool:
         # ThinLTO requires Clang+LLD or Apple Clang+Apple ld.
@@ -628,6 +628,7 @@ class Project(SimpleProject):
         super().check_system_dependencies()
 
     lto_by_default: bool = False  # Don't default to LTO
+    lto_compiler_flags_need_linker_flags: bool = False  # Include LTO-specific LDFLAGS in CFLAGS
     prefer_full_lto_over_thin_lto: bool = False  # If LTO is enabled, use LLVM's ThinLTO by default
     lto_set_ld: bool = True
     default_build_type: BuildType = BuildType.DEFAULT
@@ -821,7 +822,7 @@ class Project(SimpleProject):
             return []
         elif cbt == BuildType.DEBUG:
             # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
-            if self.get_compiler_info(self.CC).compiler == "gcc" or self.use_asan:
+            if self.get_compiler_info(self.CC).is_gcc() or self.use_asan:
                 return ["-Og"]
             return ["-O0"]
         elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
@@ -1162,6 +1163,8 @@ class Project(SimpleProject):
             lld = ccinfo.get_matching_binutil("ld.lld")
             # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
             self._lto_linker_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld"))
+            if self.lto_compiler_flags_need_linker_flags:
+                self._lto_compiler_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld", for_cflags=True))
             if not llvm_ar or not llvm_ranlib or not llvm_nm:
                 self.warning(
                     "Could not find llvm-{ar,ranlib,nm}" + version_suffix,
@@ -2016,6 +2019,7 @@ class AutotoolsProject(Project):
     do_not_add_to_targets: bool = True
     _configure_supports_prefix: bool = True
     _can_use_autogen_sh = True  # Whether autogen.sh can be used to create ./configure
+    _verbose_make_uses_v_eq_1 = True  # verbose build output can be enabled using V=1
     make_kind: MakeCommandKind = MakeCommandKind.GnuMake
     add_host_target_build_config_options: bool = True
 
@@ -2052,9 +2056,9 @@ class AutotoolsProject(Project):
                 # When compiling natively on CheriBSD, most autotools projects don't like the inferred config.guess
                 # value of aarch64c-unknown-freebsd14.0. Override it to make this work in most cases.
                 self.configure_args.extend(["--build=" + buildhost])
-        if self.config.verbose:
-            # Most autotools-base projects enable verbose output by setting V=1
-            self.make_args.set_env(V=1)
+        # Most autotools-base projects enable verbose output by setting V=1.
+        if self.config.verbose and self._verbose_make_uses_v_eq_1:
+            self.make_args.set(V=1)
 
     def configure(self, **kwargs) -> None:
         if self._configure_supports_prefix:

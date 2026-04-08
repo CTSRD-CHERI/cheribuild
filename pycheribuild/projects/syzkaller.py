@@ -163,7 +163,7 @@ class RunSyzkaller(SimpleProject):
         "ssh-privkey",
         show_help=True,
         default=ComputedDefaultValue[Path](
-            function=lambda config, project: (config.source_root / "extra-files" / "syzkaller_id_rsa"),
+            function=lambda config, project: config.source_root / "extra-files" / "syzkaller_id_rsa",
             as_string="$SOURCE_ROOT/extra-files/syzkaller_id_rsa",
         ),
         help="A directory with additional files that will be added to the image",
@@ -173,7 +173,7 @@ class RunSyzkaller(SimpleProject):
         "workdir",
         show_help=True,
         default=ComputedDefaultValue[Path](
-            function=lambda config, project: (config.output_root / "syzkaller-workdir"),
+            function=lambda config, project: config.output_root / "syzkaller-workdir",
             as_string="$OUTPUT_ROOT/syzkaller-workdir",
         ),
         help="Working directory for syzkaller output.",
@@ -197,7 +197,11 @@ class RunSyzkaller(SimpleProject):
             qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
             kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
             kernel_config = CheriBSDConfigTable.get_configs(
-                xtarget, platform=ConfigPlatform.QEMU, kernel_abi=kernel_project.get_default_kernel_abi(), fuzzing=True
+                self.config,
+                xtarget,
+                platform=ConfigPlatform.QEMU,
+                kernel_abi=kernel_project.get_default_kernel_abi(),
+                fuzzing=True,
             )
             if len(kernel_config) == 0:
                 self.fatal("No kcov kernel configuration found")

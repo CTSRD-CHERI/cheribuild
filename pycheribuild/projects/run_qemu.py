@@ -66,7 +66,6 @@ def get_default_ssh_forwarding_port(addend: int):
 class QEMUType(Enum):
     DEFAULT = "default"
     CHERI = "cheri"
-    MORELLO = "morello"
     UPSTREAM = "upstream"
     SYSTEM = "system"
     CUSTOM = "custom"
@@ -324,7 +323,7 @@ class LaunchQEMUBase(SimpleProject):
             if cls.use_qemu == QEMUType.DEFAULT:
                 qemu_class = supported_qemu_classes[0]
                 qemu_binary = None
-            elif cls.use_qemu in (QEMUType.CHERI, QEMUType.MORELLO, QEMUType.UPSTREAM):
+            elif cls.use_qemu in (QEMUType.CHERI, QEMUType.UPSTREAM):
                 qemu_class = {
                     QEMUType.CHERI: BuildQEMU,
                     QEMUType.UPSTREAM: BuildUpstreamQEMU,
@@ -540,9 +539,8 @@ class LaunchQEMUBase(SimpleProject):
             add_smb_or_9p_dir(self.rootfs_path, "/rootfs", share_name="rootfs", readonly=False)
 
         if self.forward_ssh_port:
-            user_network_options += ",hostfwd=tcp::" + str(self.ssh_forwarding_port) + "-:22"
-            # bind the qemu ssh port to the hosts port
-            # qemu_command += ["-redir", "tcp:" + str(self.ssh_forwarding_port) + "::22"]
+            # Bind the qemu ssh port to the host port (listening on localhost):
+            user_network_options += ",hostfwd=tcp:127.0.0.1:" + str(self.ssh_forwarding_port) + "-:22"
             print(
                 coloured(
                     AnsiColour.green, "\nListening for SSH connections on localhost:", self.ssh_forwarding_port, sep=""

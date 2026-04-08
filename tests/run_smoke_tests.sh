@@ -80,3 +80,5 @@ try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --build --cpu=cher
 try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --build --test --tarball --cpu=cheri128 -p llvm-native
 try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --build --test --tarball --cpu=cheri128 -p llvm-native --without-sdk
 try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --cpu=cheri128 --test run-minimal-riscv64-purecap --keep-install-dir --install-prefix=/rootfs --cheribsd/build-fpga-kernels --no-clean -p
+# Previously failed with: RuntimeError: Instantiating target gmp-riscv64-hybrid before run()!
+try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --build gdb-riscv64-hybrid --sysroot-install-dir-targets="gmp-riscv64-hybrid mpfr-riscv64-hybrid" -p

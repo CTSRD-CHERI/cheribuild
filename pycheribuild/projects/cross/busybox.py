@@ -35,6 +35,7 @@ from ..project import (
     GitRepository,
     MakeCommandKind,
 )
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
@@ -43,10 +44,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     target = "busybox"
     repository = GitRepository("https://git.busybox.net/busybox/")
     is_sdk_target = False
-    _supported_architectures = (
-        CompilationTargets.LINUX_RISCV64,
-        CompilationTargets.LINUX_AARCH64,
-    )
+    _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
 
@@ -55,8 +53,6 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         return DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self) -> None:
-        if self.config.verbose:
-            self.make_args.set(V=True)
         super().setup()
 
         if self.crosscompile_target.is_riscv(include_purecap=True):
@@ -95,24 +91,39 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         script = f"""#!/bin/sh
 # Minimal init script to replace the C init
 set -x
-echo ">>> /init: starting OK"
 
 PATH=/usr/sbin:/bin:/sbin
 export PATH
 
-echo "Hello from BusyBox"
-
 # Ensure required mount points exist
-mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
+mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp /dev
 ln -sf /proc/mounts /etc/mtab
 
 # Mount essential filesystems
+mount -t devtmpfs none /dev
 mount -t proc none /proc
 mount -t devpts none /dev/pts
 mount -t mqueue none /dev/mqueue
 mount -t tmpfs none /dev/shm
 mount -t sysfs none /sys
 mount -t cgroup none /sys/fs/cgroup
+mount -t tmpfs none /tmp
+
+# Create special character devices
+mknod -m 600 dev/console c 5 1
+mknod -m 666 dev/null    c 1 3
+mknod -m 666 /dev/zero c 1 5
+mknod -m 666 /dev/random c 1 8
+mknod -m 666 /dev/urandom c 1 9
+
+# Attach stdio to kernel console
+if [ -c /dev/console ]; then
+    exec </dev/console >/dev/console 2>&1
+fi
+
+# We can use the console from now on
+echo ">>> /init: starting OK"
+echo "Hello from BusyBox"
 
 # Set hostname
 hostname {hostname}
@@ -160,6 +171,12 @@ done
     def install(self, **kwargs) -> None:
         self.run_make_install()
         root = self.install_dir / "rootfs"
+
+        # If busybox is dynamically linked, we need to install the libc.so in Busybox' rootfs
+        libc_so = self.install_dir / "lib/libc.so"
+        if libc_so.exists():
+            self.install_file(libc_so, self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1")
+
         self.write_busybox_init(
             self.install_dir / "rootfs/init",
             hostname="cheribuild-linux",
@@ -172,7 +189,8 @@ done
 class BuildMorelloBusyBox(BuildBusyBox):
     target = "morello-busybox"
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+    _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
 
     def setup(self) -> None:
         super().setup()
@@ -195,3 +213,14 @@ class BuildMorelloBusyBox(BuildBusyBox):
             prompt="MORELLO",
         )
         super().install(**kwargs)
+
+
+class BuildAllianceBusyBox(BuildBusyBox):
+    target = "cheri-std093-busybox"
+    repository = GitRepository("https://github.com/CHERI-Alliance/busybox.git")
+    _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
+    _default_architecture = CompilationTargets.CHERI_LINUX_MORELLO_PURECAP
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+
+    def configure(self) -> None:
+        self.run_make("morello_busybox_defconfig", cwd=self.source_dir)

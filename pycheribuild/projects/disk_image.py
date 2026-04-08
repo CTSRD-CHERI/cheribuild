@@ -39,7 +39,7 @@ from pathlib import Path, PurePath
 from typing import Optional, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
-from .cross.gdb import BuildKGDB, get_build_gdb_class
+from .cross.gdb import BuildKGDB, get_build_gdb_class, get_gdb_xtarget
 from .project import (
     AutotoolsProject,
     CheriConfig,
@@ -54,7 +54,7 @@ from .project import (
 from .simple_project import BoolConfigOption, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile, MtreePath
-from ..utils import AnsiColour, coloured, include_local_file
+from ..utils import AnsiColour, coloured, include_file, include_local_file
 
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
@@ -168,7 +168,7 @@ class BuildDiskImageBase(SimpleProject):
         cls.extra_files_dir = cls.add_path_option(
             "extra-files",
             show_help=True,
-            default=lambda config, project: (config.source_root / ("extra-files" + extra_files_suffix)),
+            default=lambda config, project: config.source_root / ("extra-files" + extra_files_suffix),
             help="A directory with additional files that will be added to the "
             "image (default: "
             "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
@@ -570,8 +570,7 @@ class BuildDiskImageBase(SimpleProject):
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
         cross_target = self.source_project.crosscompile_target
-        if cross_target.is_cheri_purecap():
-            cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
+        cross_target = get_gdb_xtarget(cross_target, self.config)
         gdb_cls = get_build_gdb_class(cross_target, self.config)
         if cross_target not in gdb_cls.supported_architectures():
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
@@ -1118,6 +1117,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             default=[""],
             help="Kernel(s) to include in the image; empty string or '/' for /boot/kernel/, X for /boot/kernel.X/",
         )
+        cls.extra_files_lists = cls.add_list_option(
+            "extra-files-lists",
+            help="Files containing a list of files from the full rootfs to include in the minimal image",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1172,6 +1175,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                     files_to_add.append(f"boot/{kernel_dir}/{f}")
         elif self.kernels is not None:
             self.warning("This disk image is not installing kernels or modules, yet kernel names given.")
+
+        files_to_add += [include_file(Path(file)) for file in self.extra_files_lists]
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
@@ -1448,7 +1453,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         xtarget = cls.get_crosscompile_target()
-        gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
+        gdb_xtarget = get_gdb_xtarget(xtarget, config)
         gdb_cls = get_build_gdb_class(gdb_xtarget, config)
         if gdb_xtarget in gdb_cls.supported_architectures():
             result += (gdb_cls.get_class_for_target(gdb_xtarget).target,)

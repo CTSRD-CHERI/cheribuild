@@ -453,7 +453,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         self.skip_dependency_filters: "list[re.Pattern]" = loader.add_commandline_only_list_option(
             "skip-dependency-filter",
             group=loader.dependencies_group,
-            element_type=lambda s: re.compile(s),
+            element_type=re.compile,
             action="append",
             metavar="REGEX",
             help="A regular expression to match against to target names that should be skipped when using"
@@ -673,7 +673,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "test suites on the remote board instead of QEMU.",
         )
 
-        self.targets: "Optional[list[str]]" = None
+        self.targets: "list[str]" = []
         self.__optional_properties = [
             "internet_connection_last_checked_at",
             "start_after",

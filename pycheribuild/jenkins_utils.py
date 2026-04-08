@@ -34,7 +34,7 @@ from typing import Optional
 from .config.jenkinsconfig import CheriConfig, JenkinsConfig
 from .config.loader import CommandLineConfigOption
 from .config.target_info import CrossCompileTarget
-from .projects.project import Project
+from .projects.project import ComputedDefaultValue, Project
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import fatal_error, status_update
 
@@ -64,14 +64,18 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         if target.xtarget.is_native():
             fatal_error("Cannot use non-existent sysroot for native target", target.name, pretend=False)
 
-    def expected_install_root(tgt: Target) -> Path:
+    def expected_install_root(tgt: Target, as_template=False) -> Path:
         if tgt in sysroot_targets:
+            if as_template:
+                return Path("$SYSROOT")
             # noinspection PyProtectedMember
             proj = tgt._get_or_create_project_no_setup(cross_target=None, config=cheri_config, caller=None)
             target_info = proj.target_info
             sysroot_dir = target_info.sysroot_dir
             return sysroot_dir
         else:
+            if as_template:
+                return Path("$OUTPUT_ROOT")
             return cheri_config.output_root
 
     def expected_install_prefix(tgt: Target) -> Path:
@@ -82,14 +86,17 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         else:
             return install_prefix_arg
 
-    def expected_install_path(tgt: Target) -> Path:
-        root_dir = expected_install_root(tgt)
+    def expected_install_path(tgt: Target, as_template=False) -> Path:
+        root_dir = expected_install_root(tgt, as_template)
         install_prefix = expected_install_prefix(tgt)
         return Path(f"{root_dir}{install_prefix}")
 
     for target in all_targets:
         cls = target.project_class
-        cls._default_install_dir_fn = expected_install_path(target)
+        cls._default_install_dir_fn = ComputedDefaultValue(
+            function=lambda config, project: expected_install_path(target),
+            as_string=str(expected_install_path(target, True)),
+        )
 
     Target.instantiating_targets_should_warn = False
     # Now that we have set the _install_dir member, override the prefix/destdir after instantiating.

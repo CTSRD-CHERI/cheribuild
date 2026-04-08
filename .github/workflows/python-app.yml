@@ -10,8 +10,9 @@ on:
         branches: [ main ]
 
 env:
-    RUFF_VERSION: 0.14.0
-    PYREFLY_VERSION: 0.37.0
+    RUFF_VERSION: 0.15.9
+    PYREFLY_VERSION: 0.59.1
+    TY_VERSION: 0.0.28
 
 jobs:
     build-docker:
@@ -43,7 +44,7 @@ jobs:
                     python3 --version
                     # Don't upgrade pip.  It currently fails to uninstall.
                     # python3 -m pip install --break-system-packages --upgrade pip
-                    python3 -m pip install --break-system-packages --upgrade pre-commit ruff==${{ env.RUFF_VERSION }} pyrefly==${{ env.PYREFLY_VERSION }}
+                    python3 -m pip install --break-system-packages --upgrade pre-commit ruff==${{ env.RUFF_VERSION }} pyrefly==${{ env.PYREFLY_VERSION }} ty==${{ env.TY_VERSION }}
                     python3 -m pip install --break-system-packages -r requirements.txt
             -   name: Lint with flake8
                 run: flake8
@@ -51,6 +52,8 @@ jobs:
                 run: ruff check .
             -   name: Type check with pyrefly ${{ env.PYREFLY_VERSION }}
                 run: pyrefly check
+            -   name: Type check with ty ${{ env.TY_VERSION }}
+                run: ty check
             -   name: Run pre-commit checks
                 run: pre-commit run --all-files
             -   name: Run basic regression tests
