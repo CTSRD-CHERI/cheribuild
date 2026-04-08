@@ -258,7 +258,7 @@ class MtreeFile:
                     # when installing in parallel. Ignore those duplicates by default since it makes the output
                     # rather noisy. There are also a few duplicate files (mostly in /etc), so suppress it for all
                     # duplicates (in non-verbose mode) until the build system has been fixed
-                    if self.verbose:  # TODO: or entry.attributes.get("type") != "dir"
+                    if self.verbose and entry.attributes.get("type") != "dir":
                         warning_message("Found duplicate definition for", entry.path)
                 self._mtree[key] = entry
             except Exception as e:
