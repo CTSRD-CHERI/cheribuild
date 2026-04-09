@@ -55,7 +55,7 @@ from typing import Callable, Optional, Union
 from ..colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
-from ..qemu_utils import QemuOptions
+from ..qemu_utils import QemuOptions, qemu_supports_9pfs
 from ..utils import ConfigBase, find_free_port, get_global_config, init_global_config
 
 _cheribuild_root = Path(__file__).parent.parent.parent
@@ -208,6 +208,7 @@ class SharedMount:
         self.readonly = readonly
         self.hostdir = str(Path(hostdir).absolute())
         self.in_target = in_target
+        self.mounted = False
 
     @property
     def qemu_arg(self):
@@ -363,6 +364,8 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         self.ssh_user = "root"
         self.shared_dirs = []
         self.shared_mount_failed = False
+        self.can_use_p9fs = True
+        self.can_use_smb = True
 
     @property
     def ssh_private_key(self):
@@ -884,7 +887,7 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
 
 def boot_cheribsd(
     qemu_options: QemuOptions,
-    qemu_command: Optional[Path],
+    qemu_command: Path,
     kernel_image: Path,
     disk_image: Optional[Path],
     ssh_port: Optional[int],
@@ -901,12 +904,18 @@ def boot_cheribsd(
     boot_alternate_kernel_dir: "Optional[Path]" = None,
 ) -> QemuCheriBSDInstance:
     user_network_args = ""
+    extra_qemu_args = []
     if shared_dirs is None:
         shared_dirs = []
     if shared_dirs:
-        for d in shared_dirs:
+        for idx, d in enumerate(shared_dirs):
             if not Path(d.hostdir).exists():
-                failure("SMB share directory ", d.hostdir, " doesn't exist!", exit=True)
+                failure("Shared directory ", d.hostdir, " doesn't exist!", exit=True)
+            if qemu_supports_9pfs(qemu_command, config=get_global_config()):
+                virtfs_arg = f"local,id=virtfs{idx + 1},mount_tag=qemu{idx + 1},path={d.hostdir},security_model=none"
+                if d.readonly:
+                    virtfs_arg += ",readonly=on"
+                extra_qemu_args.extend(["-virtfs", virtfs_arg])
         user_network_args += ",smb=" + ":".join(d.qemu_arg for d in shared_dirs)
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
@@ -930,6 +939,7 @@ def boot_cheribsd(
         add_virtio_rng=True,  # faster entropy gathering
     )
     qemu_args.extend(smp_args)
+    qemu_args.extend(extra_qemu_args)
     kernel_commandline = []
     if qemu_options.can_boot_kernel_directly and kernel_image and boot_alternate_kernel_dir:
         kernel_commandline.append(f"kern.module_path={boot_alternate_kernel_dir}")
@@ -1229,36 +1239,34 @@ def _do_test_setup(
             do_scp(str(lib), "/tmp/preload/" + lib.name)
             ld_preload_target_paths.append(str(Path("/tmp/preload", lib.name)))
 
+    # List all available file system modules to check for 9P availability
+    run_cheribsd_command(qemu, "find $(sysctl -n kern.module_path | tr ';' ' ') -maxdepth 1 -name \"*fs.ko\" -print")
+
     for index, d in enumerate(shared_dirs):
         qemu.run(f"mkdir -p '{d.in_target}'")
         share_name = f"qemu{index + 1}"
-        for trial in range(MAX_SMBFS_RETRY if not get_global_config().pretend else 1):  # maximum of 3 trials
+        # Try p9fs first but if it fails, fall back to using SMBv1
+        assert d.mounted is False
+        if qemu.can_use_p9fs:
             try:
+                ro_flag = ",ro" if d.readonly else ""
                 checked_run_cheribsd_command(
                     qemu,
-                    f"mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name} '{d.in_target}'",
-                    error_output="unable to open connection: syserr = ",
-                    pretend_result=0,
+                    f"kldload -n virtio_p9fs && mount -t p9fs -o trans=virtio{ro_flag} {share_name} '{d.in_target}'",
+                    pretend_result=1,
                 )
-                qemu.shared_mount_failed = False
-                break
-            except CheriBSDMatchedErrorOutput as e:
-                # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
-                # running on the same jenkins slaves so one of them might time out
-                failure(
-                    "QEMU SMBD failed to mount ",
-                    d.in_target,
-                    " after ",
-                    e.execution_time.total_seconds(),
-                    " seconds. Trying ",
-                    (MAX_SMBFS_RETRY - trial - 1),
-                    " more time(s)",
-                    exit=False,
-                )
-                qemu.shared_mount_failed = True
-                info("Waiting for 2-10 seconds before retrying mount...")
-                if not get_global_config().pretend:
-                    time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
+                qemu.can_use_smb = False  # p9fs succeeded once, we should use it for all mounts
+                d.mounted = True
+            except CheriBSDCommandFailed:
+                # Fallback to smbfs on this iteration and don't try p9fs again
+                qemu.can_use_p9fs = False
+                info("9P mount failed, falling back to SMB mount.")
+        if qemu.can_use_smb:
+            if not mount_via_smb(d, qemu, share_name):
+                qemu.can_use_smb = False
+        if not d.mounted:
+            qemu.shared_mount_failed = True
+            failure(f"Failed to mount host directory {d.hostdir}.", exit=False)
 
     if test_archives and not get_global_config().pretend:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
@@ -1286,6 +1294,37 @@ def _do_test_setup(
         setup_tests_starttime = datetime.datetime.now()
         test_setup_function(qemu, args)
         success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
+
+
+def mount_via_smb(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -> bool:
+    for trial in range(MAX_SMBFS_RETRY if not get_global_config().pretend else 1):  # maximum of 3 trials
+        try:
+            checked_run_cheribsd_command(
+                qemu,
+                f"mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name} '{d.in_target}'",
+                error_output="unable to open connection: syserr = ",
+                pretend_result=0,
+            )
+            d.mounted = True
+            return True
+        except CheriBSDMatchedErrorOutput as e:
+            # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
+            # running on the same jenkins slaves so one of them might time out
+            d.mounted = False
+            failure(
+                "QEMU SMBD failed to mount ",
+                d.in_target,
+                " after ",
+                e.execution_time.total_seconds(),
+                " seconds. Trying ",
+                (MAX_SMBFS_RETRY - trial - 1),
+                " more time(s)",
+                exit=False,
+            )
+            info("Waiting for 2-10 seconds before retrying mount...")
+            if not get_global_config().pretend:
+                time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
+    return False
 
 
 def runtests(
