@@ -364,7 +364,8 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         self.ssh_user = "root"
         self.shared_dirs = []
         self.shared_mount_failed = False
-        self.can_use_p9fs = True
+        # 9pfs is not usable for tests yet: https://github.com/CTSRD-CHERI/cheribsd/issues/2617
+        self.can_use_p9fs = False
         self.can_use_smb = True
 
     @property
