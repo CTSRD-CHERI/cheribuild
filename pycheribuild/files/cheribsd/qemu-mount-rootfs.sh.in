@@ -1,19 +1,41 @@
 #!/bin/sh
 set -xe
-kind="${{1:-smb}}"
+
+mount_9pfs() {{
+    kldload -n virtio_p9fs
+    mount -t p9fs -o trans=virtio "$1" "$2"
+}}
+
+mount_qemu_share() {{
+    if [ "$kind" = "9p" ]; then
+        mount_9pfs "$1" "$2"
+    elif [ "$kind" = "smb" ]; then
+        mount_smbfs -I 10.0.2.4 -N "//10.0.2.4/$1" "$2"
+    else
+        # auto (or anything else)
+        if mount_9pfs "$1" "$2"; then
+            export kind="9p"
+        else
+            mount_smbfs -I 10.0.2.4 -N "//10.0.2.4/$1" "$2"
+        fi
+    fi
+
+}}
+
+kind="${{1:-auto}}"
 if [ -n "$(ls -A "/nfsroot")" ]; then
     echo "/nfsroot is not empty. Already mounted?"
     exit 0
 fi
 
-if [ "$kind" = "smb" ]; then
+if [ "$kind" = "smb" ] || [ "$kind" = "9p" ] || [ "$kind" = "auto" ]; then
     # rootfs is provided as the fourth SMB mount, but we now have named smb mounts:
-    mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/rootfs /nfsroot
+    mkdir -p /nfsroot && mount_qemu_share rootfs /nfsroot
     # Also try mounting the non-cheri/hybrid/purecap rootfs
     if [ -n "$(ls -A "/outputroot")" ]; then
         echo "/outputroot is not empty. Already mounted?"
     else
-        mkdir -p /outputroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/output_root /outputroot
+        mkdir -p /outputroot && mount_qemu_share output_root /outputroot
     fi
     test -L /nfsroot-nocheri || ln -sfnv "/outputroot/{NOCHERI_ROOTFS_DIRNAME}" /nfsroot-nocheri
     test -L /nfsroot-hybrid  || ln -sfnv "/outputroot/{HYBRID_ROOTFS_DIRNAME}" /nfsroot-hybrid
@@ -21,7 +43,7 @@ if [ "$kind" = "smb" ]; then
 elif [ "$kind" = "nfs" ]; then
     mkdir -p /nfsroot && mount "10.0.2.2:{ROOTFS_DIR}" /nfsroot/
 else
-    echo "usage: $0 [smb|nfs]"
+    echo "usage: $0 [auto|smb|9p|nfs]"
 fi
 # I previously mounted this in /rootfs but that is annoying because tab completion
 # will give /root first. Use /nfsroot instead and add a symlink for the old path.
