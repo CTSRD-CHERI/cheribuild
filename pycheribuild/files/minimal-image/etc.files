@@ -18,6 +18,7 @@ etc/network.subr
 etc/newsyslog.conf
 etc/pam.d/login
 etc/pam.d/passwd
+etc/pam.d/other
 etc/pam.d/sshd
 etc/pam.d/su
 etc/pam.d/system
