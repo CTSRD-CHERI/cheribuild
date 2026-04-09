@@ -492,7 +492,7 @@ class BuildDiskImageBase(SimpleProject):
         kyua_config_path = "etc/kyua/kyua.conf"
         kyua_config = self.rootfs_dir / kyua_config_path
         if not kyua_config.exists():
-            self.info("SSHD not installed, not changing sshd_config")
+            self.info("Kyua not installed, not changing kyua config")
         else:
             self.info("Adding kyua configuration variables for CI to", kyua_config.relative_to(self.rootfs_dir))
             # make sure we can login as root with pubkey auth:
@@ -1225,8 +1225,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             self.add_from_mtree(self.ref_mtree, "usr/sbin/pmcstat")
 
         # These dirs seem to be needed
-        self.add_from_mtree(self.ref_mtree, "var/db", print_status=self.config.verbose)
-        self.add_from_mtree(self.ref_mtree, "var/empty", print_status=self.config.verbose)
+        for d in ("var/db", "var/empty", "var/log"):
+            self.add_from_mtree(self.ref_mtree, d, print_status=self.config.verbose)
 
         # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit most modules.
         extra_files = []
