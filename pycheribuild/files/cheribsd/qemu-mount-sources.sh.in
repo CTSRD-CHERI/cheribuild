@@ -1,17 +1,39 @@
 #!/bin/sh
 set -xe
-kind="${{1:-smb}}"
+
+mount_9pfs() {{
+    kldload -n virtio_p9fs
+    mount -t p9fs -o trans=virtio,ro "$1" "$2"
+}}
+
+mount_qemu_share() {{
+    if [ "$kind" = "9p" ]; then
+        mount_9pfs "$1" "$2"
+    elif [ "$kind" = "smb" ]; then
+        mount_smbfs -I 10.0.2.4 -N "//10.0.2.4/$1" "$2"
+    else
+        # auto (or anything else)
+        if mount_9pfs "$1" "$2"; then
+            export kind="9p"
+        else
+            mount_smbfs -I 10.0.2.4 -N "//10.0.2.4/$1" "$2"
+        fi
+    fi
+
+}}
+
+kind="${{1:-auto}}"
 if [ -n "$(ls -A "{SRCPATH}")" ]; then
     echo "{SRCPATH} is not empty. Already mounted?"
     exit 0
 fi
 
-if [ "$kind" = "smb" ]; then
+if [ "$kind" = "smb" ] || [ "$kind" = "9p" ] || [ "$kind" = "auto" ]; then
     # rootfs is provided as the first SMB mount, but we now have named smb mounts:
-    # mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu1 /nfsroot
-    mkdir -p "{SRCPATH}" && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/source_root "{SRCPATH}"
+    # mkdir -p /nfsroot && mount_qemu_share qemu1 /nfsroot
+    mkdir -p "{SRCPATH}" && mount_qemu_share source_root "{SRCPATH}"
 elif [ "$kind" = "nfs" ]; then
     mkdir -p "{SRCPATH}" && mount -o ro "10.0.2.2:{SRCPATH}" "{SRCPATH}"
 else
-    echo "usage: $0 [smb|nfs]"
+    echo "usage: $0 [auto|smb|9p|nfs]"
 fi
