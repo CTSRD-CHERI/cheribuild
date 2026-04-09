@@ -1674,21 +1674,18 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 xtarget.check_conflict_with is not None
                 and xtarget.check_conflict_with in self.supported_architectures()
             ):
-                # Check that we are not installing to the same directory as MIPS to avoid conflicts
+                # Check that we are not installing to the same directory to avoid conflicts
                 base = getattr(self, "synthetic_base", None)
                 assert base is not None
                 assert issubclass(base, SimpleProject)
-                other_instance = base.get_instance_for_cross_target(
-                    xtarget.check_conflict_with, self.config, caller=self
-                )
+                other_xtarget = xtarget.check_conflict_with
+                other_cls = base.get_class_for_target(other_xtarget)
                 if self.config.verbose:
                     self.info(self.target, "install dir for", xtarget.name, "is", self.install_dir)
-                    other_xtarget = other_instance.crosscompile_target
                     self.info(self.target, "install dir for", other_xtarget.name, "is", self.install_dir)
-                assert other_instance.install_dir != self.install_dir, (
-                    other_instance.target
-                    + " reuses the same install prefix! This will cause conflicts: "
-                    + str(other_instance.install_dir)
+                other_install_dir = other_cls.get_install_dir(self, other_xtarget)
+                assert other_install_dir != self.install_dir, (
+                    f"{other_cls.target} reuses the same install prefix! This will cause conflicts: {other_install_dir}"
                 )
 
         if self.skip_update:
