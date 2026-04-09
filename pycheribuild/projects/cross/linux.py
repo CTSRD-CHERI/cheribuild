@@ -163,7 +163,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
 
 class BuildCheriAllianceLinux(BuildLinux):
     target = "cheri-std093-linux-kernel"
-    repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
+    repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv-6.18")
     _supported_architectures = (
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
         CompilationTargets.LINUX_KERNEL_RISCV64_GCC,
