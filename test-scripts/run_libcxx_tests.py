@@ -400,12 +400,19 @@ def run_parallel_impl(
                         loop_start_time - start_time,
                     )
                 if len(processes_in_next_stage) == len(processes):
+                    # We have received the NEXT_STAGE message from all shards, but they might not have reached the
+                    # barrier wait() yet.
+                    while mp_barrier.n_waiting < len(processes):
+                        for p in processes:
+                            if not p.is_alive():
+                                boot_cheribsd.failure(f"Shard {p.name} died before reaching the barrier!", exit=True)
+                        time.sleep(0.1)
                     boot_cheribsd.success(
                         f"All shards have reached stage {processes_in_next_stage[0]} succesfully. "
                         f"Releasing barrier (num_waiting = {mp_barrier.n_waiting})",
                     )
                     assert mp_barrier.n_waiting == len(processes), f"{mp_barrier.n_waiting} != {len(processes)}"
-                    mp_barrier.wait(timeout=1)
+                    mp_barrier.wait()
                     boot_cheribsd.success(f"Barrier has been released, entering {target_process.stage} stage.")
                     processes_in_next_stage = []
             elif shard_result[0] == run_remote_lit_test.FAILURE:
