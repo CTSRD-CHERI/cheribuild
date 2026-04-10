@@ -913,7 +913,9 @@ def boot_cheribsd(
             if not Path(d.hostdir).exists():
                 failure("Shared directory ", d.hostdir, " doesn't exist!", exit=True)
             if qemu_supports_9pfs(qemu_command, config=get_global_config()):
-                virtfs_arg = f"local,id=virtfs{idx + 1},mount_tag=qemu{idx + 1},path={d.hostdir},security_model=none"
+                virtfs_arg = (
+                    f"local,id=virtfs{idx + 1},mount_tag=qemu{idx + 1},path={d.hostdir},security_model=mapped-xattr"
+                )
                 if d.readonly:
                     virtfs_arg += ",readonly=on"
                 extra_qemu_args.extend(["-virtfs", virtfs_arg])

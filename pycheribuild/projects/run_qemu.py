@@ -516,7 +516,8 @@ class LaunchQEMUBase(SimpleProject):
                 ro = ",readonly=on" if readonly else ""
                 virtfs_args.append("-virtfs")
                 virtfs_args.append(
-                    f"local,id=virtfs{smb_dir_count},mount_tag={share_name},path={directory},security_model=none{ro}"
+                    f"local,id=virtfs{smb_dir_count},mount_tag={share_name},path={directory},"
+                    f"security_model=mapped-xattr{ro}"
                 )
                 guest_cmd = coloured(
                     AnsiColour.yellow,
