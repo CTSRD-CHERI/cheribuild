@@ -37,6 +37,7 @@ from ..project import (
 )
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import CPUArchitecture
 from ...utils import classproperty
 
 
@@ -178,6 +179,16 @@ done
         libc_so = self.install_dir / "lib/libc.so"
         if libc_so.exists():
             self.install_file(libc_so, self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1")
+
+            # XXX Morello Linux's driver expects _purecap suffix for the musl's rtld/interpreter, while
+            # RVY does not. We don't support hybrid/legacy userspace in this cheribuild distro, it is either
+            # all purecap or non-CHERI. In this case, removing _purecap from the triple is fine.
+            # Creating a symlink is workaround for Morello LLVM's morello-linux driver.
+            if self.target_info.target.is_cheri_purecap([CPUArchitecture.AARCH64]):
+                self.create_symlink(
+                    self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1",
+                    self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}_purecap.so.1",
+                )
 
         self.write_busybox_init(
             self.install_dir / "rootfs/init",
