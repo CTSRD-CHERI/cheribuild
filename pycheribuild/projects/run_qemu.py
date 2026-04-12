@@ -219,6 +219,10 @@ class LaunchQEMUBase(SimpleProject):
             help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
         )
 
+        cls.bios = cls.add_optional_path_option(
+            "bios", metavar="BIOS", help="If set, force QEMU to use the given bios binary"
+        )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.current_kernel: Optional[Path] = None
@@ -261,6 +265,8 @@ class LaunchQEMUBase(SimpleProject):
         return ["-bios", "default"]
 
     def get_riscv_bios_args(self) -> "list[str]":
+        if self.bios:
+            return ["-bios", str(self.bios)]
         return self.riscv_bios_arguments(self.crosscompile_target, self)
 
     @classmethod
