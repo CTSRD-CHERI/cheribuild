@@ -1056,7 +1056,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def build_toolchain_root_dir(self) -> "Optional[Path]":
         if self.build_toolchain == CompilerType.BOOTSTRAPPED:
             return self.objdir / "tmp/usr"
-        elif self.build_toolchain in (CompilerType.UPSTREAM_LLVM, CompilerType.CHERI_LLVM, CompilerType.MORELLO_LLVM):
+        elif self.build_toolchain in (
+            CompilerType.UPSTREAM_LLVM,
+            CompilerType.CHERI_LLVM,
+            CompilerType.MORELLO_LLVM,
+            CompilerType.CHERI_ALLIANCE_LLVM,
+        ):
             return BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)
         elif self.build_toolchain == CompilerType.SYSTEM_LLVM:
             system_clang_root, errmsg, fixit = self._try_find_compatible_system_clang()
