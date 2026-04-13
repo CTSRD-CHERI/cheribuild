@@ -42,7 +42,7 @@ from ...utils import classproperty
 
 
 class BuildBusyBox(CrossCompileAutotoolsProject):
-    target = "busybox"
+    target = "upstream-busybox"
     repository = GitRepository("https://git.busybox.net/busybox/")
     is_sdk_target = False
     _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
@@ -229,7 +229,7 @@ class BuildMorelloBusyBox(BuildBusyBox):
 
 
 class BuildAllianceBusyBox(BuildBusyBox):
-    target = "cheri-std093-busybox"
+    target = "busybox"
     repository = GitRepository("https://github.com/CHERI-Alliance/busybox.git")
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
     _default_architecture = CompilationTargets.CHERI_LINUX_MORELLO_PURECAP

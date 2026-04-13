@@ -897,8 +897,8 @@ class LinuxTargetInfoBase(_ClangBasedTargetInfo, ABC):
 
 class UpstreamLinuxTargetInfo(LinuxTargetInfoBase):
     uses_upstream_llvm: bool = True
-    kernel_target = "linux-kernel"
-    musl_target = "muslc"
+    kernel_target = "upstream-linux-kernel"
+    musl_target = "upstream-muslc"
     compiler_rt_target = "upstream-compiler-rt-builtins"
 
     @property
@@ -907,8 +907,8 @@ class UpstreamLinuxTargetInfo(LinuxTargetInfoBase):
 
 
 class CheriLinuxTargetInfo(LinuxTargetInfoBase):
-    kernel_target = "cheri-std093-linux-kernel"
-    musl_target = "cheri-std093-muslc"
+    kernel_target = "linux-kernel"
+    musl_target = "muslc"
     compiler_rt_target = "cheri-std093-compiler-rt-builtins"
 
     @property
@@ -919,6 +919,7 @@ class CheriLinuxTargetInfo(LinuxTargetInfoBase):
 
 class CheriLinuxWithMorelloCompilerTargetInfo(CheriLinuxTargetInfo):
     uses_morello_llvm = True
+    compiler_rt_target = "morello-compiler-rt-builtins-for-cheri-alliance-linux"
 
 
 class MorelloLinuxTargetInfo(LinuxTargetInfoBase):
