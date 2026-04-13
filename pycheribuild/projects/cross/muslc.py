@@ -44,7 +44,7 @@ from ...utils import classproperty
 
 
 class BuildMuslc(CrossCompileAutotoolsProject):
-    target = "muslc"
+    target = "upstream-muslc"
     repository = GitRepository("https://git.musl-libc.org/git/musl")
     _needs_sysroot = False
     is_sdk_target = False
@@ -98,7 +98,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
 
 
 class BuildAllianceLinuxMuslc(BuildMuslc):
-    target = "cheri-std093-muslc"
+    target = "muslc"
     repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
@@ -129,13 +129,13 @@ class InstallMuslcHeadersMixin:
 
 
 class InstallMuslcHeaders(InstallMuslcHeadersMixin, BuildMuslc):
-    target = "muslc-headers"
+    target = "upstream-muslc-headers"
     repository = ReuseOtherProjectRepository(BuildMuslc, do_update=True)
     _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildMuslc)
 
 
 class InstallAllianceMuslcHeaders(InstallMuslcHeadersMixin, BuildAllianceLinuxMuslc):
-    target = "cheri-std093-muslc-headers"
+    target = "muslc-headers"
     repository = ReuseOtherProjectRepository(BuildAllianceLinuxMuslc, do_update=True)
     _build_dir = ReuseOtherProjectBuildDir(build_project=BuildAllianceLinuxMuslc)
 

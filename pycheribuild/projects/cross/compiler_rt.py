@@ -255,15 +255,6 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
         *CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS,
     )
 
-    @classmethod
-    def dependencies(cls, config) -> "tuple[str, ...]":
-        result = super().dependencies(config)
-        xtarget = cls.get_crosscompile_target()
-        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
-            # The builtins for Linux need C library and kernel headers available.
-            result += ("muslc-headers",)
-        return result
-
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "cheri-std093-compiler-rt-builtins"
@@ -289,11 +280,7 @@ class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
         *CompilationTargets.ALL_MORELLO_LINUX_TARGETS,
     )
 
-    @classmethod
-    def dependencies(cls, config) -> "tuple[str, ...]":
-        result = super().dependencies(config)
-        xtarget = cls.get_crosscompile_target()
-        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
-            # The builtins for Linux need C library and kernel headers available.
-            result += ("morello-muslc-headers",)
-        return result
+
+class BuildCheriLinuxCompilerRtBuiltins(BuildMorelloCompilerRtBuiltins):
+    target = "morello-compiler-rt-builtins-for-cheri-alliance-linux"
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)

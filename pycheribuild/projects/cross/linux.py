@@ -46,7 +46,7 @@ from ...utils import classproperty
 
 
 class BuildLinux(CrossCompileAutotoolsProject):
-    target = "linux-kernel"
+    target = "upstream-linux-kernel"
     repository = GitRepository("https://github.com/torvalds/linux.git")
     _needs_sysroot = False
     is_sdk_target = False
@@ -153,7 +153,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
 
 
 class BuildCheriAllianceLinux(BuildLinux):
-    target = "cheri-std093-linux-kernel"
+    target = "linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv-6.18")
     _supported_architectures = (
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
@@ -240,19 +240,20 @@ class LaunchUpstreamLinux(LaunchLinuxBase):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        return *super().dependencies(config), "linux-kernel", "busybox"
+        return *super().dependencies(config), "upstream-linux-kernel", "upstream-busybox"
 
 
 class LaunchCheriAllianceLinux(LaunchLinuxBase):
-    target = "run-minimal-cheri-std093"
+    target = "run-minimal-cheri-linux"
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
+    include_os_in_target_suffix = False  # Avoid adding -linux- as we are running cheri-linux
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
-        return *result, "cheri-std093-linux-kernel", "cheri-std093-busybox"
+        return *result, "linux-kernel", "busybox"
 
 
 class LaunchMorelloLinux(LaunchLinuxBase):
