@@ -29,7 +29,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileMakefileProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 from ..project import (
     DefaultInstallDir,
     GitRepository,
@@ -42,18 +42,34 @@ from ...utils import classproperty
 import shutil
 import os
 
-class BuildCheriTestSuite(CrossCompileMakefileProject):
+class BuildCheriTestSuite(CrossCompileCMakeProject):
     _always_add_suffixed_targets = True
     _needs_sysroot = True
-    make_kind = MakeCommandKind.BsdMake
     repository = GitRepository("git@github.com:CTSRD-CHERI/pffm2-cheritest-wip.git")
     compiler_rt_dependency = None
+    native_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     @classproperty
     def default_install_dir(self):
         return DefaultInstallDir.ROOTFS_LOCALBASE
     
-    def compile(self, **kwargs):
+    def setup(self):
+        super().setup()
+        # Search for the build directory of compiler-rt-builtins
+        compiler_rt_builtins_build_dir = None
+        for d in self.cached_full_dependencies():
+            if str(d.name).find(self.compiler_rt_dependency) != -1:
+                compiler_rt_builtins_build_dir = d.get_or_create_project(
+                    self.crosscompile_target, self.config, self).get_build_dir(self)
+                break
+
+        self.add_cmake_options(CMAKE_C_FLAGS=" ".join(self.default_compiler_flags() + [
+            "-v",
+            "-rtlib=compiler-rt",
+            "-resource-dir={}".format(compiler_rt_builtins_build_dir)]))
+        self.add_cmake_options(CHERIBSDTEST_COMPAT_HEADERS=str(self.source_dir / "compat_headers"))
+
+    def old_compile(self, **kwargs):
         # Search for the build directory of compiler-rt-builtins
         compiler_rt_builtins_build_dir = None
         for d in self.cached_full_dependencies():
@@ -125,11 +141,8 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
         }
 
     def install(self, **kwargs):
-        self.run_make_install(cwd=self.source_dir / "cheribsdtest")
-
-    def process(self):
-        self.check_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
-        super().process()
+        self.install_file(self.build_dir / "cheribsdtest" / "cheribsdtest-purecap", self.install_dir / "rootfs" / "root" / "cheribsdtest-purecap")
+        super().install(**kwargs)
 
 
 class BuildRISCVCheriTestSuite(BuildCheriTestSuite):
@@ -155,7 +168,8 @@ class BuildRISCVCheriTestSuite(BuildCheriTestSuite):
 
 
 class BuildMorelloCheriTestSuite(BuildCheriTestSuite):
-    _supported_architectures = (CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,)
+    _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+    _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
     compiler_rt_dependency = "morello-compiler-rt-builtins"
     dependencies = ("morello-libxo", "morello-muslc", "morello-compiler-rt-builtins")
     target = "cheritestsuite"
