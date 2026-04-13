@@ -142,6 +142,8 @@ class BuildCheriTestSuite(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         self.install_file(self.build_dir / "cheribsdtest" / "cheribsdtest-purecap", self.install_dir / "rootfs" / "root" / "cheribsdtest-purecap")
+        self.install_file(self.build_dir / "cheribsdtest" / "cheribsdtest-purecap-dynamic", self.install_dir / "rootfs" / "root" / "cheribsdtest-purecap-dynamic")
+        self.install_file(self.build_dir / "cheribsdtest" / "libcheribsdtest_dynamic" / "libcheribsdtest_dynamic.so", self.install_dir / "rootfs" / "root" / "libcheribsdtest_dynamic.so")
         super().install(**kwargs)
 
 
