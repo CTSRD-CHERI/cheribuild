@@ -41,7 +41,11 @@ from .utils import ConfigBase, OSInfo, warning_message
 
 class QemuOptions:
     def __init__(
-        self, xtarget: CrossCompileTarget, want_debugger=False, riscv_cheri_isa: Optional[RiscvCheriISA] = None
+        self,
+        xtarget: CrossCompileTarget,
+        want_debugger=False,
+        riscv_cheri_isa: Optional[RiscvCheriISA] = None,
+        enable_mte: bool = False,
     ) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
@@ -50,6 +54,7 @@ class QemuOptions:
         self.memory_size = "2048"
         self.has_default_nic = False
         self.riscv_cheri_isa = riscv_cheri_isa
+        self.enable_mte = enable_mte
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             self._qemu_arch_suffix = "morello"
             self.can_boot_kernel_directly = False  # boot from disk
@@ -57,7 +62,8 @@ class QemuOptions:
             # virt, so CPTR_EL3 doesn't exist and CheriBSD can enable
             # CPTR_EL2.CEN freely and thus we can get away without CHERI-aware
             # firmware so long as loader(8) is plain AArch64.
-            self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
+            machine_flags = "virt,gic-version=3" + (",mte=on" if self.enable_mte else "")
+            self.machine_flags = ["-M", machine_flags, "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
         elif xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self._qemu_arch_suffix = "mips64cheri128"
@@ -95,7 +101,8 @@ class QemuOptions:
         elif xtarget.is_aarch64(include_purecap=False):
             self._qemu_arch_suffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
-            self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
+            machine_flags = "virt,gic-version=3" + (",mte=on" if self.enable_mte else "")
+            self.machine_flags = ["-M", machine_flags, "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
         elif xtarget.is_arm32(include_purecap=False):
             self._qemu_arch_suffix = "arm"
             self.can_boot_kernel_directly = False  # boot from disk

@@ -655,6 +655,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             cmd.append("--test-environment-only")
         if self.config.trap_on_unrepresentable:
             cmd.append("--trap-on-unrepresentable")
+        if self.config.qemu_enable_mte and not has_test_extra_arg_override("--qemu-enable-mte"):
+            cmd.append("--qemu-enable-mte")
         if self.config.test_ld_preload:
             cmd.append("--test-ld-preload=" + str(self.config.test_ld_preload))
             if xtarget.is_cheri_purecap() and not rootfs_xtarget.is_cheri_purecap():

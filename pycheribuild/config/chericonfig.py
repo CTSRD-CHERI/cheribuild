@@ -531,6 +531,12 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             group=loader.run_group,
             help="Run tests/benchmarks under GDB. Note: currently most targets ignore this flag.",
         )
+        self.qemu_enable_mte = loader.add_bool_option(
+            "qemu-enable-mte",
+            group=loader.run_group,
+            default=False,
+            help="Enable MTE for QEMU machine types that support it.",
+        )
 
         # Test options:
         self._test_ssh_key = loader.add_optional_path_option(

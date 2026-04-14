@@ -1407,6 +1407,11 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--qemu-cmd", "--qemu", help="Path to QEMU (default: find matching on in $PATH)", default=None)
     parser.add_argument("--qemu-smp", "--smp", type=int, help="Run QEMU with SMP", default=None)
+    parser.add_argument(
+        "--qemu-enable-mte",
+        action="store_true",
+        help="Enable MTE for QEMU machine types that support it",
+    )
     parser.add_argument("--kernel", default=None)
     parser.add_argument("--bios", default=None)
     parser.add_argument("--disk-image", default=None)
@@ -1556,7 +1561,7 @@ def _main(
     args.xtarget = xtarget
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
-    qemu_options = QemuOptions(xtarget)
+    qemu_options = QemuOptions(xtarget, enable_mte=args.qemu_enable_mte)
     if args.qemu_cmd is not None:
         if not Path(args.qemu_cmd).exists():
             failure("ERROR: Cannot find QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True)

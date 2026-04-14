@@ -234,6 +234,7 @@ class LaunchQEMUBase(SimpleProject):
             self.crosscompile_target,
             want_debugger=self.config.wait_for_debugger,
             riscv_cheri_isa=self.config.riscv_cheri_isa,
+            enable_mte=self.config.qemu_enable_mte,
         )
         self.qemu_user_networking = True
         self.rootfs_path: Optional[Path] = None
