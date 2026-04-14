@@ -37,7 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
+from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU, _cached_get_homebrew_prefix
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import get_native_gdb_binary_to_debug_target
@@ -61,6 +61,29 @@ from ..utils import AnsiColour, OSInfo, coloured, fatal_error, find_free_port, i
 def get_default_ssh_forwarding_port(addend: int):
     # chose a different port for each user (hopefully it isn't in use yet)
     return 9999 + ((os.getuid() - 1000) % 10000) + addend
+
+
+def _get_usable_smbd_path(config: CheriConfig) -> "Optional[Path]":
+    # QEMU user-mode SMB shares on macOS require the samba.org smbd, not Apple's /usr/sbin/smbd.
+    candidate_paths = []
+    if OSInfo.IS_MAC:
+        prefix = _cached_get_homebrew_prefix("samba", config)
+        if prefix is not None:
+            candidate_paths.append(prefix / "sbin/samba-dot-org-smbd")
+    candidate_paths.append(config.other_tools_dir / "sbin/smbd")
+    if OSInfo.IS_FREEBSD:
+        candidate_paths.append(Path("/usr/local/sbin/smbd"))
+    elif not OSInfo.IS_MAC:
+        candidate_paths.append(Path("/usr/sbin/smbd"))
+
+    path_from_env = shutil.which("smbd")
+    if path_from_env is not None:
+        candidate_paths.append(Path(path_from_env))
+
+    for path in candidate_paths:
+        if path.exists():
+            return path
+    return None
 
 
 class QEMUType(Enum):
@@ -482,6 +505,16 @@ class LaunchQEMUBase(SimpleProject):
         have_smbfs_support = (
             self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.find_smbd_binary(self.config).exists()
         )
+
+        # TODO: use 9pfs once kernel support is merged
+        # have_9pfs_support = (
+        #     False
+        #     and (self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86())
+        #     and qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
+        # )
+        # Only default to providing the smb mount if a usable smbd exists.
+        # have_smbfs_support = self.chosen_qemu.can_provide_src_via_smb and _get_usable_smbd_path(self.config)
+        
 
         def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):
             if not directory:
