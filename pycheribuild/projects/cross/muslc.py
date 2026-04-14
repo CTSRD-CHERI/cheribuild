@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
+import typing
 
 from .crosscompileproject import CrossCompileAutotoolsProject
 from ..project import (
@@ -39,20 +39,25 @@ from ..project import (
 )
 from ..repository import ReuseOtherProjectRepository
 from ...config.chericonfig import RiscvCheriISA
-from ...config.compilation_targets import CompilationTargets
+from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBase
 from ...utils import classproperty
 
 
 class BuildMuslc(CrossCompileAutotoolsProject):
     target = "muslc"
     repository = GitRepository("https://git.musl-libc.org/git/musl")
-    dependencies = ("upstream-compiler-rt-builtins", "linux-kernel")
     _needs_sysroot = False
     is_sdk_target = False
     _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
 
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
+        # Musl needs the kernel headers and the compiler-rt builtins
+        return ti.kernel_target, ti.compiler_rt_target
 
     @classproperty
     def default_install_dir(self):
@@ -81,7 +86,6 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
     _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
-    dependencies = ("morello-compiler-rt-builtins", "morello-linux-kernel")
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-morello"])
@@ -98,7 +102,6 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
     repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
-    dependencies = ("cheri-std093-compiler-rt-builtins", "cheri-std093-linux-kernel")
 
     def setup(self) -> None:
         if self.crosscompile_target.is_riscv(include_purecap=True):
