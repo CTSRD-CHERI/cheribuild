@@ -521,8 +521,8 @@ class LaunchQEMUBase(SimpleProject):
                 )
                 guest_cmd = coloured(
                     AnsiColour.yellow,
-                    f"mkdir -p {target} && kldload -n virtio_p9fs && "
-                    f"mount -t virtfs -o trans=virtio{',ro' if readonly else ''} {share_name} {target}",
+                    f"mkdir -p {target} && kldload -n p9fs virtio_p9fs && "
+                    f"mount -t p9fs -o trans=virtio{',ro' if readonly else ''} {share_name} {target}",
                 )
                 self.info(
                     "Providing ",
