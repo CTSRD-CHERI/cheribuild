@@ -102,10 +102,10 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
 
     def setup(self) -> None:
         if self.crosscompile_target.is_riscv(include_purecap=True):
-            self.configure_args.extend(["--enable-bakewell --enable-debug"])
+            self.configure_args.append("--enable-bakewell")
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            self.configure_args.extend(["--enable-morello"])
-
+            self.configure_args.append("--enable-morello")
+        self.configure_args.append("--enable-debug")
         # FIXME Need to add the compiler resource directory as Codasip's muslc includes
         # cheri_init_globals_bw.h while building with -nostdinc
         resource_dir = self.get_compiler_info(self.CC).get_resource_dir()
