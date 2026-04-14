@@ -36,7 +36,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU, find_usable_smbd
+from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import get_native_gdb_binary_to_debug_target
@@ -54,7 +54,7 @@ from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDepe
 from ..config.compilation_targets import CompilationTargets, LaunchFreeBSDInterface
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs
-from ..utils import AnsiColour, coloured, fatal_error, find_free_port, is_jenkins_build
+from ..utils import AnsiColour, OSInfo, coloured, fatal_error, find_free_port, is_jenkins_build
 
 
 def get_default_ssh_forwarding_port(addend: int):
