@@ -364,8 +364,9 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         self.ssh_user = "root"
         self.shared_dirs = []
         self.shared_mount_failed = False
-        # 9pfs is not usable for tests yet: https://github.com/CTSRD-CHERI/cheribsd/issues/2617
-        self.can_use_p9fs = False
+        # p9fs may not be usable for tests yet: https://github.com/CTSRD-CHERI/cheribsd/issues/2617
+        self.cheribsd_issue_2617_fixed: Optional[bool] = None
+        self.can_use_p9fs = True
         self.can_use_smb = True
 
     @property
@@ -823,7 +824,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
         super().__init__(qemu_config, "cat", use_poll=True, **kwargs)
 
     def expect(self, *args, pretend_result=None, **kwargs):
-        info("Expecting", args)
+        # info("Expecting", args)
         args_list = args[0]
         assert isinstance(args_list, list)
         if pretend_result:
@@ -1251,16 +1252,7 @@ def _do_test_setup(
         # Try p9fs first but if it fails, fall back to using SMBv1
         assert d.mounted is False
         if qemu.can_use_p9fs:
-            try:
-                ro_flag = ",ro" if d.readonly else ""
-                checked_run_cheribsd_command(
-                    qemu,
-                    f"kldload -n virtio_p9fs && mount -t p9fs -o trans=virtio{ro_flag} {share_name} '{d.in_target}'",
-                    pretend_result=1,
-                )
-                qemu.can_use_smb = False  # p9fs succeeded once, we should use it for all mounts
-                d.mounted = True
-            except CheriBSDCommandFailed:
+            if not mount_via_p9fs(d, qemu, share_name):
                 # Fallback to smbfs on this iteration and don't try p9fs again
                 qemu.can_use_p9fs = False
                 info("9P mount failed, falling back to SMB mount.")
@@ -1297,6 +1289,39 @@ def _do_test_setup(
         setup_tests_starttime = datetime.datetime.now()
         test_setup_function(qemu, args)
         success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
+
+
+def mount_via_p9fs(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -> bool:
+    try:
+        ro_flag = ",ro" if d.readonly else ""
+        checked_run_cheribsd_command(
+            qemu,
+            f"kldload -n virtio_p9fs && mount -t p9fs -o trans=virtio{ro_flag} {share_name} '{d.in_target}'",
+        )
+        d.mounted = True
+    except CheriBSDCommandFailed:
+        d.mounted = False
+        return False
+    if not d.readonly and qemu.cheribsd_issue_2617_fixed is None:
+        try:
+            # Check if we are affected by https://github.com/CTSRD-CHERI/cheribsd/issues/2617
+            checked_run_cheribsd_command(
+                qemu,
+                f"echo test > /tmp/issue_2617.txt && mv -f /tmp/issue_2617.txt {d.in_target}/issue_2617.txt",
+                pretend_result=1,
+            )
+            qemu.cheribsd_issue_2617_fixed = True
+        except CheriBSDCommandFailed:
+            info("P9FS driver is not new enough to support running tests. Will unmount again.")
+            qemu.cheribsd_issue_2617_fixed = False
+            checked_run_cheribsd_command(qemu, f"rm -f /tmp/issue_2617.txt {d.in_target}/issue_2617.txt")
+            checked_run_cheribsd_command(qemu, f"umount {d.in_target}")
+            d.mounted = False
+            return False
+    if qemu.cheribsd_issue_2617_fixed is False:
+        d.mounted = False
+        return False
+        return True
 
 
 def mount_via_smb(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -> bool:
