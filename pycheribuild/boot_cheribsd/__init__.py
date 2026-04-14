@@ -140,7 +140,6 @@ class PretendSpawn(pexpect.spawn):
     def expect(self, *args, pretend_result=None, **kwargs):
         args_list = args[0]
         assert isinstance(args_list, list)
-        info("Expecting ", args_list)
         if pretend_result:
             return pretend_result
         # Never return TIMEOUT in pretend mode
@@ -150,7 +149,6 @@ class PretendSpawn(pexpect.spawn):
         return 0
 
     def expect_exact(self, pattern_list, pretend_result=None, **kw):
-        info("Expecting ", pattern_list)
         if pretend_result:
             return pretend_result
         # Never return TIMEOUT in pretend mode
