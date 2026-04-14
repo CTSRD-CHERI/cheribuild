@@ -279,15 +279,6 @@ class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     llvm_project = BuildCheriAllianceLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
 
-    @classmethod
-    def dependencies(cls, config) -> "tuple[str, ...]":
-        result = super().dependencies(config)
-        xtarget = cls.get_crosscompile_target()
-        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
-            # The builtins for Linux need C library and kernel headers available.
-            result += ("cheri-std093-muslc-headers",)
-        return result
-
 
 class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "morello-compiler-rt-builtins"
