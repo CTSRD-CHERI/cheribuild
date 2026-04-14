@@ -29,7 +29,6 @@
 #
 import datetime
 import os
-import shutil
 import socket
 import sys
 import typing
@@ -37,7 +36,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU, _cached_get_homebrew_prefix
+from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU, find_usable_smbd
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import get_native_gdb_binary_to_debug_target
@@ -55,35 +54,12 @@ from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDepe
 from ..config.compilation_targets import CompilationTargets, LaunchFreeBSDInterface
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs
-from ..utils import AnsiColour, OSInfo, coloured, fatal_error, find_free_port, is_jenkins_build
+from ..utils import AnsiColour, coloured, fatal_error, find_free_port, is_jenkins_build
 
 
 def get_default_ssh_forwarding_port(addend: int):
     # chose a different port for each user (hopefully it isn't in use yet)
     return 9999 + ((os.getuid() - 1000) % 10000) + addend
-
-
-def _get_usable_smbd_path(config: CheriConfig) -> "Optional[Path]":
-    # QEMU user-mode SMB shares on macOS require the samba.org smbd, not Apple's /usr/sbin/smbd.
-    candidate_paths = []
-    if OSInfo.IS_MAC:
-        prefix = _cached_get_homebrew_prefix("samba", config)
-        if prefix is not None:
-            candidate_paths.append(prefix / "sbin/samba-dot-org-smbd")
-    candidate_paths.append(config.other_tools_dir / "sbin/smbd")
-    if OSInfo.IS_FREEBSD:
-        candidate_paths.append(Path("/usr/local/sbin/smbd"))
-    elif not OSInfo.IS_MAC:
-        candidate_paths.append(Path("/usr/sbin/smbd"))
-
-    path_from_env = shutil.which("smbd")
-    if path_from_env is not None:
-        candidate_paths.append(Path(path_from_env))
-
-    for path in candidate_paths:
-        if path.exists():
-            return path
-    return None
 
 
 class QEMUType(Enum):

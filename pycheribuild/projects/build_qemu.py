@@ -54,6 +54,30 @@ from ..config.config_loader_base import ConfigOptionHandle
 from ..utils import OSInfo
 
 
+def find_usable_smbd(config: CheriConfig) -> "Optional[Path]":
+    # QEMU user-mode SMB shares on macOS require the samba.org smbd, not Apple's /usr/sbin/smbd.
+    candidate_paths = [config.other_tools_dir / "sbin/smbd"]
+    if OSInfo.IS_MAC:
+        prefix = _cached_get_homebrew_prefix("samba", config)
+        if prefix is not None:
+            candidate_paths.append(prefix / "sbin/samba-dot-org-smbd")
+    elif OSInfo.IS_FREEBSD:
+        candidate_paths.append(Path("/usr/local/sbin/smbd"))
+    else:
+        candidate_paths.append(Path("/usr/sbin/smbd"))
+
+    path_from_env = shutil.which("smbd")
+    if path_from_env is not None:
+        candidate_paths.append(Path(path_from_env))
+
+    for path in candidate_paths:
+        if OSInfo.IS_MAC and path == Path("/usr/sbin/smbd"):
+            continue
+        if path.exists():
+            return path
+    return None
+
+
 class BuildQEMUBase(AutotoolsProject):
     repository = GitRepository("https://github.com/qemu/qemu.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -278,6 +302,29 @@ class BuildQEMUBase(AutotoolsProject):
         if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
             self.common_warning_flags.append("-Wno-null-pointer-subtraction")
             self.common_warning_flags.append("-Wno-bitwise-instead-of-logical")
+        # This would have caught some problems in the past
+        if self.use_smbd:
+            self.smbd_path = find_usable_smbd(self.config)
+            if self.smbd_path is not None and self.target_info.is_macos():
+                self.info("Guessed samba path", self.smbd_path)
+            if self.smbd_path is None:
+                self.smbd_path = Path("/could/not/find/smbd")
+            self.configure_args.append("--smbd=" + str(self.smbd_path))
+            if not Path(self.smbd_path).exists():
+                if self.target_info.is_macos():
+                    # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
+                    # sources but the macOS /usr/sbin/smbd is incompatible with that:
+                    self.warning(
+                        "QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
+                        "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
+                        "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU",
+                    )
+                self.fatal(
+                    "Could not find smbd -> QEMU SMB shares networking will not work",
+                    fixit_hint="Either install samba using the system package manager or with cheribuild. "
+                    "If you really don't need QEMU host shares you can disable the samba dependency "
+                    "by setting --" + self.target + "/no-use-smbd",
+                )
         self.configure_args.extend(
             [
                 "--disable-xen",
