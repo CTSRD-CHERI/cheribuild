@@ -40,6 +40,7 @@ from ..project import (
 from ..repository import ReuseOtherProjectRepository
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBase
+from ...config.target_info import CPUArchitecture
 from ...utils import classproperty
 
 
@@ -104,9 +105,9 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     def setup(self) -> None:
-        if self.crosscompile_target.is_riscv(include_purecap=True):
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
             self.configure_args.append("--enable-bakewell")
-        elif self.crosscompile_target.is_aarch64(include_purecap=True):
+        elif self.crosscompile_target.is_cheri_purecap([CPUArchitecture.AARCH64]):
             self.configure_args.append("--enable-morello")
         self.configure_args.append("--enable-debug")
         # FIXME Need to add the compiler resource directory as Codasip's muslc includes
