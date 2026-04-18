@@ -13,7 +13,7 @@ repos:
         args: [ "--fix=lf" ]
       - id: check-case-conflict
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.15.8' # Ruff version.
+    rev: 'v0.15.11' # Ruff version.
     hooks:
       - id: ruff
         stages: [ pre-push, pre-commit, manual ]
@@ -30,7 +30,7 @@ repos:
       - id: pyrefly-typecheck-specific-version
         name: Pyrefly (type checking)
         pass_filenames: false
-        additional_dependencies: ["pyrefly==0.59.1", "argcomplete", "libtmux"]
+        additional_dependencies: ["pyrefly==0.61.1", "argcomplete", "libtmux"]
   - repo: local
     hooks:
       - id: cheribuild-commit-messages
