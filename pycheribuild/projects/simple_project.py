@@ -837,6 +837,13 @@ class SimpleProjectBase(AbstractProject, ABC):
             **kwargs,
         )
 
+    def try_run_cmd(self, *args, **kwargs) -> bool:
+        try:
+            self.run_cmd(*args, **kwargs)
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
     def set_env(self, *, print_verbose_only=True, **environ) -> "typing.ContextManager":
         return set_env(print_verbose_only=print_verbose_only, config=self.config, **environ)
 

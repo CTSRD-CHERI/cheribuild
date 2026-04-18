@@ -476,12 +476,10 @@ class GitRepository(SourceRepository):
         else:
             target_hash = matching_remote + "/" + target_override.branch
             git_worktree_add_cmd.append("--track")
-        try:
-            current_project.run_cmd(
-                [*git_worktree_add_cmd, "-b", target_override.branch, src_dir, target_hash],
-                print_verbose_only=False,
-            )
-        except subprocess.CalledProcessError:
+        if not current_project.try_run_cmd(
+            [*git_worktree_add_cmd, "-b", target_override.branch, src_dir, target_hash],
+            print_verbose_only=False,
+        ):
             current_project.warning(
                 "Could not create worktree with branch name ",
                 target_override.branch,
@@ -543,13 +541,42 @@ class GitRepository(SourceRepository):
                     if old_url.endswith(".git"):
                         old_url = old_url[:-4]
                     if remote_url == old_url:
-                        current_project.warning(current_project.target, "still points to old repository", remote_url)
+                        current_project.warning(
+                            current_project.target, "still points to old repository", remote_url, "instead of", self.url
+                        )
                         if current_project.query_yes_no("Update to correct URL?"):
+                            has_origin = current_project.try_run_cmd(
+                                ["git", "remote", "get-url", "origin"],
+                                capture_output=True,
+                                cwd=src_dir,
+                                print_verbose_only=True,
+                            )
+
+                            if has_origin:
+                                new_name = "old-origin"
+                                while not current_project.try_run_cmd(
+                                    ["git", "remote", "rename", "origin", new_name],
+                                    run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                                    cwd=src_dir,
+                                    capture_error=True,
+                                ):
+                                    new_name = "old-" + new_name
+
                             current_project.run_cmd(
-                                ["git", "remote", "set-url", branch_info.remote_name, self.url],
+                                ["git", "remote", "add", "origin", self.url],
                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
                                 cwd=src_dir,
                             )
+                            branch_info = branch_info._replace(remote_name="origin")
+                            default_branch = self.get_default_branch(current_project, include_per_target=True)
+                            if default_branch:
+                                current_project.info(f"Switching to default branch {default_branch} for new URL")
+                                current_project.run_cmd(["git", "fetch", branch_info.remote_name], cwd=src_dir)
+                                current_project.run_cmd(
+                                    ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
+                                    cwd=src_dir,
+                                    capture_error=True,
+                                )
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
