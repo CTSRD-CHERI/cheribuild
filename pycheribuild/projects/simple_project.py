@@ -1482,7 +1482,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         self,
         *args,
         problem="missing",
-        install_instructions: "Optional[InstallInstructions]" = None,
+        install_instructions: "Optional[InstallInstructions | str]" = None,
         cheribuild_target: "Optional[str]" = None,
         cheribuild_xtarget: "Optional[CrossCompileTarget]" = None,
         cheribuild_action: str = "install",

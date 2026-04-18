@@ -195,7 +195,7 @@ class LaunchQEMUBase(SimpleProject):
                 as_string=str(default_ssh_port),
                 as_readme_string="<UID-dependent>",
             )
-            cls.ssh_forwarding_port = cls.add_config_option(
+            cls.ssh_forwarding_port: int = cls.add_config_option(
                 "ssh-forwarding-port",
                 kind=int,
                 default=default_ssh_port_computed,
@@ -204,7 +204,7 @@ class LaunchQEMUBase(SimpleProject):
                 help="The port on localhost to forward to the QEMU ssh "
                 "port. You can then use `ssh root@localhost -p $PORT` "
                 "to connect to the VM",
-            )
+            )  # ty:ignore[invalid-assignment]
         cls.ephemeral = False
         if cls._uses_disk_image:
             cls.ephemeral = cls.add_bool_option(

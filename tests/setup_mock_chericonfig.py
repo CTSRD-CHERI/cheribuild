@@ -63,6 +63,7 @@ class MockConfig(CheriConfig):
         self.cheri_alliance_sdk_dir = self.output_root / "cheri-std093-sdk"
         self.sysroot_output_root = self.output_root
         self.other_tools_dir = self.output_root / "other"
+        self.sleep_before_delete = False
 
         assert self._ensure_required_properties_set()
 

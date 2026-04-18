@@ -157,7 +157,7 @@ class MakeOptions:
         self.subkind = None
         self.__can_pass_j_flag: "Optional[bool]" = None
         self.__command: "Optional[str]" = None
-        self.__command_args: "list[str]" = []
+        self.__command_args: "list[str | Path]" = []
 
     def __deepcopy__(self, memo) -> "typing.NoReturn":
         raise RuntimeError("Should not be called!")
@@ -256,11 +256,12 @@ class MakeOptions:
             self.__project.fatal('Cannot infer path from CustomMakeTool. Set self.make_args.set_command("tool")')
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, early_args: "Optional[Sequence[str | Path]]" = None):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "Optional[list[str | Path]]" = None):
         self.__command = str(value)
         if early_args is None:
             early_args = []
-        self.__command_args = early_args
+        if early_args is not None:
+            self.__command_args = early_args
         assert isinstance(self.__command_args, list)
         if not Path(value).is_absolute():
             self.__project.check_required_system_tool(value)
@@ -308,7 +309,7 @@ class MakeOptions:
                 assert all(isinstance(t, str) for t in targets), "Invalid empty/non-string target name"
                 if cmake_version >= (3, 15, 0):
                     result.extend(targets)
-                    targets = None  # don't pass the targets to the build tool again
+                    targets = []  # don't pass the targets to the build tool again
                 else:
                     result.append(targets[0])
                     targets = targets[1:]  # pass remaining targets to the build tool directly
@@ -930,7 +931,10 @@ class Project(SimpleProject):
             self.repository.url = self._repository_url
 
         if isinstance(self.default_directory_basename, ComputedDefaultValue):
-            self.default_directory_basename = self.default_directory_basename(self.config, self)
+            self.default_directory_basename = self.default_directory_basename(  # ty:ignore[invalid-assignment]
+                self.config,
+                self,
+            )
         if isinstance(self.repository, ReuseOtherProjectRepository):
             initial_source_dir = inspect.getattr_static(self, "_initial_source_dir")
             assert isinstance(initial_source_dir, ConfigOptionHandle)
@@ -942,7 +946,7 @@ class Project(SimpleProject):
             self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
         else:
             if isinstance(self.source_dir, ComputedDefaultValue):
-                self.source_dir = self.source_dir(self.config, self)
+                self.source_dir = self.source_dir(self.config, self)  # ty:ignore[invalid-assignment]
             self._initial_source_dir = self.source_dir
 
         if self.build_in_source_dir:
@@ -952,7 +956,7 @@ class Project(SimpleProject):
             self._initial_build_dir = self.source_dir
 
         # non-assignable variables:
-        self.configure_args: "Sequence[str | Path]" = []
+        self.configure_args: "list[str | Path]" = []
         self.configure_environment: "dict[str, str]" = {}
         self.make_args = MakeOptions(self.make_kind, self)
         self._compiledb_tool: Optional[str] = None
@@ -1676,6 +1680,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
+            assert self._xtarget is not None
             xtarget: CrossCompileTarget = self._xtarget
             # If the conflicting target is also in supported_architectures, check for conficts:
             if (
@@ -1997,7 +2002,7 @@ class _CMakeAndMesonSharedLogic(Project):
         if not Path(self.configure_command).is_absolute():
             abspath = shutil.which(self.configure_command)
             if abspath:
-                self.configure_command = abspath
+                self.configure_command = Path(abspath)
 
     def process(self) -> None:
         super().process()
