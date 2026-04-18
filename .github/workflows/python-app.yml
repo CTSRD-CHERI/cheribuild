@@ -10,9 +10,9 @@ on:
         branches: [ main ]
 
 env:
-    RUFF_VERSION: 0.15.9
-    PYREFLY_VERSION: 0.59.1
-    TY_VERSION: 0.0.28
+    RUFF_VERSION: 0.15.11
+    PYREFLY_VERSION: 0.61.1
+    TY_VERSION: 0.0.31
 
 jobs:
     build-docker:
