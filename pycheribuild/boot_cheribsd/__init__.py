@@ -202,20 +202,20 @@ class CheriBSDMatchedErrorOutput(CheriBSDCommandFailed):
 
 
 class SharedMount:
-    def __init__(self, hostdir: str, readonly: bool, in_target: str):
+    def __init__(self, hostdir: Path, readonly: bool, in_target: str):
         self.readonly = readonly
-        self.hostdir = str(Path(hostdir).absolute())
+        self.hostdir = Path(hostdir).absolute()
         self.in_target = in_target
         self.mounted = False
 
     @property
-    def qemu_arg(self):
+    def qemu_arg(self) -> str:
         if self.readonly:
-            return self.hostdir + "@ro"
-        return self.hostdir
+            return str(self.hostdir + "@ro")
+        return str(self.hostdir)
 
     def __repr__(self):
-        return "<{} ({}) -> {}>".format(self.hostdir, "ro" if self.readonly else "rw", self.in_target)
+        return f"<{self.hostdir} ({'ro' if self.readonly else 'rw'}) -> {self.in_target}>"
 
 
 def parse_smb_mount(arg: str):
@@ -226,14 +226,14 @@ def parse_smb_mount(arg: str):
     if host.endswith("@ro"):
         host = host[:-3]
         readonly = True
-    return SharedMount(host, readonly, target)
+    return SharedMount(Path(host), readonly, target)
 
 
 if typing.TYPE_CHECKING:
     MixinBase = pexpect.spawn
 else:
     MixinBase = object
-PatternListType = typing.List[Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
+PatternListType = typing.Sequence[Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
 
 
 class CheriBSDSpawnMixin(MixinBase):
@@ -887,8 +887,8 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
 
 def boot_cheribsd(
     qemu_options: QemuOptions,
-    qemu_command: Path,
-    kernel_image: Path,
+    qemu_command: Optional[Path],
+    kernel_image: Optional[Path],
     disk_image: Optional[Path],
     ssh_port: Optional[int],
     ssh_pubkey: Optional[Path],
@@ -1674,6 +1674,7 @@ def _main(
         )
 
     boot_starttime = datetime.datetime.now()
+    assert args.qemu_cmd is not None
     qemu = boot_cheribsd(
         qemu_options,
         qemu_command=args.qemu_cmd,
