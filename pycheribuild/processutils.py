@@ -876,7 +876,7 @@ def extract_version(
         print(output)
         raise ValueError("Expected to match regex " + str(regex))
     # Python 3.7.0 includes None elements for unmatched optional groups, so we have to omit those.
-    return tuple(component_kind(x) for x in match.groups() if x is not None)
+    return tuple(component_kind(x) for x in match.groups() if x is not None)  # pyrefly: ignore[bad-argument-count]
 
 
 def latest_system_clang_tool(config: ConfigBase, basename: str, fallback_basename: "Optional[str]") -> Optional[Path]:

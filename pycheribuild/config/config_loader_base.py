@@ -420,9 +420,10 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         else:
             if self.is_list:
                 assert isinstance(result, list), "Should have converted to a list already"
-                result = [self.value_type(x) for x in result]
+                result = [self.value_type(x) for x in result]  # pyrefly: ignore[bad-argument-count]
             else:
-                result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+                # make sure it has the right type (e.g. Path, int, bool, str)
+                result = self.value_type(result)  # pyrefly: ignore[bad-argument-count]
         return typing.cast(T, result)
 
     def __repr__(self) -> str:
