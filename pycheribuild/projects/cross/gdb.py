@@ -218,14 +218,14 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
-        self.run_make(make_target="all-gdb", cwd=self.build_dir)
-        self.run_make(make_target="all-binutils", cwd=self.build_dir)  # also install objdump
+        self.run_make("all-gdb", cwd=self.build_dir)
+        self.run_make("all-binutils", cwd=self.build_dir)  # also install objdump
         # And for native GDB also build ld.bfd
         if self.compiling_for_host():
-            self.run_make(make_target="all-ld", cwd=self.build_dir)
+            self.run_make("all-ld", cwd=self.build_dir)
 
     def install(self, **kwargs):
-        self.run_make_install(target="install-gdb")
+        self.run_make_install(targets=["install-gdb"])
         # Install the binutils prefixed with g (like homebrew does it on MacOS)
         # objdump is useful for cases where CHERI llvm-objdump doesn't print sensible source lines
         # Also install most of the other tools in case they work better than elftoolchain

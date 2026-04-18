@@ -700,7 +700,14 @@ class BuildFreeBSDBase(Project):
             args = {key: value}
             self.make_args.set_env(**args)
 
-    def run_make(self, make_target="", *, options: "Optional[MakeOptions]" = None, parallel=True, **kwargs):
+    def run_make(
+        self,
+        make_targets: "Optional[str | list[str]]" = None,
+        *,
+        options: "Optional[MakeOptions]" = None,
+        parallel=True,
+        **kwargs,
+    ):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.make_jobs == 1:
             parallel = False
@@ -711,7 +718,7 @@ class BuildFreeBSDBase(Project):
             assert options.env_vars["METALOG"].startswith(options.env_vars["DESTDIR"]), "METALOG not below DESTDIR"
         assert options.get_var("METALOG", None) is None, "METALOG should only be set in the environment"
         assert options.get_var("DESTDIR", None) is None, "DESTDIR should only be set in the environment"
-        super().run_make(make_target, options=options, cwd=self.source_dir, parallel=parallel, **kwargs)
+        super().run_make(make_targets, options=options, cwd=self.source_dir, parallel=parallel, **kwargs)
 
     @property
     def jflag(self) -> "list[str]":

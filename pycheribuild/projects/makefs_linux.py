@@ -49,7 +49,7 @@ class BuildMakefsOnLinux(Project):
 
     def compile(self, **kwargs):
         # Doesn't have an all target
-        self.run_make(make_target="", parallel=False)
+        self.run_make(parallel=False)
 
     def clean(self):
         self.delete_file(self.source_dir / "builddir/.build_stamp")

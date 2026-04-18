@@ -52,6 +52,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     # Meson already sets PKG_CONFIG_* variables internally based on the cross toolchain
     set_pkg_config_path: bool = False
     _configure_tool_name: str = "Meson"
+    configure_command = Path(os.getenv("MESON_COMMAND", "meson"))
     meson_test_script_extra_args: "Sequence[str]" = tuple()  # additional arguments to pass to run_meson_tests.py
     _meson_extra_binaries = ""  # Needed for picolibc
     _meson_extra_properties = ""  # Needed for picolibc
@@ -78,9 +79,6 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.configure_command = os.getenv("MESON_COMMAND", None)
-        if self.configure_command is None:
-            self.configure_command = "meson"
         self.configure_args.insert(0, "setup")
         # We generate a toolchain file when cross-compiling and the toolchain files need at least 0.57
         self.set_minimum_meson_version(0, 57)

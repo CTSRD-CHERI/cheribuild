@@ -162,7 +162,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
             )
 
     def run_tests(self):
-        self.run_make(make_target="test")  # XXX: doesn't work yet, needs a read/write/isatty()
+        self.run_make("test")  # XXX: doesn't work yet, needs a read/write/isatty()
 
     @classmethod
     def mcp_rom_bin(cls, caller):
@@ -211,7 +211,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
         self.make_args.set(HOSTCC=self.host_CC)
 
     def compile(self, **kwargs):
-        self.run_make(make_target="all", cwd=self.source_dir)
+        self.run_make("all", cwd=self.source_dir)
         fip_make = self.make_args.copy()
         fip_make.set_env(CFLAGS="", CPPFLAGS="", CXXFLAGS="")
         if OSInfo.IS_MAC:
@@ -224,7 +224,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
             )
             # FIXME: Makefile doesn't add HOSTLDFLAGS
             fip_make.set(HOSTCC=str(self.host_CC) + " -Qunused-arguments " + fip_make.env_vars["HOSTLDFLAGS"])
-        self.run_make(make_target="all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
+        self.run_make("all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
 
     def install(self, **kwargs):
         output_dir = self.build_dir / "build/morello" / ("debug" if self.build_type.is_debug() else "release")

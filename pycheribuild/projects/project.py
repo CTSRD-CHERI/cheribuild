@@ -256,7 +256,7 @@ class MakeOptions:
             self.__project.fatal('Cannot infer path from CustomMakeTool. Set self.make_args.set_command("tool")')
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, early_args: "Optional[list[str]]" = None):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "Optional[Sequence[str | Path]]" = None):
         self.__command = str(value)
         if early_args is None:
             early_args = []
@@ -267,12 +267,12 @@ class MakeOptions:
         self.__can_pass_j_flag = can_pass_j_flag
 
     def all_commandline_args(self, config) -> "list[str]":
-        return self.get_commandline_args(config=config)
+        return self.get_commandline_args(config=config, targets=[])
 
     def get_commandline_args(
         self,
         *,
-        targets: "Optional[list[str]]" = None,
+        targets: "list[str]",
         jobs: "Optional[int]" = None,
         verbose=False,
         continue_on_error=False,
@@ -446,8 +446,9 @@ class Project(SimpleProject):
     default_build_tests: bool = True  # whether to build tests by default
     show_optional_tests_in_help: bool = True  # whether to show the --foo/build-tests in --help
     add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
-    _initial_source_dir: Optional[Path]
+    _initial_source_dir: Path
     source_dir: Path
+    configure_command: Path = Path("/invalid/configure/command")
     supported_riscv_cheri_standard: Optional[RiscvCheriISA] = None
 
     @classmethod
@@ -519,7 +520,7 @@ class Project(SimpleProject):
         return False
 
     @classmethod
-    def get_default_install_dir_kind(cls) -> Optional[DefaultInstallDir]:
+    def get_default_install_dir_kind(cls) -> DefaultInstallDir:
         xtarget = cls.get_crosscompile_target()
         if cls.default_install_dir is not None:
             install_dir = cls.default_install_dir
@@ -534,6 +535,7 @@ class Project(SimpleProject):
                 install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
             else:
                 install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+        assert install_dir is not None
         return install_dir
 
     default_install_dir: Optional[DefaultInstallDir] = None
@@ -639,7 +641,7 @@ class Project(SimpleProject):
     def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
         super().setup_config_options(**kwargs)
         if cls.source_dir is None:
-            cls._initial_source_dir = cls.add_optional_path_option(
+            cls._initial_source_dir = cls.add_path_option(
                 "source-directory",
                 metavar="DIR",
                 default=cls.default_source_dir,
@@ -949,7 +951,6 @@ class Project(SimpleProject):
                 self.info("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
             self._initial_build_dir = self.source_dir
 
-        self.configure_command = None
         # non-assignable variables:
         self.configure_args: "list[str]" = []
         self.configure_environment: "dict[str, str]" = {}
@@ -1161,16 +1162,16 @@ class Project(SimpleProject):
             llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
             llvm_nm = ccinfo.get_matching_binutil("llvm-nm")
             lld = ccinfo.get_matching_binutil("ld.lld")
-            # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
-            self._lto_linker_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld"))
-            if self.lto_compiler_flags_need_linker_flags:
-                self._lto_compiler_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld", for_cflags=True))
-            if not llvm_ar or not llvm_ranlib or not llvm_nm:
+            if lld is None or llvm_ar is None or llvm_ranlib is None or llvm_nm is None:
                 self.warning(
                     "Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                     "-> disabling LTO (resulting binary will be a bit slower)",
                 )
                 return False
+            # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
+            self._lto_linker_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld"))
+            if self.lto_compiler_flags_need_linker_flags:
+                self._lto_compiler_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld", for_cflags=True))
             ld = lld if self.lto_set_ld else None
             self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=ld)
         if self.prefer_full_lto_over_thin_lto or not self.can_use_thinlto(ccinfo):
@@ -1230,7 +1231,7 @@ class Project(SimpleProject):
 
     def _get_make_commandline(
         self,
-        make_target: "Optional[Union[str, list[str]]]",
+        make_targets: "list[str]",
         make_command,
         options: MakeOptions,
         parallel: bool = True,
@@ -1239,8 +1240,8 @@ class Project(SimpleProject):
         assert options is not None
         assert make_command is not None
         options = options.copy()
-        if compilation_db_name is not None and make_target in ("clean", "distclean", "mrproper"):
-            # self.info(f"Ignoring request to create a compilation DB for '{make_target}' target")
+        if compilation_db_name is not None and any(tgt in ("clean", "distclean", "mrproper") for tgt in make_targets):
+            self.info(f"Ignoring request to create a compilation DB for '{make_targets}' targets")
             compilation_db_name = None
 
         if compilation_db_name is not None and self.config.create_compilation_db and self.compile_db_requires_bear:
@@ -1267,7 +1268,7 @@ class Project(SimpleProject):
         all_args = [
             make_command,
             *options.get_commandline_args(
-                targets=[make_target] if isinstance(make_target, str) and make_target else make_target,
+                targets=make_targets,
                 jobs=self.config.make_jobs if parallel else None,
                 config=self.config,
                 verbose=self.config.verbose,
@@ -1280,7 +1281,7 @@ class Project(SimpleProject):
 
     def get_make_commandline(
         self,
-        make_target: "Union[str, list[str]]",
+        make_targets: "list[str]",
         make_command: "Optional[str]" = None,
         options: "Optional[MakeOptions]" = None,
         parallel: bool = True,
@@ -1290,11 +1291,11 @@ class Project(SimpleProject):
             options = self.make_args
         if not make_command:
             make_command = self.make_args.command
-        return self._get_make_commandline(make_target, make_command, options, parallel, compilation_db_name)
+        return self._get_make_commandline(make_targets, make_command, options, parallel, compilation_db_name)
 
     def run_make(
         self,
-        make_target: "Optional[Union[str, list[str]]]" = None,
+        make_targets: "Optional[str | list[str]]" = None,
         *,
         make_command: "Optional[str]" = None,
         options: "Optional[MakeOptions]" = None,
@@ -1309,21 +1310,26 @@ class Project(SimpleProject):
             options = self.make_args
         if not make_command:
             make_command = options.command
+        make_targets_list: "list[str]" = (
+            [] if make_targets is None else ([make_targets] if isinstance(make_targets, str) else make_targets)
+        )
         all_args = self._get_make_commandline(
-            make_target, make_command, options, parallel=parallel, compilation_db_name=compilation_db_name
+            make_targets_list, make_command, options, parallel=parallel, compilation_db_name=compilation_db_name
         )
         if not cwd:
             cwd = self.build_dir
         if not logfile_name:
             logfile_name = Path(make_command).name
-            if make_target:
-                logfile_name += "." + (make_target if isinstance(make_target, str) else "_".join(make_target))
+            if make_targets_list:
+                logfile_name += "." + (
+                    make_targets_list if isinstance(make_targets_list, str) else "_".join(make_targets_list)
+                )
 
         starttime = time.time()
         if not self.config.write_logfile and stdout_filter == _default_stdout_filter:
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
-            if make_command == "ninja" and make_target != "install":
+            if make_command == "ninja" and "install" not in make_targets_list:
                 stdout_filter = None
         if stdout_filter is _default_stdout_filter:
             stdout_filter = self._stdout_filter
@@ -1340,7 +1346,7 @@ class Project(SimpleProject):
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / compilation_db_name).exists():
             self.install_file(self.build_dir / compilation_db_name, self.source_dir / compilation_db_name, force=True)
         # add a newline at the end in case it ended with a filtered line (no final newline)
-        print("Running", make_command, make_target, "took", time.time() - starttime, "seconds")
+        print("Running", make_command, " ".join(make_targets_list), "took", time.time() - starttime, "seconds")
 
     def update(self) -> None:
         if not self.repository and not self.skip_update:
@@ -1491,7 +1497,7 @@ class Project(SimpleProject):
         _stdout_filter=_default_stdout_filter,
         cwd: "Optional[Path]" = None,
         parallel: Optional[bool] = None,
-        target: "Union[str, list[str]]" = "install",
+        targets: "Optional[list[str]]" = None,
         make_install_env=None,
         **kwargs,
     ):
@@ -1504,8 +1510,10 @@ class Project(SimpleProject):
         if make_install_env is None:
             make_install_env = self.make_install_env
         options.env_vars.update(make_install_env)
+        if targets is None:
+            targets = ["install"]
         self.run_make(
-            make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd, parallel=parallel, **kwargs
+            make_targets=targets, options=options, stdout_filter=_stdout_filter, cwd=cwd, parallel=parallel, **kwargs
         )
 
     def install(self, *, _stdout_filter=_default_stdout_filter) -> None:
@@ -1691,6 +1699,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.skip_update:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
+                assert self._initial_source_dir is not None
                 self.repository.ensure_cloned(
                     self,
                     src_dir=self.source_dir,
@@ -1814,7 +1823,7 @@ class _CMakeAndMesonSharedLogic(Project):
     class CommandLineArgs:
         """Simple wrapper to distinguish CMake (space-separated string) from Meson (python-style list)"""
 
-        def __init__(self, args: "list[Union[str, Path]]") -> None:
+        def __init__(self, args: "Sequence[str |  Path]") -> None:
             self.args = args
 
         def __str__(self) -> str:
@@ -1835,7 +1844,7 @@ class _CMakeAndMesonSharedLogic(Project):
         def __repr__(self) -> str:
             return str(self)
 
-    def _toolchain_file_list_to_str(self, value: "list[Union[str, Path]]") -> str:
+    def _toolchain_file_list_to_str(self, value: "Sequence[str | Path]") -> str:
         raise NotImplementedError()
 
     def _toolchain_file_command_args_to_str(self, value: CommandLineArgs) -> str:
@@ -1985,7 +1994,6 @@ class _CMakeAndMesonSharedLogic(Project):
 
     def setup(self):
         super().setup()
-        assert self.configure_command is not None
         if not Path(self.configure_command).is_absolute():
             abspath = shutil.which(self.configure_command)
             if abspath:
