@@ -39,7 +39,7 @@ from pathlib import Path, PurePath
 from typing import Optional, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
-from .cross.gdb import BuildKGDB, get_build_gdb_class, get_gdb_xtarget
+from .cross.gdb import BuildKGDB, BuildUpstreamGDB, get_build_gdb_class, get_gdb_xtarget
 from .project import (
     AutotoolsProject,
     CheriConfig,
@@ -1523,6 +1523,14 @@ class BuildFreeBSDImage(BuildDiskImageBase):
     include_os_in_target_suffix = False
     _source_class = BuildFreeBSD
     disk_image_prefix = "freebsd"
+    
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        xtarget = cls.get_crosscompile_target()
+        if xtarget in BuildUpstreamGDB.supported_architectures():
+            result += (BuildUpstreamGDB.get_class_for_target(xtarget).target,)
+        return result
 
     @classmethod
     def setup_config_options(cls, **kwargs):
