@@ -117,6 +117,9 @@ def set_env(*, print_verbose_only=True, config: ConfigBase, **environ):
 
 
 class TtyState:
+    flags: int
+    attrs: "termios._Attr"
+
     # noinspection PyBroadException
     def __init__(self, fd: "typing.TextIO", context: str):
         self.fd = fd
@@ -127,13 +130,13 @@ class TtyState:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a TTY
             if self._is_foreground_tty():
                 warning_message("Failed to query TTY state for", context, "-", e)
-            self.attrs = None
+            self.attrs = []
         try:
             self.flags = fcntl.fcntl(fd, fcntl.F_GETFL)
         except Exception as e:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a real file.  When running tests with pytest, this
             # will raise UnsupportedOperation("redirected stdin is pseudofile, has no fileno()")
-            self.flags = None
+            self.flags = 0
             if self._is_foreground_tty():
                 warning_message("Failed to query TTY flags for", context, "-", e)
 
@@ -222,18 +225,21 @@ def keep_terminal_sane(gave_tty_control=False, command: Optional[list] = None):
     # propagated to the shell that invoked cheribuild.
     # This function attempts to restore the stdin/stdout/stderr state in those cases:
     context = "'" + commandline_to_str(command) + "'" if command else ""
-    stdin_state = TtyState(sys.__stdin__, context)
-    stdout_state = TtyState(sys.__stdout__, context)
-    stderr_state = TtyState(sys.__stderr__, context)
+    stdin_state = TtyState(sys.__stdin__, context) if sys.__stdin__ is not None else None
+    stdout_state = TtyState(sys.__stdout__, context) if sys.__stdout__ is not None else None
+    stderr_state = TtyState(sys.__stderr__, context) if sys.__stderr__ is not None else None
     try:
         yield
     finally:
         # Can seemingly get unwanted SIGTTOU's whilst restoring so just ignore
         # them temporarily.
         with suppress_sigttou(suppress=gave_tty_control):
-            stdin_state.restore()
-            stdout_state.restore()
-            stderr_state.restore()
+            if stdin_state is not None:
+                stdin_state.restore()
+            if stdout_state is not None:
+                stdout_state.restore()
+            if stderr_state is not None:
+                stderr_state.restore()
 
 
 def print_command(
@@ -279,9 +285,9 @@ def get_interpreter(cmdline: "typing.Sequence[str]") -> "Optional[list[str]]":
     :return: The interpreter command if the executable does not have execute permissions
     """
     executable = Path(cmdline[0])
-    print(executable, os.access(str(executable), os.X_OK), cmdline)
+    # print(executable, os.access(str(executable), os.X_OK), cmdline)
     if not executable.exists():
-        executable = Path(shutil.which(str(executable)))
+        executable = Path(shutil.which(str(executable)) or executable)
     status_update(executable, "is not executable, looking for shebang:", end=" ")
     with executable.open("r", encoding="utf-8") as f:
         first_line = f.readline()
@@ -488,15 +494,15 @@ def run_command(
                 exc = e
                 exc.__cause__ = e
             retcode = process.poll()
+            assert retcode is not None
             if retcode != expected_exit_code and not allow_unexpected_returncode:
                 exc = _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr, cwd=kwargs["cwd"])
             if exc is not None:
                 if config.pretend and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                     fatal_error(
-                        "Command ",
-                        "`" + commandline_to_str(process.args) + "` failed with unexpected exit code ",
-                        retcode,
+                        f"Command `{commandline_to_str(process.args)}`",  # ty:ignore[invalid-argument-type]
+                        f"failed with unexpected exit code {retcode}",
                         *cwd,
                         sep="",
                         pretend=config.pretend,
@@ -733,7 +739,7 @@ class CompilerInfo:
         return self.compiler == "gcc"
 
     def __repr__(self) -> str:
-        return "{} ({} {})".format(self.path, self.compiler, ".".join(map(str, self.version)))
+        return "{} ({} {})".format(self.path, self.compiler, ".".join(str(x) for x in self.version))
 
 
 _cached_compiler_infos: "dict[Path, CompilerInfo]" = {}
@@ -785,7 +791,7 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
             version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
             executed_sucessfully = False
         except OSError as e:
-            version_cmd = CompletedProcess([compiler, "-v"], e.errno, b"", str(e).encode("utf-8"))
+            version_cmd = CompletedProcess([compiler, "-v"], e.errno or 0, b"", str(e).encode("utf-8"))
             executed_sucessfully = False
 
         clang_version = clang_version_pattern.search(version_cmd.stderr)

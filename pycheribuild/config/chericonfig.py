@@ -133,7 +133,7 @@ class RiscvFloatAbi(Enum):
     HARD = "hard"
 
 
-def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
+def _default_arm_none_eabi_prefix(c: "CheriConfig", _) -> str:
     # see if the local install exists:
     default_path = c.output_root / c.local_arm_none_eabi_toolchain_relpath
     if (default_path / "bin/arm-none-eabi-gcc").exists():
@@ -648,7 +648,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         )
 
         self.local_arm_none_eabi_toolchain_relpath = Path("arm-none-eabi-sdk")
-        self.arm_none_eabi_toolchain_prefix = loader.add_option(
+        self.arm_none_eabi_toolchain_prefix: str = loader.add_option(
             "arm-none-eabi-prefix",
             default=ComputedDefaultValue(_default_arm_none_eabi_prefix, ""),
             group=loader.path_group,

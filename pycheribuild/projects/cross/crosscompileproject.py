@@ -31,7 +31,7 @@
 import os
 import typing
 from pathlib import Path
-from typing import Union
+from typing import Sequence, Union
 
 from ..cmake_project import CMakeProject
 from ..meson_project import MesonProject
@@ -137,7 +137,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         for k, v in kwargs.items():
             self.add_configure_env_arg(k, v)
 
-    def set_configure_prog_with_args(self, prog: str, path: Path, args: "list[Union[str, Path]]"):
+    def set_configure_prog_with_args(self, prog: str, path: Path, args: "Sequence[str | Path]"):
         super().set_configure_prog_with_args(prog, path, args)
         if self._configure_supports_variables_on_cmdline:
             self.configure_args.append(prog + "=" + self.configure_environment[prog])

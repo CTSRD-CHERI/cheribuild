@@ -114,11 +114,12 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
             # We are building on CheriBSD (purecap)
             assert native_instance.compiling_for_cheri()
             result = shutil.which("update-mime-database")
-            if not result:
+            if result is None:
                 native_instance.dependency_error(
                     "Cannot find native update-mime-database and can't build it for purecap yet",
                     install_instructions=InstallInstructions("pkg64 install shared-mime-info"),
                 )
+                return Path("update-mime-database")
             return Path(result)
 
     @property

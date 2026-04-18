@@ -32,7 +32,7 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence
 
 from .project import MakeCommandKind, Project, _CMakeAndMesonSharedLogic
 from .simple_project import _default_stdout_filter
@@ -66,7 +66,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     cmake_options: "list[str]"
     configure_command = Path(os.getenv("CMAKE_COMMAND", "cmake"))
 
-    def _toolchain_file_list_to_str(self, value: "list[Union[str, Path]]") -> str:
+    def _toolchain_file_list_to_str(self, value: "Sequence[str | Path]") -> str:
         assert isinstance(value, list), f"Expected a list and not {type(value)}: {value}"
         return ";".join(map(str, value))
 
@@ -75,7 +75,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def _toolchain_file_env_var_path_list_to_str(self, value: _CMakeAndMesonSharedLogic.EnvVarPathList) -> str:
         # We store the raw ':'-separated list in the CMake toolchain file since it's also set using set(ENV{FOO} ...)
-        return ":".join(map(str, value.paths))
+        return ":".join(str(x) for x in value.paths)
 
     def _bool_to_str(self, value: bool) -> str:
         return "TRUE" if value else "FALSE"
@@ -374,8 +374,15 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def find_package(self, name: str) -> bool:
         try:
-            cmd = "cmake --find-package -DCOMPILER_ID=Clang -DLANGUAGE=CXX -DMODE=EXIST -DQUIET=TRUE".split()
-            cmd.append("-DNAME=" + name)
+            cmd = [
+                "cmake",
+                "--find-package",
+                "-DCOMPILER_ID=Clang",
+                "-DLANGUAGE=CXX",
+                "-DMODE=EXIST",
+                "-DQUIET=TRUE",
+                "-DNAME=" + name,
+            ]
             return self.run_cmd(cmd).returncode == 0
         except subprocess.CalledProcessError:
             return False

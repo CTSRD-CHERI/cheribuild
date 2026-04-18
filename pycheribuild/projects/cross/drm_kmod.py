@@ -28,16 +28,14 @@ class BuildDrmKMod(CrossCompileProject):
                 LOCAL_MODULES_DIR=self.source_dir.parent,
                 MODULES_OVERRIDE="linuxkpi",
             )
-        self.kernel_make_args = self.freebsd_project.kernel_make_args_for_config(
-            self.freebsd_project.kernel_config,
-            extra_make_args,
-        )
+        kernconfs = self.freebsd_project.kernconf_list()
+        self.kernel_make_args = self.freebsd_project.kernel_make_args_for_config(kernconfs, extra_make_args)
         assert self.kernel_make_args.kind == MakeCommandKind.BsdMake
 
     def clean(self, **kwargs) -> None:
         # TODO: use buildenv and only build the kernel modules...
         if self.use_buildenv:
-            self.info("Cleaning drm-kmod modules for configs:", self.freebsd_project.kernel_config)
+            self.info("Cleaning drm-kmod modules for configs:", self.freebsd_project.kernconf_list())
             self.freebsd_project.build_and_install_subdir(
                 self.kernel_make_args,
                 str(self.source_dir),

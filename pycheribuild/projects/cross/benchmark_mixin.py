@@ -31,7 +31,7 @@ import os
 import shlex
 import typing
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 from .crosscompileproject import CompilationTargets
 from ..project import Project
@@ -66,8 +66,8 @@ class BenchmarkMixin(_BenchmarkMixinBase):
         *,
         output_file: "Optional[str]" = None,
         benchmark_script: "Optional[str]" = None,
-        benchmark_script_args: "Optional[list[str]]" = None,
-        extra_runbench_args: "Optional[list[str]]" = None,
+        benchmark_script_args: "Optional[Sequence[str | Path]]" = None,
+        extra_runbench_args: "Optional[Sequence[str | Path]]" = None,
     ):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"

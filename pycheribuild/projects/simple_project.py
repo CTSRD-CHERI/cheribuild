@@ -180,6 +180,15 @@ if typing.TYPE_CHECKING:
     def PathConfigOption(  # noqa: N802
         name: str,
         help: str,
+        default: "typing.Union[Path, ComputedDefaultValue[Path]]" = None,
+        **kwargs,
+    ) -> "Path":
+        return typing.cast(Path, default)
+
+    # noinspection PyPep8Naming
+    def OptionalPathConfigOption(  # noqa: N802
+        name: str,
+        help: str,
         default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
         **kwargs,
     ) -> "Optional[Path]":
@@ -238,7 +247,7 @@ else:
             self,
             name: str,
             help: str,
-            default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
+            default: "typing.Union[Path, ComputedDefaultValue[Path]]" = None,
             **kwargs,
         ):
             super().__init__(name, help, default, **kwargs)
@@ -247,6 +256,24 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
+            )
+
+    class OptionalPathConfigOption(PerProjectConfigOption[Optional[Path]]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=Optional[Path], **self._kwargs
+                ),
             )
 
     class ListConfigOption(PerProjectConfigOption[typing.List[str]]):
@@ -623,7 +650,9 @@ class SimpleProjectBase(AbstractProject, ABC):
         if caller is not None:
             assert caller._init_called, "Cannot call this inside __init__()"
         assert cross_target is not None
-        target = target_manager.get_target(target_name, required_arch=cross_target, config=config, caller=caller)
+        target = target_manager.get_target(
+            target_name, required_arch=cross_target, config=config, caller="<unknown>" if caller is None else caller
+        )
         result = target.get_or_create_project(cross_target, config, caller=caller)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target()
@@ -1258,7 +1287,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     def run_with_logfile(
         self,
-        args: "typing.Sequence[str]",
+        args: "typing.Sequence[str | Path]",
         logfile_name: str,
         *,
         stdout_filter: "Optional[Callable[[bytes], None]]" = None,
@@ -1793,6 +1822,15 @@ class SimpleProject(SimpleProjectBase, metaclass=ProjectSubclassDefinitionHook):
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__
         )
+
+
+class FakeProject(SimpleProjectBase):
+    def __init__(self, config: CheriConfig, *, crosscompile_target: CrossCompileTarget):
+        self._xtarget = crosscompile_target
+        super().__init__(config, crosscompile_target=crosscompile_target)
+
+    def process(self):
+        pass
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies

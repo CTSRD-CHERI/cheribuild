@@ -67,7 +67,7 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.benchmark_size = cls.add_config_option(
+        cls.benchmark_size: str = cls.add_config_option(
             "benchmark-size",
             choices=("small", "large"),
             default="large",

@@ -80,7 +80,7 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
             target_option.completer = target_completer
             argcomplete.autocomplete(
                 self._parser,
-                always_complete_options=None,  # don't print -/-- by default
+                always_complete_options=False,  # don't print -/-- by default
                 print_suppressed=True,  # also include target-specific options
             )
 
@@ -209,7 +209,9 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "list[SdkArchive
                 )
             else:
                 # otherwise fall back to the /usr/bin version
-                cheri_config.FS.create_symlink(Path(shutil.which(tool)), expected_bindir / tool, relative=False)
+                cheri_config.FS.create_symlink(
+                    Path(shutil.which(tool) or f"/cannot/find/{tool}"), expected_bindir / tool, relative=False
+                )
     if not (expected_bindir / "ld").exists():
         status_update("Adding missing $SDK/ld link to ld.lld")
         cheri_config.FS.create_symlink(expected_bindir / "ld.lld", expected_bindir / "ld", relative=True)

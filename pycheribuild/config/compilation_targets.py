@@ -45,6 +45,7 @@ from .chericonfig import CheriConfig, RiscvCheriISA
 from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
+    AbstractProject,
     AutoVarInit,
     BasicCompilationTargets,
     CompilerType,
@@ -120,6 +121,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         if self._sdk_root_dir is not None:
             return self._sdk_root_dir
         self._sdk_root_dir = self._get_sdk_root_dir_lazy()
+        assert self._sdk_root_dir is not None
         return self._sdk_root_dir
 
     @classmethod
@@ -351,7 +353,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return result
 
     @classmethod
-    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: bool) -> str:
+    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: Optional[bool]) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
         arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + "ima"
@@ -366,7 +368,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return arch_string
 
     @classmethod
-    def get_riscv_abi(cls, xtarget: CrossCompileTarget, *, softfloat: bool) -> str:
+    def get_riscv_abi(cls, xtarget: CrossCompileTarget, *, softfloat: Optional[bool]) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         xlen = xtarget.cpu_architecture.word_bits()
         purecap = xtarget.is_cheri_purecap()
@@ -508,7 +510,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("freebsd", xtarget)
 
-    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
+    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run-freebsd", xtarget, caller.config, caller)
         return typing.cast(LaunchFreeBSDInterface, result)
 
@@ -614,7 +616,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         script = self.project.get_test_script_path(script_name)
         if not script.exists():
             self.project.fatal("Could not find test script", script)
-        cmd = [script, "--architecture", rootfs_xtarget.base_arch_suffix]
+        cmd: "list[str | Path]" = [script, "--architecture", rootfs_xtarget.base_arch_suffix]
         if self.config.test_ssh_key is not None:
             cmd.extend(["--ssh-key", self.config.test_ssh_key])
         if kernel_path and not has_test_extra_arg_override("--kernel"):
@@ -668,7 +670,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
         cmd.extend(map(str, script_args))
         if self.config.test_extra_args:
-            cmd.extend(map(str, self.config.test_extra_args))
+            cmd.extend(self.config.test_extra_args)
         self.project.run_cmd(cmd, give_tty_control=True)
 
 
