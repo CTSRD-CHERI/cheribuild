@@ -1526,11 +1526,12 @@ class BuildFreeBSDImage(BuildDiskImageBase):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(default_hostname=_default_disk_image_hostname("freebsd"), **kwargs)
+        super().setup_config_options(
+            default_hostname=_default_disk_image_hostname("freebsd"), extra_files_suffix="-freebsd", **kwargs
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # TODO: different extra-files directory
         self.minimum_image_size = "256m"
 
 
