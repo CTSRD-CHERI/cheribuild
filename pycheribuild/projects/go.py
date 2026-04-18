@@ -39,7 +39,7 @@ class BuildGo(Project):
         "https://github.com/golang/go.git",
         default_branch="release-branch.go1.21",
         force_branch=True,
-        old_urls=[b"https://github.com/CTSRD-CHERI/freebsd-mips-go.git"],
+        old_urls=["https://github.com/CTSRD-CHERI/freebsd-mips-go.git"],
     )
     no_default_sysroot = None
     skip_cheri_symlinks = True

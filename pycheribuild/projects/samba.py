@@ -47,7 +47,7 @@ class BuildSamba(Project):
     # NB: We can't update beyond 4.13 due to https://bugzilla.samba.org/show_bug.cgi?id=15024
     repository = GitRepository(
         "https://github.com/samba-team/samba.git",
-        old_urls=[b"https://github.com/CTSRD-CHERI/samba.git"],
+        old_urls=["https://github.com/CTSRD-CHERI/samba.git"],
         default_branch="v4-23-stable",
         force_branch=True,
     )

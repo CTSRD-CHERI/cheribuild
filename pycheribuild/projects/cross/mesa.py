@@ -59,7 +59,7 @@ class BuildLibGlvnd(CrossCompileMesonProject):
     dependencies = ("libx11", "libxext")
     repository = GitRepository(
         "https://gitlab.freedesktop.org/glvnd/libglvnd.git",
-        old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"],
+        old_urls=["https://gitlab.freedesktop.org/arichardson/libglvnd.git"],
     )
     _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
@@ -81,7 +81,7 @@ class BuildMesa(CrossCompileMesonProject):
         "https://gitlab.freedesktop.org/mesa/mesa.git",
         temporary_url_override="https://github.com/CTSRD-CHERI/mesa",
         url_override_reason="Various changes to allow purecap compilation",
-        old_urls=[b"https://gitlab.freedesktop.org/arichardson/mesa.git"],
+        old_urls=["https://gitlab.freedesktop.org/arichardson/mesa.git"],
         force_branch=True,
         default_branch="mesa-22.3.7-cheriabi",
     )
@@ -149,7 +149,7 @@ class BuildLibEpoxy(CrossCompileMesonProject):
     target = "libepoxy"
     dependencies = ("libglvnd",)
     repository = GitRepository(
-        "https://github.com/anholt/libepoxy", old_urls=[b"https://github.com/arichardson/libepoxy"]
+        "https://github.com/anholt/libepoxy", old_urls=["https://github.com/arichardson/libepoxy"]
     )
     _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 

@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import typing
 from pathlib import Path
+from subprocess import CompletedProcess
 from typing import Optional
 
 from .simple_project import SimpleProject
@@ -171,7 +172,7 @@ class GitRepository(SourceRepository):
         self,
         url: str,
         *,
-        old_urls: "Optional[list[bytes]]" = None,
+        old_urls: "Optional[list[str]]" = None,
         default_branch: "Optional[str]" = None,
         force_branch: bool = False,
         temporary_url_override: "Optional[str]" = None,
@@ -184,9 +185,9 @@ class GitRepository(SourceRepository):
             self.url = temporary_url_override
             _ = url_override_reason  # silence unused argument warning
             if self.old_urls is None:
-                self.old_urls = [url.encode("utf-8")]
+                self.old_urls = [url]
             else:
-                self.old_urls.append(url.encode("utf-8"))
+                self.old_urls.append(url)
         else:
             self.url = url
         self._default_branch = default_branch
@@ -196,7 +197,7 @@ class GitRepository(SourceRepository):
         self.per_target_branches = per_target_branches
         self.old_branches = old_branches
 
-    def get_default_branch(self, current_project: "Project", *, include_per_target: bool) -> str:
+    def get_default_branch(self, current_project: "Project", *, include_per_target: bool) -> Optional[str]:
         if include_per_target:
             target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
             if target_override is not None:
@@ -352,7 +353,7 @@ class GitRepository(SourceRepository):
         current_project: "Project",
         *,
         src_dir: Path,
-        base_project_source_dir: Path,
+        base_project_source_dir: Optional[Path],
         skip_submodules=False,
     ) -> None:
         if current_project.config.skip_clone:
@@ -379,7 +380,7 @@ class GitRepository(SourceRepository):
             if not skip_submodules:
                 clone_cmd.append("--recurse-submodules")
             clone_branch = self.get_default_branch(current_project, include_per_target=False)
-            if self._default_branch:
+            if clone_branch:
                 clone_cmd += ["--branch", clone_branch]
             current_project.run_cmd([*clone_cmd, self.url, base_project_source_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
@@ -522,21 +523,24 @@ class GitRepository(SourceRepository):
         if src_dir.exists() and self.old_urls:
             branch_info = self.get_branch_info(src_dir, config=current_project.config)
             if branch_info is not None and branch_info.remote_name is not None:
-                remote_url = current_project.run_cmd(
-                    "git",
-                    "remote",
-                    "get-url",
-                    branch_info.remote_name,
-                    capture_output=True,
-                    cwd=src_dir,
-                ).stdout.strip()
+                remote_url = (
+                    current_project.run_cmd(
+                        "git",
+                        "remote",
+                        "get-url",
+                        branch_info.remote_name,
+                        capture_output=True,
+                        cwd=src_dir,
+                    )
+                    .stdout.strip()
+                    .decode("utf-8")
+                )
                 # Strip any .git suffix to match more old URLs
-                if remote_url.endswith(b".git"):
+                if remote_url.endswith(".git"):
                     remote_url = remote_url[:-4]
                 # Update from the old url:
                 for old_url in self.old_urls:
-                    assert isinstance(old_url, bytes)
-                    if old_url.endswith(b".git"):
+                    if old_url.endswith(".git"):
                         old_url = old_url[:-4]
                     if remote_url == old_url:
                         current_project.warning(current_project.target, "still points to old repository", remote_url)
@@ -566,7 +570,7 @@ class GitRepository(SourceRepository):
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and (self.force_branch or self.old_branches):
             branch_info = self.get_branch_info(src_dir, config=current_project.config)
-            current_branch = branch_info.local_branch if branch_info is not None else None
+            current_branch = branch_info.local_branch if branch_info is not None else ""
             if branch_info is None:
                 default_branch = None
             elif self.force_branch:
@@ -685,7 +689,7 @@ class MercurialRepository(SourceRepository):
         self,
         url: str,
         *,
-        old_urls: "Optional[list[bytes]]" = None,
+        old_urls: "Optional[list[str]]" = None,
         default_branch: "Optional[str]" = None,
         force_branch: bool = False,
         temporary_url_override: "Optional[str]" = None,
@@ -696,16 +700,16 @@ class MercurialRepository(SourceRepository):
             self.url = temporary_url_override
             _ = url_override_reason  # silence unused argument warning
             if self.old_urls is None:
-                self.old_urls = [url.encode("utf-8")]
+                self.old_urls = [url]
             else:
-                self.old_urls.append(url.encode("utf-8"))
+                self.old_urls.append(url)
         else:
             self.url = url
         self.default_branch = default_branch
         self.force_branch = force_branch
 
     @staticmethod
-    def run_hg(src_dir: "Optional[Path]", *args, project: "Project", **kwargs):
+    def run_hg(src_dir: "Optional[Path]", *args, project: "Project", **kwargs) -> "CompletedProcess[bytes]":
         assert src_dir is None or isinstance(src_dir, Path)
         command = ["hg"]
         project.check_required_system_tool("hg", default="mercurial")
@@ -754,7 +758,7 @@ class MercurialRepository(SourceRepository):
         current_project: "Project",
         *,
         src_dir: Path,
-        base_project_source_dir: Path,
+        base_project_source_dir: Optional[Path],
         skip_submodules=False,
     ) -> None:
         if current_project.config.skip_clone:
@@ -799,16 +803,19 @@ class MercurialRepository(SourceRepository):
 
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
-            remote_url = self.run_hg(
-                src_dir,
-                "paths",
-                "default",
-                capture_output=True,
-                project=current_project,
-            ).stdout.strip()
+            remote_url = (
+                self.run_hg(
+                    src_dir,
+                    "paths",
+                    "default",
+                    capture_output=True,
+                    project=current_project,
+                )
+                .stdout.strip()
+                .decode("utf-8")
+            )
             # Update from the old url:
             for old_url in self.old_urls:
-                assert isinstance(old_url, bytes)
                 if remote_url == old_url:
                     current_project.warning(current_project.target, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):

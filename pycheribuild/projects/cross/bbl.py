@@ -55,7 +55,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         force_branch=True,
         default_branch="cheri_purecap",
         # Compilation fixes for clang and support for CHERI
-        old_urls=[b"https://github.com/jrtc27/riscv-pk.git"],
+        old_urls=["https://github.com/jrtc27/riscv-pk.git"],
     )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True

@@ -282,7 +282,7 @@ class BuildKCodecs(KDECMakeProject):
 class BuildKCoreAddons(KDECMakeProject):
     repository = KF5GitRepository(
         "https://invent.kde.org/frameworks/kcoreaddons.git",
-        old_urls=[b"https://invent.kde.org/arichardson/kcoreaddons.git"],
+        old_urls=["https://invent.kde.org/arichardson/kcoreaddons.git"],
     )
 
     def setup(self):
@@ -582,7 +582,7 @@ class BuildKPackage(KDECMakeProject):
     dependencies = ("karchive", "ki18n", "kcoreaddons", "kcoreaddons-native")
     repository = KF5GitRepository(
         "https://invent.kde.org/frameworks/kpackage.git",
-        old_urls=[b"https://invent.kde.org/arichardson/kpackage.git"],
+        old_urls=["https://invent.kde.org/arichardson/kpackage.git"],
     )
 
 
@@ -933,7 +933,7 @@ class BuildKirigami(KDECMakeProject):
     dependencies = ("qtquickcontrols2", "extra-cmake-modules", "qtgraphicaleffects")
     repository = KF5GitRepository(
         "https://invent.kde.org/frameworks/kirigami.git",
-        old_urls=[b"https://invent.kde.org/arichardson/kirigami.git"],
+        old_urls=["https://invent.kde.org/arichardson/kirigami.git"],
     )
 
 
@@ -957,7 +957,7 @@ class BuildPlasmaFramework(KDECMakeProject):
     )
     repository = KF5GitRepository(
         "https://invent.kde.org/frameworks/plasma-framework.git",
-        old_urls=[b"https://invent.kde.org/arichardson/plasma-framework.git"],
+        old_urls=["https://invent.kde.org/arichardson/plasma-framework.git"],
     )
 
 
@@ -1019,7 +1019,7 @@ class BuildKScreenLocker(KDECMakeProject):
     target = "kscreenlocker"
     repository = KDEPlasmaGitRepository(
         "https://invent.kde.org/plasma/kscreenlocker.git",
-        old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"],
+        old_urls=["https://invent.kde.org/arichardson/kscreenlocker.git"],
     )
     dependencies = (
         "kwindowsystem",
@@ -1108,7 +1108,7 @@ class BuildLibKScreen(KDECMakeProject):
     target = "libkscreen"
     repository = KDEPlasmaGitRepository(
         "https://invent.kde.org/plasma/libkscreen.git",
-        old_urls=[b"https://invent.kde.org/arichardson/libkscreen.git"],
+        old_urls=["https://invent.kde.org/arichardson/libkscreen.git"],
     )
     dependencies = ("qtx11extras", "kwayland")
     _uses_wayland_scanner = True
@@ -1151,7 +1151,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     _uses_wayland_scanner = True
     repository = KDEPlasmaGitRepository(
         "https://invent.kde.org/plasma/plasma-workspace.git",
-        old_urls=[b"https://invent.kde.org/arichardson/plasma-workspace.git"],
+        old_urls=["https://invent.kde.org/arichardson/plasma-workspace.git"],
     )
     dependencies = (
         "xprop",
@@ -1232,7 +1232,7 @@ class BuildSystemSettings(KDECMakeProject):
     target = "systemsettings"
     repository = KDEPlasmaGitRepository(
         "https://invent.kde.org/plasma/systemsettings.git",
-        old_urls=[b"https://invent.kde.org/arichardson/systemsettings.git"],
+        old_urls=["https://invent.kde.org/arichardson/systemsettings.git"],
     )
     dependencies = ("plasma-workspace",)
 
@@ -1251,7 +1251,7 @@ class BuildLibPng(CrossCompileCMakeProject):
     _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     repository = GitRepository(
         "https://github.com/glennrp/libpng",
-        old_urls=[b"https://github.com/CTSRD-CHERI/libpng"],
+        old_urls=["https://github.com/CTSRD-CHERI/libpng"],
         default_branch="libpng16",
         force_branch=True,
     )
@@ -1351,7 +1351,7 @@ class BuildPoppler(CrossCompileCMakeProject):
     dependencies = ("freetype2", "fontconfig", "qtbase", "libtiff", "openjpeg", "curl")
     repository = GitRepository(
         "https://gitlab.freedesktop.org/poppler/poppler.git",
-        old_urls=[b"https://gitlab.freedesktop.org/arichardson/poppler.git"],
+        old_urls=["https://gitlab.freedesktop.org/arichardson/poppler.git"],
     )
 
     def setup(self):
@@ -1391,7 +1391,7 @@ class BuildKPty(KDECMakeProject):
     target = "kpty"
     repository = KF5GitRepository(
         "https://invent.kde.org/frameworks/kpty.git",
-        old_urls=[b"https://invent.kde.org/arichardson/kpty"],
+        old_urls=["https://invent.kde.org/arichardson/kpty"],
     )
 
     def setup(self):
@@ -1452,7 +1452,7 @@ class BuildOkular(KDECMakeProject):
     # TODO: after the next exiv2 release add "libkexiv2" (currently fails to build due to auto_ptr).
     repository = GitRepository(
         "https://invent.kde.org/graphics/okular.git",
-        old_urls=[b"https://invent.kde.org/arichardson/okular.git"],
+        old_urls=["https://invent.kde.org/arichardson/okular.git"],
         default_branch="release/23.08",  # release/23.08 is the last Qt5 release
         force_branch=True,
     )

@@ -34,7 +34,7 @@ class BuildChocolateDoom(CrossCompileAutotoolsProject):
     target = "chocolate-doom"
     repository = GitRepository(
         "https://github.com/chocolate-doom/chocolate-doom.git",
-        old_urls=[b"https://github.com/jrtc27/chocolate-doom.git"],
+        old_urls=["https://github.com/jrtc27/chocolate-doom.git"],
         default_branch="master",
         force_branch=True,
     )

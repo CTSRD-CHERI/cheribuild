@@ -34,7 +34,7 @@ class BuildFreeType2(CrossCompileMesonProject):
     target = "freetype2"
     _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     repository = GitRepository(
-        "https://gitlab.freedesktop.org/freetype/freetype", old_urls=[b"https://github.com/freetype/freetype2.git"]
+        "https://gitlab.freedesktop.org/freetype/freetype", old_urls=["https://github.com/freetype/freetype2.git"]
     )
     dependencies = ("libpng",)
 

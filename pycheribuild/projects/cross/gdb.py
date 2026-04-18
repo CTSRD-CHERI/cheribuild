@@ -300,7 +300,7 @@ class BuildGDB(BuildGDBBase):
             "morello-8.3": default_branch,
             "cheri-12": default_branch,
         },
-        old_urls=[b"https://github.com/bsdjhb/gdb.git"],
+        old_urls=["https://github.com/bsdjhb/gdb.git"],
     )
 
 
@@ -339,7 +339,7 @@ class BuildKGDB(BuildGDB):
             "mips_cheri-8.3-kgdb": default_branch,
             "cheri-12-kgdb": default_branch,
         },
-        old_urls=[b"https://github.com/bsdjhb/gdb.git"],
+        old_urls=["https://github.com/bsdjhb/gdb.git"],
     )
 
 

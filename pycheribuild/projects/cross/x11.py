@@ -359,7 +359,7 @@ class BuildPixman(X11MesonProject):
     dependencies = ("libpng",)
     repository = GitRepository(
         "https://gitlab.freedesktop.org/pixman/pixman.git",
-        old_urls=[b"https://gitlab.freedesktop.org/arichardson/pixman.git"],
+        old_urls=["https://gitlab.freedesktop.org/arichardson/pixman.git"],
     )
 
     def setup(self):
@@ -425,7 +425,7 @@ class BuildLibJpegTurbo(X11CMakeProject):
     target = "libjpeg-turbo"
     repository = GitRepository(
         "https://github.com/libjpeg-turbo/libjpeg-turbo.git",
-        old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"],
+        old_urls=["https://github.com/arichardson/libjpeg-turbo.git"],
     )
 
     def setup(self):
@@ -680,7 +680,7 @@ class BuildIceWM(X11CMakeProject):
         "libxft",
         "libxrandr",
     )
-    repository = GitRepository("https://github.com/bbidulock/icewm", old_urls=[b"https://github.com/arichardson/icewm"])
+    repository = GitRepository("https://github.com/bbidulock/icewm", old_urls=["https://github.com/arichardson/icewm"])
 
     def setup(self):
         super().setup()

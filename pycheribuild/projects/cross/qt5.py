@@ -89,7 +89,7 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
     target = "shared-mime-info"
     repository = GitRepository(
         "https://gitlab.freedesktop.org/xdg/shared-mime-info.git",
-        old_urls=[b"https://gitlab.freedesktop.org/arichardson/shared-mime-info.git"],
+        old_urls=["https://gitlab.freedesktop.org/arichardson/shared-mime-info.git"],
     )
     # We don't actually want to install the mime info, we just want the update-mime-info tool for native builds
     native_install_dir = DefaultInstallDir.KDE_PREFIX
@@ -805,7 +805,7 @@ class BuildQtSVG(BuildQtModuleWithQMake):
     target = "qtsvg"
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/qtsvg.git",
-        old_urls=[b"https://code.qt.io/qt/qtsvg.git"],
+        old_urls=["https://code.qt.io/qt/qtsvg.git"],
         default_branch="5.15",
         force_branch=True,
     )
@@ -815,7 +815,7 @@ class BuildQtX11Extras(BuildQtModuleWithQMake):
     target = "qtx11extras"
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qtx11extras.git",
-        old_urls=[b"https://code.qt.io/qt/qtx11extras.git"],
+        old_urls=["https://code.qt.io/qt/qtx11extras.git"],
         default_branch="5.15",
         force_branch=True,
     )
@@ -825,7 +825,7 @@ class BuildQtMacExtras(BuildQtModuleWithQMake):
     target = "qtmacextras"
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qtmacextras.git",
-        old_urls=[b"https://code.qt.io/qt/qtmacextras.git"],
+        old_urls=["https://code.qt.io/qt/qtmacextras.git"],
         default_branch="5.15",
         force_branch=True,
     )
@@ -854,7 +854,7 @@ class BuildQtTools(BuildQtModuleWithQMake):
     dependencies = ("qtbase", "qtdeclarative")
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qttools.git",
-        old_urls=[b"https://code.qt.io/qt/qttools.git"],
+        old_urls=["https://code.qt.io/qt/qttools.git"],
         default_branch="kde/5.15",
         force_branch=True,
     )
@@ -910,7 +910,7 @@ class BuildQtQuickControls2(BuildQtModuleWithQMake):
     dependencies = ("qtdeclarative",)
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qtquickcontrols2.git",
-        old_urls=[b"https://code.qt.io/qt/qtquickcontrols2.git"],
+        old_urls=["https://code.qt.io/qt/qtquickcontrols2.git"],
         default_branch="kde/5.15",
         force_branch=True,
     )
@@ -924,7 +924,7 @@ class BuildQtQuickControls(BuildQtModuleWithQMake):
     dependencies = ("qtdeclarative",)
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qtquickcontrols.git",
-        old_urls=[b"https://code.qt.io/qt/qtquickcontrols.git"],
+        old_urls=["https://code.qt.io/qt/qtquickcontrols.git"],
         default_branch="kde/5.15",
         force_branch=True,
     )
@@ -971,7 +971,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         "https://github.com/CTSRD-CHERI/icu.git",
         default_branch="maint/maint-70",
         force_branch=True,
-        old_urls=[b"https://github.com/unicode-org/icu.git"],
+        old_urls=["https://github.com/unicode-org/icu.git"],
     )
     default_directory_basename = "icu"
     target = "icu4c"
@@ -1019,7 +1019,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 # it also needs libxml2
 class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository(
-        "https://gitlab.gnome.org/GNOME/libxml2.git", old_urls=[b"https://github.com/CTSRD-CHERI/libxml2"]
+        "https://gitlab.gnome.org/GNOME/libxml2.git", old_urls=["https://github.com/CTSRD-CHERI/libxml2"]
     )
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE

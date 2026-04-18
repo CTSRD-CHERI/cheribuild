@@ -45,7 +45,7 @@ from ...utils import OSInfo
 class BuildBODiagSuite(CrossCompileCMakeProject):
     target = "bodiagsuite"
     repository = GitRepository(
-        "https://github.com/CTSRD-CHERI/bodiagsuite", old_urls=[b"https://github.com/nwf/bodiagsuite"]
+        "https://github.com/CTSRD-CHERI/bodiagsuite", old_urls=["https://github.com/nwf/bodiagsuite"]
     )
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     default_build_type = BuildType.DEBUG

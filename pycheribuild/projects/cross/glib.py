@@ -32,7 +32,7 @@ class BuildGlib(CrossCompileMesonProject):
     repository = GitRepository(
         "https://gitlab.gnome.org/GNOME/glib.git",
         temporary_url_override="https://gitlab.gnome.org/arichardson/glib.git",
-        old_urls=[b"https://github.com/CTSRD-CHERI/glib.git"],
+        old_urls=["https://github.com/CTSRD-CHERI/glib.git"],
         url_override_reason="Lots of CHERI incompatibilities",
         default_branch="main-with-cheri-fixes",
         force_branch=True,

@@ -73,7 +73,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
 class BuildLibUdevDevd(CrossCompileMesonProject):
     target = "libudev-devd"
     repository = GitRepository(
-        "https://github.com/wulf7/libudev-devd", old_urls=[b"https://github.com/FreeBSDDesktop/libudev-devd"]
+        "https://github.com/wulf7/libudev-devd", old_urls=["https://github.com/FreeBSDDesktop/libudev-devd"]
     )
     _supported_architectures = (
         CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
@@ -315,7 +315,7 @@ class BuildWayland(CrossCompileMesonProject):
         "https://gitlab.freedesktop.org/wayland/wayland.git",
         default_branch="main",
         force_branch=True,
-        old_urls=[b"https://github.com/CTSRD-CHERI/wayland"],
+        old_urls=["https://github.com/CTSRD-CHERI/wayland"],
     )
     _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
