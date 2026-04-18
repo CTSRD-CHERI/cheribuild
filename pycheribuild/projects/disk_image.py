@@ -150,6 +150,9 @@ class BuildDiskImageBase(SimpleProject):
         "no-autoboot", default=False, help="Disable autoboot and boot menu for targets that use loader(8)"
     )
 
+    # Make use of the mtree file created by make installworld to create a disk image without root privilege
+    manifest_file: Path  # Initialized after __init__
+
     @classmethod
     def default_architecture(cls) -> Optional[CrossCompileTarget]:
         assert cls._source_class is not None
@@ -229,9 +232,6 @@ class BuildDiskImageBase(SimpleProject):
     def __init__(self, *args, **kwargs) -> None:
         # TODO: different extra-files directory
         super().__init__(*args, **kwargs)
-        # make use of the mtree file created by make installworld
-        # this means we can create a disk image without root privilege
-        self.manifest_file: Optional[Path] = None
         self.extra_files: "list[Path]" = []
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
         self.makefs_cmd: Optional[Path] = None
@@ -626,7 +626,7 @@ class BuildDiskImageBase(SimpleProject):
     def is_x86(self):
         return self.crosscompile_target.is_any_x86()
 
-    def run_mkimg(self, cmd: "list[str]", **kwargs):
+    def run_mkimg(self, cmd: "list[str | Path]", **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
             self.fatal(
                 f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",

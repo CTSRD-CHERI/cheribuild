@@ -85,4 +85,4 @@ class BuildGit(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        self.run_make_install(target="install-man", cwd=self.build_dir / "Documentation")
+        self.run_make_install(targets=["install-man"], cwd=self.build_dir / "Documentation")

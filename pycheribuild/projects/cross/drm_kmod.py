@@ -85,7 +85,7 @@ class BuildDrmKMod(CrossCompileProject):
             )
         else:
             self.run_make_install(
-                target="installkernel",
+                targets=["installkernel"],
                 options=make_args,
                 cwd=self.freebsd_project.source_dir,
                 parallel=False,

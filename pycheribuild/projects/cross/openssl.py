@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import shutil
+from pathlib import Path
 
 from .crosscompileproject import CrossCompileProject, DefaultInstallDir, GitRepository
 
@@ -51,7 +51,7 @@ class BuildOpenSSL(CrossCompileProject):
 
     def setup(self):
         super().setup()
-        self.configure_command = shutil.which("perl")
+        self.configure_command = Path("perl")
         self.set_configure_prog_with_args("CC", self.CC, [*self.default_compiler_flags(), "-fuse-ld=lld"])
         self.add_configure_env_arg("AR", self.target_info.ar)
         self.configure_args.append(str(self.source_dir / "Configure"))

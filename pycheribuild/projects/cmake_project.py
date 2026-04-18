@@ -64,6 +64,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
     _minimum_cmake_or_meson_version: "tuple[int, ...]" = (3, 13, 4)
     cmake_options: "list[str]"
+    configure_command = Path(os.getenv("CMAKE_COMMAND", "cmake"))
 
     def _toolchain_file_list_to_str(self, value: "list[Union[str, Path]]") -> str:
         assert isinstance(value, list), f"Expected a list and not {type(value)}: {value}"
@@ -100,9 +101,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.configure_command = os.getenv("CMAKE_COMMAND", None)
-        if self.configure_command is None:
-            self.configure_command = "cmake"
         # allow a -G flag in cmake-options to override the default generator (Ninja).
         custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         generator = custom_generator if custom_generator else self._default_cmake_generator_arg
