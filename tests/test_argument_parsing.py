@@ -800,6 +800,15 @@ def test_freebsd_toolchains(
         assert project.kernel_make_args_for_config(["GENERIC"], None).env_vars.get("XCC", None) == expected_path
 
 
+def test_freebsd_build_target_llvm():
+    config = _parse_arguments(["--freebsd-aarch64/build-target-llvm", "--pretend"])
+    project = _get_target_instance("freebsd-aarch64", config, BuildFreeBSD)
+    buildworld_args = project.buildworld_args
+    assert buildworld_args.get_var("WITH_CLANG", None) != "no"
+    assert buildworld_args.get_var("WITH_LLD", None) != "no"
+    assert buildworld_args.get_var("WITH_LLDB", None) != "no"
+
+
 @pytest.mark.parametrize(
     ("target", "expected_name"),
     [

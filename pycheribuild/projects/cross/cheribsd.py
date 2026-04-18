@@ -869,6 +869,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # XXX: this is not correct if we were to support a CHERI-64 userspace
             assert not cls._xtarget.is_hybrid_or_purecap_cheri()
             cls.build_lib32 = False
+        cls.include_llvm = cls.add_bool_option(
+            "build-target-llvm",
+            help="Build LLVM/Clang/LLD/LLDB for the target architecture and install it into the target system",
+        )
 
     def get_default_kernel_platform(self) -> ConfigPlatform:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
@@ -1091,16 +1095,18 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return
 
         self.cross_toolchain_config.set_with_options(
-            # TODO: should we have an option to include a compiler in the target system?
             GCC=False,
-            CLANG=False,
-            LLD=False,  # Take a long time and not needed in the target system
-            LLDB=False,  # may be useful but means we need to build LLVM
             # Bootstrap compiler/ linker are not needed:
             GCC_BOOTSTRAP=False,
             CLANG_BOOTSTRAP=False,
             LLD_BOOTSTRAP=False,
         )
+        if not self.include_llvm:
+            self.cross_toolchain_config.set_with_options(
+                CLANG=False,
+                LLD=False,  # Take a long time and not needed in the target system
+                LLDB=False,  # may be useful but means we need to build LLVM
+            )
         if not self.build_lib32:
             # takes a long time and usually not needed.
             self.cross_toolchain_config.set_with_options(LIB32=False)
@@ -1828,10 +1834,6 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs) -> None:
         super().setup_config_options(bootstrap_toolchain=True)
-        cls.include_llvm = cls.add_bool_option(
-            "build-target-llvm",
-            help="Build LLVM for the target architecture. Note: this adds significant time to the build",
-        )
 
     def add_cross_build_options(self) -> None:
         # Just try to build as much as possible (but using make.py)
