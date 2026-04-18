@@ -217,7 +217,7 @@ class ConfigLoaderBase(ABC):
     def debug_msg(self, *args, sep=" ", **kwargs) -> None:
         pass
 
-    def is_needed_for_completion(self, name: str, shortname: str, option_type) -> bool:
+    def is_needed_for_completion(self, name: str, shortname: "Optional[str]", option_type) -> bool:
         return True
 
     # noinspection PyUnresolvedReferences,PyProtectedMember

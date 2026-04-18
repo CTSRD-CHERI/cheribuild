@@ -422,15 +422,17 @@ class LaunchQEMUBase(SimpleProject):
                 cheribuild_xtarget=kernel_xtarget,
             )
 
-        if self.forward_ssh_port and not self.is_port_available(self.ssh_forwarding_port):
-            self.print_port_usage(self.ssh_forwarding_port)
-            self.fatal(
-                "SSH forwarding port",
-                self.ssh_forwarding_port,
-                "is already in use! Make sure you don't "
-                "already have a QEMU instance running or change the chosen port by setting the config option",
-                self.get_config_option_name("ssh_forwarding_port"),
-            )
+        if self.forward_ssh_port:
+            assert self.ssh_forwarding_port is not None
+            if not self.is_port_available(self.ssh_forwarding_port):
+                self.print_port_usage(self.ssh_forwarding_port)
+                self.fatal(
+                    "SSH forwarding port",
+                    self.ssh_forwarding_port,
+                    "is already in use! Make sure you don't "
+                    "already have a QEMU instance running or change the chosen port by setting the config option",
+                    self.get_config_option_name("ssh_forwarding_port"),
+                )
 
         monitor_options = []
         if self.use_telnet:
@@ -668,8 +670,9 @@ class LaunchQEMUBase(SimpleProject):
                 session = server.list_sessions()[0]
                 window: libtmux.Window = session.attached_window
                 pane = window.attached_pane
+                assert pane is not None
                 # Note: multiply by two since most monospace fonts are taller than wide
-                vertical = int(pane.height) * 2 > int(pane.width)
+                vertical = int(pane.height or "0") * 2 > int(pane.width or "0")
                 self.verbose_print("Current window h =", window.height, "w =", window.width)
                 self.verbose_print("Current pane h =", window.attached_pane.height, "w =", window.attached_pane.width)
                 if self.config.pretend:
@@ -818,6 +821,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
         scp_path = os.path.expandvars(self.remote_kernel_path)
         self.info("Copying kernel image from build machine:", scp_path)
         self.makedirs(self.current_kernel.parent)
+        assert self.current_kernel is not None
         self.copy_remote_file(scp_path, self.current_kernel)
 
     def process(self):
@@ -832,8 +836,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     do_not_add_to_targets = True
     include_os_in_target_suffix = False
-    _freebsd_class: Optional[BuildFreeBSD] = None
-    _disk_image_class: Optional[BuildDiskImageBase] = None
+    _freebsd_class: "Optional[type[BuildFreeBSD]]" = None
+    _disk_image_class: "Optional[type[BuildDiskImageBase]]" = None
     kyua_test_files = ("/usr/tests/Kyuafile",)
 
     @classmethod

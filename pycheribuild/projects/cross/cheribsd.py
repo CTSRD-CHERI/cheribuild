@@ -766,7 +766,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if cls._xtarget:
             # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
             # the global --kernel-config option that is provided for convenience and backwards compat.
-            cls.kernel_config = cls.add_config_option(
+            cls.kernel_config: Optional[str] = cls.add_config_option(
                 "kernel-config",
                 metavar="CONFIG",
                 show_help=True,
@@ -1000,11 +1000,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't use apple_clang from /usr/bin
             prefix = self.get_homebrew_prefix()
             path = [str(prefix / "opt/llvm/bin"), str(prefix / "bin"), "/usr/bin"]
-            compiler_path = shutil.which("clang", path=":".join(path))
+            compiler_path = Path(shutil.which("clang", path=":".join(path)) or "clang")
         else:
             # Try using the latest installed clang
             compiler_path = latest_system_clang_tool(self.config, "clang", None)
-        if not compiler_path:
+        if compiler_path is None:
             # No system clang found, fall back to trying the compiler specified as the host path
             cc_info = self.get_compiler_info(self.host_CC)
             # Use the compiler configured in the cheribuild config if possible
@@ -1016,6 +1016,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     "Could not find a system installation of clang.",
                     "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain option.",
                 )
+        assert compiler_path is not None  # silence type checker false positives
         self.info("Checking if", compiler_path, "can be used to build FreeBSD...")
         cc_info = self.get_compiler_info(compiler_path)
         if cc_info.is_apple_clang:
@@ -1808,6 +1809,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         for run job restrictions (e.g. debug/benchmark or group).
         The filter parameters in kwargs are mapped to CheriBSDConfig fields.
         """
+        assert self.kernel_config is not None
         config = CheriBSDConfigTable.get_entry(self.config, self.crosscompile_target, self.kernel_config)
         assert config is not None, "Invalid configuration name"
         return [c.kernconf for c in filter_kernel_configs([config], platform=platform, kernel_abi=None)]

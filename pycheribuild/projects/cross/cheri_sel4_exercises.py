@@ -16,6 +16,7 @@
 import os
 import subprocess
 import threading
+from pathlib import Path
 from typing import Sequence, Union
 
 from .cheri_microkit import BuildCheriMicrokit
@@ -73,7 +74,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     # ------------------------------------------------------------------
     # Project config
     # ------------------------------------------------------------------
-    def configure(self) -> None:
+    def configure(self, **kwargs) -> None:
         if self.crosscompile_target.is_riscv(include_purecap=True):
             self.board = "qemu_virt_riscv64"
             # Build and test both baseline and purecap variants
@@ -122,8 +123,8 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         self,
         ccc,
         target: str,
-        sources: Sequence[Union[str, "os.PathLike[str]"]],
-        output_elf: Union[str, "os.PathLike[str]"],
+        sources: "Sequence[str | Path]",
+        output_elf: "Union[str, Path]",
     ) -> None:
         """Invoke the ccc helper to build a single ELF for a target."""
         flags: list[str] = []
@@ -132,7 +133,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         if self.crosscompile_target.is_riscv(include_purecap=True):
             flags.append("-G0")
 
-        cmd: list[Union[str, "os.PathLike[str]"]] = [ccc, target]
+        cmd: "list[str | Path]" = [ccc, target]
         cmd.extend(flags)
         cmd.extend(sources)
         cmd.extend(["-o", output_elf])
@@ -141,7 +142,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     def _package_microkit_image(
         self,
         microkit_bin,
-        system_file: Union[str, "os.PathLike[str]"],
+        system_file: Union[str, Path],
         image_stem: str,
     ) -> None:
         """Run Microkit tool to produce a bootable image."""
@@ -349,7 +350,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         return new_opts
 
     @staticmethod
-    def _add_aarch64_loader(options: QemuOptions, image: Union[str, "os.PathLike[str]"]) -> None:
+    def _add_aarch64_loader(options: QemuOptions, image: Union[str, Path]) -> None:
         options.machine_flags += [
             "-device",
             f"loader,file={image},addr={AARCH64_LOADER_ADDR},cpu-num={AARCH64_LOADER_CPU_NUM}",
@@ -360,7 +361,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     # ------------------------------------------------------------------
     def run_qemu_and_monitor(
         self,
-        cmd: Sequence[Union[str, "os.PathLike[str]"]],
+        cmd: Sequence[Union[str, Path]],
         expected_output: str,
         label: str,
         timeout: int = 30,

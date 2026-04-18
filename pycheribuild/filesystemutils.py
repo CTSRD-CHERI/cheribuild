@@ -117,7 +117,7 @@ class FileSystemUtils:
                 if not self.config.pretend:
                     assert tempdir.is_dir()
                     assert len(list(tempdir.iterdir())) == 0, list(tempdir.iterdir())
-                all_entries = list(path.iterdir())
+                all_entries: list[Path] = list(path.iterdir())
                 if keep_dirs:
                     all_entries_new = []
                     for i in all_entries:
@@ -126,7 +126,6 @@ class FileSystemUtils:
                         else:
                             all_entries_new.append(i)
                     all_entries = all_entries_new
-                all_entries = list(map(str, all_entries))
                 print_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True, config=self.config)
                 for entry in all_entries:
                     if not self.config.pretend:

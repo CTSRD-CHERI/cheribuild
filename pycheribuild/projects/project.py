@@ -952,7 +952,7 @@ class Project(SimpleProject):
             self._initial_build_dir = self.source_dir
 
         # non-assignable variables:
-        self.configure_args: "list[str]" = []
+        self.configure_args: "Sequence[str | Path]" = []
         self.configure_environment: "dict[str, str]" = {}
         self.make_args = MakeOptions(self.make_kind, self)
         self._compiledb_tool: Optional[str] = None
@@ -1416,7 +1416,7 @@ class Project(SimpleProject):
         assert not isinstance(value, tuple), ("Wrong type:", type(value))
         self.configure_environment[arg] = str(value)
 
-    def set_configure_prog_with_args(self, prog: str, path: Path, args: "list[Union[str, Path]]") -> None:
+    def set_configure_prog_with_args(self, prog: str, path: Path, args: "Sequence[str | Path]") -> None:
         fullpath = str(path)
         if args:
             fullpath += " " + self.commandline_to_str(args)

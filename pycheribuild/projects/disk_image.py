@@ -36,7 +36,7 @@ import tempfile
 from enum import Enum
 from functools import cached_property
 from pathlib import Path, PurePath
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildKGDB, get_build_gdb_class, get_gdb_xtarget
@@ -626,7 +626,7 @@ class BuildDiskImageBase(SimpleProject):
     def is_x86(self):
         return self.crosscompile_target.is_any_x86()
 
-    def run_mkimg(self, cmd: "list[str | Path]", **kwargs):
+    def run_mkimg(self, cmd: "Sequence[str | Path]", **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
             self.fatal(
                 f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",

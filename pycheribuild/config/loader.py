@@ -86,7 +86,10 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
 
     def __call__(self, astring: "Union[str, list[str], EnumTy]") -> "Union[EnumTy, list[EnumTy]]":
         if isinstance(astring, list):
-            return typing.cast(typing.List[EnumTy], [self.__call__(a) for a in astring])
+            return typing.cast(
+                typing.List[EnumTy],
+                [self.__call__(a) for a in typing.cast(typing.List[str], astring)],
+            )
         if isinstance(astring, self.enums):
             return typing.cast(EnumTy, astring)  # Allow passing an enum instance
         name = self.enums.__name__
@@ -549,16 +552,16 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                     # sys.stdout.buffer
                     argcomplete.autocomplete(
                         self._parser,
-                        always_complete_options=None,  # don't print -/-- by default
+                        always_complete_options=False,  # don't print -/-- by default
                         exclude=self.completion_excludes,  # hide these options from the output
                         print_suppressed=True,  # also include target-specific options
-                        output_stream=output,
+                        output_stream=output,  # ty:ignore[invalid-argument-type]
                         exit_method=sys.exit,
                     )  # ensure that cprofile data is written
             else:
                 argcomplete.autocomplete(
                     self._parser,
-                    always_complete_options=None,  # don't print -/-- by default
+                    always_complete_options=False,  # don't print -/-- by default
                     exclude=self.completion_excludes,  # hide these options from the output
                     print_suppressed=True,  # also include target-specific options
                 )
@@ -602,7 +605,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
     def add_mutually_exclusive_group(self) -> "argparse._MutuallyExclusiveGroup":
         return self._parser.add_mutually_exclusive_group()
 
-    def is_needed_for_completion(self, name: str, shortname: str, option_type) -> bool:
+    def is_needed_for_completion(self, name: str, shortname: Optional[str], option_type) -> bool:
         comp_prefix = self._argcomplete_prefix
         if comp_prefix is None:
             return True

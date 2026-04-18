@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Sequence, Union
 
 from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
-from .simple_project import ListConfigOption
+from .simple_project import FakeProject, ListConfigOption
 from ..config.chericonfig import BuildType
 from ..config.target_info import BasicCompilationTargets, NativeTargetInfo
 from ..utils import InstallInstructions, OSInfo, include_local_file, remove_duplicates
@@ -177,7 +177,10 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # Create a stub NativeTargetInfo to obtain the host {CMAKE_PREFIX,PKG_CONFIG}_PATH.
             # NB: we pass None as the project argument here to ensure the results do not different between projects.
             # noinspection PyTypeChecker
-            host_target_info = NativeTargetInfo(BasicCompilationTargets.NATIVE, None)  # pytype: disable=wrong-arg-types
+            host_target_info = NativeTargetInfo(
+                BasicCompilationTargets.NATIVE,
+                FakeProject(self.config, crosscompile_target=BasicCompilationTargets.NATIVE),
+            )  # pytype: disable=wrong-arg-types
             host_prefixes = self.host_dependency_prefixes
             assert self.config.other_tools_dir in host_prefixes
             host_pkg_config_dirs = list(
