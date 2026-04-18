@@ -940,8 +940,8 @@ class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qtgraphicaleffects.git",
         old_urls=[
-            b"https://github.com/CTSRD-CHERI/qtgraphicaleffects",
-            b"https://code.qt.io/qt/qtgraphicaleffects.git",
+            "https://github.com/CTSRD-CHERI/qtgraphicaleffects",
+            "https://code.qt.io/qt/qtgraphicaleffects.git",
         ],
         default_branch="kde/5.15",
         force_branch=True,
