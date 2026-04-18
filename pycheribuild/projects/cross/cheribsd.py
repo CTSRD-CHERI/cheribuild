@@ -779,7 +779,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 ),
                 use_default_fallback_config_names=False,  #
                 help="The kernel configuration to use for `make buildkernel`",
-            )
+            )  # ty:ignore[invalid-assignment]
 
         if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM

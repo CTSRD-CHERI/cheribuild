@@ -133,11 +133,11 @@ class FileSystemType(Enum):
 
 class BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
-    disk_image_path: Path = None
+    disk_image_path: Path
     _source_class: "Optional[type[Project]]" = None
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
-    disk_image_prefix: str = None
+    disk_image_prefix: str
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj),
         as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture",
@@ -361,7 +361,6 @@ class BuildDiskImageBase(SimpleProject):
 
     def prepare_rootfs(self):
         assert self.tmpdir is not None
-        assert self.manifest_file is not None
         # skip parsing the metalog in the git push hook since it takes a long time and isn't that useful
         for metalog in self.input_metalogs:
             if metalog.exists() and not os.getenv("_TEST_SKIP_METALOG"):
@@ -661,11 +660,11 @@ class BuildDiskImageBase(SimpleProject):
             return True
         return False
 
-    def make_x86_disk_image(self, out_img: Path):
+    def make_x86_disk_image(self, out_img: Path, manifest_file: Path):
         assert self.is_x86
         root_partition = out_img.with_suffix(".root.img")
         try:
-            self.make_rootfs_image(root_partition)
+            self.make_rootfs_image(root_partition, manifest_file)
 
             if self.rootfs_type == FileSystemType.ZFS:
                 mkimg_bootfs_args = ["-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptzfsboot")]
@@ -694,7 +693,7 @@ class BuildDiskImageBase(SimpleProject):
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
-    def make_gpt_disk_image(self, out_img: Path):
+    def make_gpt_disk_image(self, out_img: Path, manifest_file: Path):
         root_partition = out_img.with_suffix(".root.img")
 
         if self.include_efi_partition:
@@ -717,7 +716,7 @@ class BuildDiskImageBase(SimpleProject):
                 mkimg_swap_args = []
 
             mkimg_rootfs_args = ["-p", f"freebsd-{self.rootfs_type.value}:={root_partition}"]
-            self.make_rootfs_image(root_partition)
+            self.make_rootfs_image(root_partition, manifest_file)
             self.run_mkimg(
                 [
                     "-s",
@@ -806,10 +805,10 @@ class BuildDiskImageBase(SimpleProject):
                 self.run_cmd(mtools_bin / "mdir", "-i", efi_partition, "-/", "::")
                 # self.run_cmd(mtools_bin / "mdu", "-i", efi_partition, "-a", "::")
 
-    def make_rootfs_image(self, rootfs_img: Path):
+    def make_rootfs_image(self, rootfs_img: Path, manifest_file: Path):
         # write out the manifest file:
-        self.mtree.write(self.manifest_file, pretend=self.config.pretend)
-        # print(self.manifest_file.read_text())
+        self.mtree.write(manifest_file, pretend=self.config.pretend)
+        # print(manifest_file.read_text())
 
         makefs_flags = []
         if self.rootfs_type == FileSystemType.ZFS:
@@ -870,7 +869,7 @@ class BuildDiskImageBase(SimpleProject):
                     # use master.passwd from the cheribsd source not the current systems passwd file
                     # which makes sure that the numeric UID values are correct
                     rootfs_img,  # output file
-                    self.manifest_file,  # use METALOG as the manifest for the disk image
+                    manifest_file,  # use METALOG as the manifest for the disk image
                 ],
                 cwd=self.rootfs_dir,
             )
@@ -884,7 +883,7 @@ class BuildDiskImageBase(SimpleProject):
             )
             raise
 
-    def make_disk_image(self):
+    def make_disk_image(self, manifest_file: Path):
         # check that qemu-img exists before starting the potentially long-running makefs command
         qemu_img_command = self.config.qemu_bindir / "qemu-img"
         if not qemu_img_command.is_file():
@@ -903,13 +902,13 @@ class BuildDiskImageBase(SimpleProject):
             raw_img = self.disk_image_path
 
         if self.rootfs_only:
-            self.make_rootfs_image(raw_img)
+            self.make_rootfs_image(raw_img, manifest_file)
         elif self.is_x86:
             # X86 currently requires special handling
             # TODO: Switch to normal UEFI booting
-            self.make_x86_disk_image(raw_img)
+            self.make_x86_disk_image(raw_img, manifest_file)
         else:
-            self.make_gpt_disk_image(raw_img)
+            self.make_gpt_disk_image(raw_img, manifest_file)
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemu_img_command.exists():
@@ -1013,7 +1012,6 @@ class BuildDiskImageBase(SimpleProject):
 
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as tmp:
             self.tmpdir = Path(tmp)
-            self.manifest_file = self.tmpdir / "METALOG"
             self.prepare_rootfs()
             # now add all the user provided files to the image:
             # we have to make a copy as we modify self.extra_files in self.add_file_to_image()
@@ -1029,9 +1027,8 @@ class BuildDiskImageBase(SimpleProject):
             # Add/symlink GDB (if requested).
             self.add_gdb()
             # finally create the disk image
-            self.make_disk_image()
+            self.make_disk_image(manifest_file=self.tmpdir / "METALOG")
         self.tmpdir = None
-        self.manifest_file = None
 
     def add_unlisted_files_to_metalog(self):
         unlisted_files = []
@@ -1409,7 +1406,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             contents=include_local_file("files/minimal-image/etc/rc"),
         )
 
-    def make_rootfs_image(self, rootfs_img: Path):
+    def make_rootfs_image(self, rootfs_img: Path, manifest_file: Path):
         # update cheribsdbox link in case we stripped it:
         cheribsdbox_entry = self.mtree.get("./bin/cheribsdbox")
         # When binaries are not stripped cheribsdbox will not have a contents= key
@@ -1438,7 +1435,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         if self.config.verbose:
             self.run_cmd("du", "-ah", self.tmpdir)
             self.run_cmd("sh", "-c", f"du -ah '{self.tmpdir}' | sort -h")
-        super().make_rootfs_image(rootfs_img)
+        super().make_rootfs_image(rootfs_img, manifest_file)
 
 
 class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
@@ -1497,16 +1494,17 @@ class BuildCheriBSDTarball(BuildCheriBSDDiskImage):
         super().check_system_dependencies()
         self.check_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
 
-    def make_disk_image(self):
+    def make_disk_image(self, manifest_file: Optional[Path] = None):
         # write out the manifest file:
-        self.mtree.write(self.manifest_file, pretend=self.config.pretend)
+        assert manifest_file is not None
+        self.mtree.write(manifest_file, pretend=self.config.pretend)
         bsdtar_path = shutil.which("bsdtar")
         if not bsdtar_path:
             if not self.config.pretend:
                 raise LookupError("Could not find bsdtar command in PATH")
             bsdtar_path = "bsdtar"
         try:
-            self.run_cmd([bsdtar_path, "acf", self.disk_image_path, "@" + str(self.manifest_file)], cwd=self.rootfs_dir)
+            self.run_cmd([bsdtar_path, "acf", self.disk_image_path, "@" + str(manifest_file)], cwd=self.rootfs_dir)
         except Exception:
             self.warning(
                 "bsdtar failed, if it reports an issue with METALOG report a bug (could be either cheribuild"

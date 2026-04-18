@@ -69,7 +69,7 @@ def _parse_arguments(
     ConfigLoaderBase._cheri_config._cached_deps = collections.defaultdict(dict)
     assert isinstance(ConfigLoaderBase._cheri_config, DefaultCheriConfig)
     target_manager.reset()
-    ConfigLoaderBase._cheri_config.loader._config_path = config_file
+    ConfigLoaderBase._cheri_config.loader._config_path = config_file  # ty:ignore[invalid-assignment]
     sys.argv = ["cheribuild.py", *args]
     ConfigLoaderBase._cheri_config.loader.reset()
     ConfigLoaderBase._cheri_config.loader.is_running_unit_tests = True
@@ -1088,8 +1088,8 @@ def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expect
 def test_default_build_dir(target: str, args: "list[str]", expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
-    target = target_manager.get_target(target, config=config, caller="test_default_arch")
-    builddir = target.get_or_create_project(None, config, caller=None).build_dir
+    t = target_manager.get_target(target, config=config, caller="test_default_arch")
+    builddir = t.get_or_create_project(None, config, caller=None).build_dir
     assert isinstance(builddir, Path)
     assert builddir.name == expected
 

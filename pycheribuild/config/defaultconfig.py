@@ -83,7 +83,7 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
             visible_targets = available_targets.copy()
             visible_targets.remove("__run_everything__")
             target_completer = argcomplete.completers.ChoicesCompleter(visible_targets)
-            target_option.completer = target_completer
+            target_option.completer = target_completer  # ty:ignore[invalid-assignment]
             # make sure we get target completion for the unparsed args too by adding another zero_or more options
             # not sure why this works but it's a nice hack
             unparsed = self._parser.add_argument(
@@ -94,7 +94,7 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
                 help=argparse.SUPPRESS,
                 choices=available_targets,
             )
-            unparsed.completer = target_completer
+            unparsed.completer = target_completer  # ty:ignore[invalid-assignment]
 
 
 class DefaultCheriConfig(CheriConfig):
@@ -196,7 +196,7 @@ class DefaultCheriConfig(CheriConfig):
         )
         self.make_jobs: int = loader.add_option(
             "make-jobs", "j", type=int, default=default_make_jobs_computed, help="Number of jobs to use for compiling"
-        )
+        )  # ty:ignore[invalid-assignment]
 
         # configurable paths
         self.source_root = loader.add_path_option(

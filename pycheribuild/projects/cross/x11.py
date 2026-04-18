@@ -79,7 +79,7 @@ class X11AutotoolsProject(X11Mixin, CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        self.configure_environment["ACLOCAL_PATH"] = BuildXorgMacros.get_install_dir(self) / "share/aclocal"
+        self.configure_environment["ACLOCAL_PATH"] = str(BuildXorgMacros.get_install_dir(self) / "share/aclocal")
         self.make_args.set_env(ACLOCAL_PATH=BuildXorgMacros.get_install_dir(self) / "share/aclocal")
         # Avoid building documentation
         self.configure_args.extend(["--with-doxygen=no", "--enable-specs=no", "--enable-devel-docs=no"])

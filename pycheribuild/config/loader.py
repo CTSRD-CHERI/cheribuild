@@ -533,7 +533,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
             else:
                 # noinspection PyTypeChecker
                 kwargs["choices"] = tuple(t.name.lower() for t in type)
-            type = _EnumArgparseType(type)
+            type = _EnumArgparseType(type)  # ty:ignore[invalid-assignment]
         return super().add_option(
             name, shortname, default=default, type=type, group=group, help_hidden=help_hidden, **kwargs
         )

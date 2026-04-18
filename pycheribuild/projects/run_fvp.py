@@ -503,7 +503,7 @@ def _default_fvp_ssh_port():
 
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
-    _source_class: typing.ClassVar[BuildDiskImageBase] = None
+    _source_class: typing.ClassVar[BuildDiskImageBase]
     required_fvp_version = (0, 11, 19)
 
     @classmethod

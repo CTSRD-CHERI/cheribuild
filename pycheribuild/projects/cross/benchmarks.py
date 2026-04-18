@@ -73,7 +73,7 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
             default="large",
             kind=str,
             help="Size of benchmark input data to use",
-        )
+        )  # ty:ignore[invalid-assignment]
 
     @property
     def bundle_dir(self):

@@ -77,7 +77,7 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
             except ImportError:
                 sys.exit("argcomplete missing")
             target_completer = argcomplete.completers.ChoicesCompleter(available_targets)
-            target_option.completer = target_completer
+            target_option.completer = target_completer  # ty:ignore[invalid-assignment]
             argcomplete.autocomplete(
                 self._parser,
                 always_complete_options=False,  # don't print -/-- by default
