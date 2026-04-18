@@ -2,14 +2,9 @@ import io
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 import pytest
-
-try:
-    import typing
-except ImportError:
-    typing = {}
-from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 # The following line triggers a flake8 warning, but ruff is able to ignore the
