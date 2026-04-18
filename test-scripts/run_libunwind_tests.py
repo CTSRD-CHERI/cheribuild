@@ -43,10 +43,6 @@ def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namesp
 
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    common_args = dict(
-        test_dirs=["libunwind/test"],
-        llvm_lit_path=args.llvm_lit_path,
-    )
     with tempfile.TemporaryDirectory(prefix="cheribuild-libunwind-tests-") as tempdir:
         # run the tests both for shared and static libunwind by setting -Denable_shared=
         # First static binaries
@@ -56,7 +52,8 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
             args,
             tempdir,
             lit_extra_args=["-Dforce_static_executable=True", "-Denable_shared=False"],
-            **common_args,
+            test_dirs=["libunwind/test"],
+            llvm_lit_path=args.llvm_lit_path,
         )
         # dynamic binary with libunwind linked statically
         static_libunwind_success = run_remote_lit_test.run_remote_lit_tests(
@@ -65,7 +62,8 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
             args,
             tempdir,
             lit_extra_args=["-Denable_shared=False"],
-            **common_args,
+            test_dirs=["libunwind/test"],
+            llvm_lit_path=args.llvm_lit_path,
         )
         # dynamic binary with libunwind linked shared
         shared_success = run_remote_lit_test.run_remote_lit_tests(
@@ -74,7 +72,8 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
             args,
             tempdir,
             lit_extra_args=["-Denable_shared=True"],
-            **common_args,
+            test_dirs=["libunwind/test"],
+            llvm_lit_path=args.llvm_lit_path,
         )
         return static_libunwind_success and static_everything_success and shared_success
 

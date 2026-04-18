@@ -96,7 +96,7 @@ def adjust_common_cmdline_args(args: argparse.Namespace):
         shared_tmpdir.mkdir(parents=True, exist_ok=True)
         args.shared_tmpdir_local = shared_tmpdir
         args.shared_mount_directories.append(
-            boot_cheribsd.SharedMount(str(shared_tmpdir), readonly=False, in_target="/shared-tmpdir"),
+            boot_cheribsd.SharedMount(shared_tmpdir, readonly=False, in_target="/shared-tmpdir"),
         )
 
 
@@ -108,7 +108,7 @@ def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
 def notify_main_process(
     cmdline_args: argparse.Namespace,
     stage: MultiprocessStages,
-    mp_q: multiprocessing.Queue,
+    mp_q: "Optional[multiprocessing.Queue]",
     barrier: "Optional[threading.Barrier]" = None,
 ):
     if mp_q:
@@ -117,7 +117,7 @@ def notify_main_process(
         mp_q.put((NEXT_STAGE, cmdline_args.internal_shard, CURRENT_STAGE, stage))
         CURRENT_STAGE = stage
     if barrier:
-        assert mp_q
+        assert mp_q is not None
         mp_debug(cmdline_args, "Waiting for main process to release barrier for stage ", stage)
         barrier.wait()
         mp_debug(cmdline_args, "Barrier released for stage ", stage)
@@ -156,6 +156,7 @@ def run_remote_lit_tests(
     qemu: boot_cheribsd.CheriBSDInstance,
     args: argparse.Namespace,
     tempdir: str,
+    *,
     test_dirs: "list[str]",
     test_env: "Optional[dict[str, str]]" = None,
     mp_q: Optional[multiprocessing.Queue] = None,

@@ -34,6 +34,18 @@ from run_tests_common import boot_cheribsd, get_default_junit_xml_name, run_test
 from pycheribuild.utils import get_global_config
 
 
+def get_host_cmake_path(cmake_cache: Path) -> bytes:
+    if cmake_cache.is_file():
+        with cmake_cache.open("rb") as f:
+            for line in f.readlines():
+                if line.startswith(b"CMAKE_COMMAND:INTERNAL="):
+                    host_cmake_path = line[len(b"CMAKE_COMMAND:INTERNAL=") :].strip()
+                    boot_cheribsd.info("Host CMake path is ", host_cmake_path)
+                    return host_cmake_path
+    boot_cheribsd.info("Could not determine real CMake path, assuming /usr/bin/cmake")
+    return b"/usr/bin/cmake"
+
+
 def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     if not args.extra_library_paths:
         # If the used passed extra library paths assume that those are correct.
@@ -50,14 +62,7 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     # Update all references to CMAKE_COMMAND in the CTest file. Otherwise tests that use something like
     # `${CMAKE} -E copy_if_different ...` will fail.
     cmake_cache = Path(args.build_dir, "CMakeCache.txt")
-    host_cmake_path = None
-    if cmake_cache.is_file():
-        with cmake_cache.open("rb") as f:
-            for line in f.readlines():
-                if line.startswith(b"CMAKE_COMMAND:INTERNAL="):
-                    host_cmake_path = line[len(b"CMAKE_COMMAND:INTERNAL=") :].strip()
-                    boot_cheribsd.info("Host CMake path is ", host_cmake_path)
-                    break
+    host_cmake_path = get_host_cmake_path(cmake_cache)
     for ctest_file in Path(args.build_dir).rglob("CTestTestfile.cmake"):
         boot_cheribsd.info("Updating references to ${CMAKE_COMMAND} in ", ctest_file)
         ctest_contents = ctest_file.read_bytes()
