@@ -181,9 +181,9 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
         force_branch=True,
         default_branch="morello/master",
         old_urls=[
-            b"git@git.morello-project.org:morello/trusted-firmware-a.git",
-            b"git@git.morello-project.org:university-of-cambridge/trusted-firmware-a.git",
-            b"https://git.morello-project.org/university-of-cambridge/trusted-firmware-a.git",
+            "git@git.morello-project.org:morello/trusted-firmware-a.git",
+            "git@git.morello-project.org:university-of-cambridge/trusted-firmware-a.git",
+            "https://git.morello-project.org/university-of-cambridge/trusted-firmware-a.git",
         ],
     )
     set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
@@ -266,9 +266,9 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
         force_branch=True,
         default_branch="morello/master",
         old_urls=[
-            b"git@git.morello-project.org:morello/edk2-platforms.git",
-            b"git@git.morello-project.org:university-of-cambridge/edk2-platforms.git",
-            b"https://git.morello-project.org/university-of-cambridge/edk2-platforms.git",
+            "git@git.morello-project.org:morello/edk2-platforms.git",
+            "git@git.morello-project.org:university-of-cambridge/edk2-platforms.git",
+            "https://git.morello-project.org/university-of-cambridge/edk2-platforms.git",
         ],
     )
     dependencies = ("gdb-native", "morello-acpica")  # To get ld.bfd
