@@ -33,20 +33,20 @@ from .crosscompileproject import (
     CrossCompileMesonProject,
     CrossCompileSimpleProject,
 )
-from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository
+from ..project import ExternallyManagedSourceRepository
+from ...utils import classproperty
 
 _cwd_path = Path(os.getcwd())
 
 
-def _cwd_directory_basename(_, _1):
-    return _cwd_path.name
-
-
 class CurrentDirectoryMixin:
     do_not_add_to_targets = True
-    default_directory_basename = ComputedDefaultValue(function=_cwd_directory_basename, as_string="$SOURCE_DIR_NAME")
     inherit_default_directory_basename = True
     repository = ExternallyManagedSourceRepository()
+
+    @classproperty
+    def default_directory_basename(self) -> str:
+        return _cwd_path.name
 
     @property
     def source_dir(self):

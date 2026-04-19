@@ -333,7 +333,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
     # Note that this is not inherited by default unless you set inherit_default_directory_basename (which itself is
     # inherited as normal, so can be set in a base class).
-    default_directory_basename: Optional[str] = None
+    default_directory_basename: str
     inherit_default_directory_basename: bool = False
     _local_config_options: "typing.ClassVar[typing.Mapping[str, PerProjectConfigOption]]" = dict()
     dependencies: "tuple[str, ...]" = tuple()
