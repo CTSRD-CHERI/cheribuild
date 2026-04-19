@@ -240,7 +240,7 @@ class BuildDiskImageBase(SimpleProject):
         self.mtree = MtreeFile(verbose=self.config.verbose)
         self.input_metalogs = []
         # used during process to generated files
-        self.tmpdir: Optional[Path] = None
+        self._tmpdir: Optional[Path] = None
         self.file_templates = _AdditionalFileTemplates()
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
@@ -252,6 +252,11 @@ class BuildDiskImageBase(SimpleProject):
         source_class = self._source_class.get_class_for_target(self._get_source_class_target())
         assert issubclass(source_class, BuildFreeBSD), source_class
         return source_class.get_instance(self)
+
+    @property
+    def tmpdir(self) -> Path:
+        assert self._tmpdir is not None, "Called tempdir too early"
+        return self._tmpdir
 
     @property
     def rootfs_dir(self) -> Path:
@@ -1013,7 +1018,7 @@ class BuildDiskImageBase(SimpleProject):
             self.fatal("master.passwd does not exist in ", self.user_group_db_dir)
 
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as tmp:
-            self.tmpdir = Path(tmp)
+            self._tmpdir = Path(tmp)
             self.prepare_rootfs()
             # now add all the user provided files to the image:
             # we have to make a copy as we modify self.extra_files in self.add_file_to_image()
@@ -1030,7 +1035,7 @@ class BuildDiskImageBase(SimpleProject):
             self.add_gdb()
             # finally create the disk image
             self.make_disk_image(manifest_file=self.tmpdir / "METALOG")
-        self.tmpdir = None
+        self._tmpdir = None
 
     def add_unlisted_files_to_metalog(self):
         unlisted_files = []
