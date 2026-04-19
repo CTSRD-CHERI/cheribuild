@@ -2417,8 +2417,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     target: str = "cheribsd-sysroot"
     is_sdk_target: bool = True
     rootfs_source_class: "type[BuildCHERIBSD]" = BuildCHERIBSD
-    copy_remote_sysroot: "ClassVar[bool]"
-    remote_path: "ClassVar[Optional[str]]"
     install_dir_override: "ClassVar[Optional[Path]]"
 
     @classmethod
@@ -2474,27 +2472,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         if self.install_dir_override is not None:
             return self.install_dir_override  # pytype: disable=bad-return-type
         return super().cross_sysroot_path
-
-    def copy_sysroot_from_remote_machine(self) -> None:
-        self.info("Copying sysroot from remote system.")
-        if not self.remote_path:
-            self.fatal(
-                "Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)"
-            )
-            if self.config.pretend:
-                self.remote_path = "someuser@somehose:this/path/does/not/exist"
-        # noinspection PyAttributeOutsideInit
-        self.remote_path = os.path.expandvars(self.remote_path)
-        remote_sysroot_dir = self.remote_path + "/" + self.cross_sysroot_path.name
-        self.info("Will copy the sysroot files from ", remote_sysroot_dir, sep="")
-        if not self.query_yes_no("Continue?"):
-            return
-
-        # now copy the files
-        self.copy_remote_file(remote_sysroot_dir + "/", self.cross_sysroot_path.parent)
-        # TODO: could also extract the remote archive?
-        # with self.async_clean_directory(self.cross_sysroot_path / "usr"):
-        #    extract_sysroot_archive()
 
     @property
     def sysroot_archive(self) -> Path:
@@ -2554,10 +2531,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             self.info("Not building sysroot because --skip-world was passed")
             return
 
-        if self.copy_remote_sysroot:
-            self.copy_sysroot_from_remote_machine()
-        else:
-            self.create_sysroot()
+        self.create_sysroot()
         if (self.cross_sysroot_path / "usr/lib64c/").is_dir():
             # clang++ expects libgcc_eh to exist:
             libgcc_eh = self.cross_sysroot_path / "usr/lib64c/libgcc_eh.a"
