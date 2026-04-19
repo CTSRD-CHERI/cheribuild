@@ -462,11 +462,7 @@ class Project(SimpleProject):
 
     @classmethod
     def project_build_dir_help(cls) -> str:
-        result = "$BUILD_ROOT/"
-        if isinstance(cls.default_directory_basename, ComputedDefaultValue):
-            result += cls.default_directory_basename.as_string
-        else:
-            result += cls.default_directory_basename
+        result = "$BUILD_ROOT/" + cls.default_directory_basename
         if cls._xtarget is not BasicCompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
         result += "-build"
@@ -926,12 +922,6 @@ class Project(SimpleProject):
         if hasattr(self, "_repository_url") and isinstance(self.repository, GitRepository):
             # TODO: remove this and use a custom argparse.Action subclass
             self.repository.url = self._repository_url
-
-        if isinstance(self.default_directory_basename, ComputedDefaultValue):
-            self.default_directory_basename = self.default_directory_basename(  # ty:ignore[invalid-assignment]
-                self.config,
-                self,
-            )
         self.source_dir = self.repository.get_real_source_dir(self, self.source_dir)
         if self.build_in_source_dir:
             assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
