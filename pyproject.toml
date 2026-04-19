@@ -77,7 +77,6 @@ missing-attribute = false
 no-access = false
 bad-assignment = false
 not-callable = false
-bad-return = false
 bad-function-definition = false
 not-iterable = false
 bad-param-name-override = false
