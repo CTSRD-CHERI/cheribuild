@@ -79,8 +79,10 @@ class BuildOpenSBI(Project):
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.fw_jump_addr = cls.add_config_option("fw-jump-addr", kind=str, help="OpenSBI FW_JUMP_ADDR")
-        cls.fw_jump_fdt_addr = cls.add_config_option("fw-jump-fdt-addr", kind=str, help="OpenSBI FW_JUMP_FDT_ADDR")
+        cls.fw_jump_addr = cls.add_optional_config_option("fw-jump-addr", kind=str, help="OpenSBI FW_JUMP_ADDR")
+        cls.fw_jump_fdt_addr = cls.add_optional_config_option(
+            "fw-jump-fdt-addr", kind=str, help="OpenSBI FW_JUMP_FDT_ADDR"
+        )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()

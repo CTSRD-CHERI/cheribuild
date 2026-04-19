@@ -114,14 +114,11 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.qemu_targets = typing.cast(
-            str,
-            cls.add_config_option(
-                "targets",
-                show_help=True,
-                help="Build QEMU for the following targets",
-                default=cls.default_targets,
-            ),
+        cls.qemu_targets = cls.add_config_option(
+            "targets",
+            show_help=True,
+            help="Build QEMU for the following targets",
+            default=cls.default_targets,
         )
 
     @classmethod

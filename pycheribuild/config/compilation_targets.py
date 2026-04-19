@@ -680,7 +680,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
     uses_upstream_llvm = False
 
-    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
+    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run", xtarget, caller.config, caller)
         return typing.cast(LaunchFreeBSDInterface, result)
 

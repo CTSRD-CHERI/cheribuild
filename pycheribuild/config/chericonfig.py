@@ -333,7 +333,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             help="Open a shell with the right environment for building compat libraries.",
         )
 
-        self.cheri_cap_table_abi = loader.add_option(
+        self.cheri_cap_table_abi = loader.add_optional_option(
             "cap-table-abi",
             help_hidden=True,
             choices=("pcrel", "plt", "fn-desc"),
@@ -397,7 +397,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             help_hidden=True,
             help="Whether to log CSetBounds statistics in csv format",
         )
-        self.subobject_bounds = loader.add_option(
+        self.subobject_bounds = loader.add_optional_option(
             "subobject-bounds",
             type=str,
             group=loader.cross_compile_options_group,
@@ -472,8 +472,9 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             group=loader.run_group,
             help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).",
         )
-        self.qemu_debug_program = loader.add_option(
+        self.qemu_debug_program = loader.add_optional_option(
             "qemu-gdb-debug-userspace-program",
+            type=str,
             group=loader.run_group,
             help="Print the command to debug the following userspace program in GDB attaced to QEMU",
         )
@@ -604,7 +605,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             default="cheri-fpga",
             help="The SSH hostname/IP for the benchmark FPGA",
         )
-        self.benchmark_statcounters_suffix = loader.add_option(
+        self.benchmark_statcounters_suffix = loader.add_optional_option(
             "benchmark-csv-suffix", group=loader.benchmark_group, help="Add a custom suffix for the statcounters CSV."
         )
         self.benchmark_ld_preload = loader.add_optional_path_option(
@@ -622,7 +623,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             group=loader.benchmark_group,
             help="Run the benchmark without setting LD_BIND_NOW.",
         )
-        self.benchmark_iterations = loader.add_option(
+        self.benchmark_iterations = loader.add_optional_option(
             "benchmark-iterations",
             type=int,
             group=loader.benchmark_group,
@@ -667,8 +668,9 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "list-kernels", group=loader.action_group, help="List available kernel configs to run and exit"
         )
 
-        self.remote_morello_board = loader.add_option(
+        self.remote_morello_board = loader.add_optional_option(
             "remote-morello-board",
+            type=str,
             help="SSH hostname of a Morello board. When set, some projects will run their "
             "test suites on the remote board instead of QEMU.",
         )

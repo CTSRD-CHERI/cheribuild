@@ -83,7 +83,7 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
             visible_targets = available_targets.copy()
             visible_targets.remove("__run_everything__")
             target_completer = argcomplete.completers.ChoicesCompleter(visible_targets)
-            target_option.completer = target_completer  # ty:ignore[invalid-assignment]
+            target_option.completer = target_completer
             # make sure we get target completion for the unparsed args too by adding another zero_or more options
             # not sure why this works but it's a nice hack
             unparsed = self._parser.add_argument(
@@ -94,14 +94,14 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
                 help=argparse.SUPPRESS,
                 choices=available_targets,
             )
-            unparsed.completer = target_completer  # ty:ignore[invalid-assignment]
+            unparsed.completer = target_completer
 
 
 class DefaultCheriConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, available_targets: "list[str]") -> None:
         super().__init__(loader, action_class=CheribuildAction, default_action=CheribuildAction.BUILD)
         # The run mode:
-        self.get_config_option = loader.add_option(
+        self.get_config_option = loader.add_optional_option(
             "get-config-option",
             type=str,
             metavar="KEY",

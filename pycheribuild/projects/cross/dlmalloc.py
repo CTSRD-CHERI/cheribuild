@@ -47,11 +47,11 @@ class DLMalloc(CrossCompileProject):
 
         cls.cheri_set_bounds = cls.add_bool_option("cheri-bounds", default=True, help="Set bounds on allocations")
 
-        cls.qmabs = cls.add_config_option("qmabs", kind=int, help="Quarantine memory absolute threshold")
+        cls.qmabs = cls.add_optional_config_option("qmabs", kind=int, help="Quarantine memory absolute threshold")
 
-        cls.qmratio = cls.add_config_option("qmratio", kind=float, help="Quarantine memory ratio threshold")
+        cls.qmratio = cls.add_optional_config_option("qmratio", kind=float, help="Quarantine memory ratio threshold")
 
-        cls.qmmin = cls.add_config_option(
+        cls.qmmin = cls.add_optional_config_option(
             "qmmin", kind=int, help="Minimum amount quarantined to trigger a revocation based on ratio"
         )
 
@@ -67,7 +67,7 @@ class DLMalloc(CrossCompileProject):
 
         cls.unmap_support = cls.add_bool_option("unmap-support", default=True, help="support for unmapping")
 
-        cls.unmap_threshold = cls.add_config_option(
+        cls.unmap_threshold = cls.add_optional_config_option(
             "unmap-threshold",
             kind=int,
             help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped",

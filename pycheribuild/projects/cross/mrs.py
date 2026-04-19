@@ -43,7 +43,9 @@ class MRS(CrossCompileCMakeProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.build_target = cls.add_config_option("build-target", kind=str, help="specify a target to build, or all")
+        cls.build_target = cls.add_optional_config_option(
+            "build-target", kind=str, help="specify a target to build, or all"
+        )
 
         cls.debug = cls.add_bool_option("debug", help="enable debug output")
         cls.offload_quarantine = cls.add_bool_option(
@@ -54,7 +56,7 @@ class MRS(CrossCompileCMakeProject):
         cls.clear_on_free = cls.add_bool_option("clear-on-free", help="zero regions as they come out of quarantine")
         cls.print_stats = cls.add_bool_option("print-stats", help="print heap statistics on exit")
         cls.print_caprevoke = cls.add_bool_option("print-caprevoke", help="print per-revocation statistics")
-        cls.concurrent_revocation_passes = cls.add_config_option(
+        cls.concurrent_revocation_passes = cls.add_optional_config_option(
             "concurrent-revocation-passes",
             kind=int,
             help="enable N concurrent revocation passes before the stop-the-world pass",
@@ -70,12 +72,12 @@ class MRS(CrossCompileCMakeProject):
             "just-paint-bitmap", help="do bookkeeping, quarantining, and bitmap painting"
         )
 
-        cls.quarantine_ratio = cls.add_config_option(
+        cls.quarantine_ratio = cls.add_optional_config_option(
             "quarantine-ratio",
             kind=int,
             help="limit the quarantine size to 1/QUARANTINE_RATIO times the size of the heap",
         )
-        cls.quarantine_highwater = cls.add_config_option(
+        cls.quarantine_highwater = cls.add_optional_config_option(
             "quarantine-highwater",
             kind=int,
             help="limit the quarantine size to QUARANTINE_HIGHWATER bytes (supersedes QUARANTINE_RATIO)",

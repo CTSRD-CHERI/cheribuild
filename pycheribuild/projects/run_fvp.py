@@ -39,7 +39,7 @@ from typing import Optional
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
-from .simple_project import BoolConfigOption, IntConfigOption, PathConfigOption, SimpleProject
+from .simple_project import BoolConfigOption, IntConfigOption, OptionalPathConfigOption, SimpleProject
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
@@ -69,7 +69,7 @@ class InstallMorelloFVP(SimpleProject):
         "use-docker-container", default=OSInfo.IS_MAC, help="Run the FVP inside a docker container"
     )
     i_agree_to_the_contained_eula = BoolConfigOption("agree-to-the-contained-eula", help="Accept the EULA")
-    installer_path = PathConfigOption("installer-path", help="Path to the FVP installer.sh or installer.tgz")
+    installer_path = OptionalPathConfigOption("installer-path", help="Path to the FVP installer.sh or installer.tgz")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -545,7 +545,7 @@ class LaunchFVPBase(SimpleProject):
         cls.firmware_path = cls.add_path_option(
             "firmware-path", default=fw_default, help="Path to the UEFI firmware binaries"
         )
-        cls.remote_disk_image_path = cls.add_config_option(
+        cls.remote_disk_image_path = cls.add_optional_config_option(
             "remote-disk-image-path",
             help="When set rsync will be used to update the image from the remote server prior to running it.",
         )
@@ -553,14 +553,16 @@ class LaunchFVPBase(SimpleProject):
             "extra-tcp-forwarding",
             help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
         )
-        cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
+        cls.license_server = cls.add_optional_config_option(
+            "license-server", help="License server to use for the model"
+        )
         cls.arch_model_path = cls.add_path_option(
             "simulator-path", help="Path to the FVP Model", default=Path("/usr/local/FVP_Base_RevC-Rainier")
         )
         cls.fvp_trace = cls.add_optional_path_option(
             "trace", help="Enable FVP tracing plugin to output to the given file"
         )
-        cls.fvp_trace_icount = cls.add_config_option(
+        cls.fvp_trace_icount = cls.add_optional_config_option(
             "trace-start-icount", help="Instruction count from which to start Tarmac trace"
         )
 

@@ -799,16 +799,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls._cross_toolchain_root = None
 
         if not bootstrap_toolchain:
-            cls.build_toolchain = typing.cast(
-                CompilerType,
-                cls.add_config_option(
-                    "toolchain",
-                    kind=CompilerType,
-                    default=CompilerType.DEFAULT_COMPILER,
-                    enum_choice_strings=[t.value for t in CompilerType],
-                    help="The toolchain to use for building FreeBSD/CheriBSD.  When set to 'custom',"
-                    " the 'toolchain-path' option must also be set",
-                ),
+            cls.build_toolchain = cls.add_config_option(
+                "toolchain",
+                kind=CompilerType,
+                default=CompilerType.DEFAULT_COMPILER,
+                enum_choice_strings=[t.value for t in CompilerType],
+                help="The toolchain to use for building FreeBSD/CheriBSD.  When set to 'custom',"
+                " the 'toolchain-path' option must also be set",
             )
             cls._cross_toolchain_root = cls.add_optional_path_option(
                 "toolchain-path", help="Path to the cross toolchain tools"
@@ -2435,7 +2432,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         cls.copy_remote_sysroot = cls.add_bool_option(
             "copy-remote-sysroot", help="Copy sysroot from remote server instead of from local machine"
         )
-        cls.remote_path = cls.add_config_option(
+        cls.remote_path = cls.add_optional_config_option(
             "remote-sdk-path",
             show_help=True,
             metavar="PATH",

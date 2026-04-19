@@ -134,8 +134,8 @@ class ConfigLoaderBase(ABC):
         name: str,
         shortname=None,
         *,
+        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]",
         type: "Union[type[T], Callable[[str], T]]" = str,
-        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
         _owning_class: "Optional[type]" = None,
         _fallback_names: "Optional[list[str]]" = None,
         option_cls: "Optional[type[ConfigOptionBase[T]]]" = None,
@@ -145,9 +145,6 @@ class ConfigLoaderBase(ABC):
     ) -> T:
         if option_cls is None:
             option_cls = self.__option_cls
-        if fallback_replaceable is None:
-            fallback_replaceable = replaceable
-
         # If there is a option this one inherits the value from (e.g. cheribsd-riscv64-purecap/foo -> cheribsd/foo),
         # we register the fallback option when we first encounter a usage or all prior usages are replaceable (e.g.
         # so that cheribsd-riscv64-purecap/foo creates cheribsd/foo even if cheribsd-riscv64/foo was enumerated first
@@ -160,8 +157,9 @@ class ConfigLoaderBase(ABC):
                     self.add_option(
                         fallback_name,
                         type=type,
+                        default=None,
                         option_cls=option_cls,
-                        replaceable=fallback_replaceable,
+                        replaceable=replaceable if fallback_replaceable is None else fallback_replaceable,
                         is_fallback=True,
                     )
         option = option_cls(
@@ -173,8 +171,12 @@ class ConfigLoaderBase(ABC):
             self.option_handles[name] = ConfigOptionHandle(option, replaceable)
         return typing.cast("T", self.option_handles[name])
 
+    def add_optional_option(
+        self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str, default=None, **kwargs
+    ) -> Optional[T]:
+        return self.add_option(name, shortname, type=type, default=default, **kwargs)
+
     def add_bool_option(self, name: str, shortname=None, default=False, **kwargs) -> bool:
-        # noinspection PyTypeChecker
         return self.add_option(name, shortname, default=default, type=bool, **kwargs)
 
     def add_path_option(
