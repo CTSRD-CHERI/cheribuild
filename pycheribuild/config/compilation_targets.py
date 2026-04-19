@@ -304,7 +304,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
             )
-            if xtarget.is_cheri_purecap():
+            if xtarget.is_cheri_purecap() and xtarget.is_experimental_cheri093_std(config):
                 # Necessary for library compartmentalisation ABI
                 result.extend(
                     [
