@@ -341,7 +341,7 @@ class BuildLibXKBCommon(X11MesonProject):
         )
 
     def process(self):
-        newpath = os.getenv("PATH")
+        newpath = os.getenv("PATH", "")
         if OSInfo.IS_MAC:
             # /usr/bin/bison on macOS is not compatible with this build system
             newpath = str(self.get_homebrew_prefix("bison")) + "/bin:" + newpath

@@ -194,7 +194,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def process(self):
         if not self.compiling_for_host():
             # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used
-            with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH")):
+            with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", "")):
                 super().process()
         else:
             # when building the native target we just rely on the host tools in /usr/bin

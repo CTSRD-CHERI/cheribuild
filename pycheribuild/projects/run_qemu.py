@@ -624,6 +624,7 @@ class LaunchQEMUBase(SimpleProject):
             self.info("To start and connect GDB run the following command in another terminal:")
             path_to_kernel = self.current_kernel
             if path_to_kernel is None:
+                assert self.rootfs_path is not None
                 path_to_kernel = self.rootfs_path / "boot/kernel/kernel"
             # Prefer the file with debug info
             kernel_full_guess = path_to_kernel.with_name(path_to_kernel.name + ".full")

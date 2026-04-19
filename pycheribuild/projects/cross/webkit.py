@@ -166,7 +166,7 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
         elfctl_cmd: Optional[Path] = None
         if self.crosscompile_target.is_cheri_purecap():
             if self.compiling_for_host():
-                elfctl_root = "/"
+                elfctl_root = Path("/")
             else:
                 freebsd_builddir = self.target_info.get_rootfs_project(t=BuildFreeBSD, caller=self).objdir
                 elfctl_root = freebsd_builddir / "tmp"
