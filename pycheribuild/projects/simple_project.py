@@ -297,7 +297,7 @@ else:
 
 
 @functools.lru_cache(maxsize=20)
-def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
+def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig) -> Optional[Path]:
     assert OSInfo.IS_MAC, "Should only be called on macos"
     command = ["brew", "--prefix"]
     if package:
@@ -979,11 +979,12 @@ class SimpleProjectBase(AbstractProject, ABC):
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         legacy_alias_target_names = [tgt + "/" + name for tgt in cls.__dict__.get("_config_file_aliases", tuple())]
+        # pyrefly: ignore [bad-return]
         return cls._config_loader.add_option(
             fullname,
             shortname,
-            default=default,
             type=kind,
+            default=default,
             _owning_class=cls,
             group=cls._commandline_option_group,
             help_hidden=help_hidden,
@@ -1591,7 +1592,7 @@ class SimpleProjectBase(AbstractProject, ABC):
                 prefix = prefix / "opt" / package
             else:
                 self.dependency_error("Could not find homebrew")
-        return prefix
+        return prefix or Path(f"/could/not/find/homebrew/prefix/for/{package}")
 
     @staticmethod
     def get_test_script_path(script_name: str) -> Path:

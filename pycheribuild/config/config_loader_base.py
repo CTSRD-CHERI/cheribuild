@@ -134,8 +134,8 @@ class ConfigLoaderBase(ABC):
         name: str,
         shortname=None,
         *,
-        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]",
         type: "Union[type[T], Callable[[str], T]]" = str,
+        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]",
         _owning_class: "Optional[type]" = None,
         _fallback_names: "Optional[list[str]]" = None,
         option_cls: "Optional[type[ConfigOptionBase[T]]]" = None,
@@ -381,6 +381,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
 
     def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> Optional[T]:
         if callable(self.default):
+            # pyrefly: ignore [bad-return]
             return self.default(config, instance)
         else:
             return self.default
