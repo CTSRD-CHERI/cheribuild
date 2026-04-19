@@ -345,6 +345,8 @@ class BuildDiskImageBase(SimpleProject):
         if strip_binaries:
             # Try to shrink the size by stripping all elf binaries
             entry = self.mtree.get(mtree_path)
+            if entry is None and self.config.pretend:
+                return  # We would get a fatal error for non-pretend runs
             contents = MtreePath(entry.attributes.get("contents", entry.path))
             if contents not in self.stripped_contents:
                 stripped_path = self.tmpdir / entry.path
