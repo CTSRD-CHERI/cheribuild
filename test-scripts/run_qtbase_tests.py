@@ -137,6 +137,7 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
             boot_cheribsd.info("Results for ", f.name, ": ", qt_test)
             if not isinstance(qt_test, junitparser.TestSuite):
                 raise ValueError("Got unexpected parse result loading JUnit Xml: " + qt_test.tostring())
+            # pyrefly: ignore [unsupported-operation]
             if qt_test.tests < 1:
                 raise ValueError("No test found in: " + qt_test.tostring())
             if not qt_test.time:

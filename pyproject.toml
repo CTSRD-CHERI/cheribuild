@@ -73,7 +73,6 @@ python-platform = "linux"
 # bad-override would cause lots of churn
 bad-override = false
 # TODO: enable all of these one-by-one
-unsupported-operation = false
 missing-attribute = false
 no-access = false
 bad-assignment = false

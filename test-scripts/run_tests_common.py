@@ -98,6 +98,7 @@ def finish_and_write_junit_xml_report(
     for suite in xml:
         assert isinstance(suite, junitparser.TestSuite)
         num_testsuites += 1
+        # pyrefly: ignore [unsupported-operation]
         if suite.errors > 0 or suite.failures > 0:
             failed_test_suites.append(suite)
     boot_cheribsd.info("JUnit results:", xml)

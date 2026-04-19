@@ -113,6 +113,7 @@ class BuildXCBProto(X11AutotoolsProject):
             automake_version: "tuple[int, ...]" = get_program_version(
                 Path("automake"), config=self.config, regex=rb"automake\s+\(GNU automake\)\s+(\d+)\.(\d+)\.?(\d+)?"
             )
+        # pyrefly: ignore [unsupported-operation]
         if automake_version >= (1, 16, 4):
             self.info("Working around https://www.mail-archive.com/bug-automake@gnu.org/msg04957.html")
             self.replace_in_file(self.build_dir / "xcb-proto.pc", {"${PYTHON_PREFIX}": str(self.install_prefix)})
