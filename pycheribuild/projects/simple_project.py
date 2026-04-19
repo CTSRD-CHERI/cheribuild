@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import argparse
 import errno
 import functools
 import inspect
@@ -327,7 +328,7 @@ _clear_line_sequence: bytes = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
 
 
 class SimpleProjectBase(AbstractProject, ABC):
-    _commandline_option_group: typing.Any = None
+    _commandline_option_group: "Optional[argparse._ArgumentGroup]"
     _config_loader: ConfigLoaderBase
 
     # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
