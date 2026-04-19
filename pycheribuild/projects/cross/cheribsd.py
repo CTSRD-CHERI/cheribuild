@@ -786,22 +786,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not use_upstream_llvm
             assert not bootstrap_toolchain
             cls.build_toolchain = CompilerType.DEFAULT_COMPILER
-            cls.linker_for_world = "lld"
-            cls.linker_for_kernel = "lld"
         elif bootstrap_toolchain:
             assert not use_upstream_llvm
             cls.build_toolchain = CompilerType.BOOTSTRAPPED
             cls._cross_toolchain_root = None
-            cls.linker_for_kernel = "should-not-be-used"
-            cls.linker_for_world = "should-not-be-used"
-        else:
-            # override in CheriBSD
-            cls.linker_for_world = cls.add_config_option(
-                "linker-for-world", default="lld", choices=["bfd", "lld"], help="The linker to use for world"
-            )
-            cls.linker_for_kernel = cls.add_config_option(
-                "linker-for-kernel", default="lld", choices=["bfd", "lld"], help="The linker to use for the kernel"
-            )
 
         if not bootstrap_toolchain:
             cls.build_toolchain = typing.cast(
@@ -1163,28 +1151,19 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # building with an older clang we have to explicitly set the flag otherwise we get build failures.
             self.cross_toolchain_config.set(TARGET_CPUTYPE="i686")
 
-        if self.linker_for_world == "bfd":
-            # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
-            # created and the build system will then fall back to using /usr/bin/ld which won't work!
-            self.cross_toolchain_config.set_with_options(LLD_IS_LD=False)
-            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.bfd")
-        else:
-            assert self.linker_for_world == "lld"
-            # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
-            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld")
+        self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld")
 
         if target_flags:
             self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
 
-        if self.linker_for_kernel == "lld" and self.linker_for_world == "lld" and not self.compiling_for_host():
+        if not self.compiling_for_host():
+            # FIXME: this is stale
             # When building freebsd x86 we need to build the 'as' binary
             self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
 
     def _setup_arch_specific_options(self) -> str:
         if self.crosscompile_target.is_any_x86() or self.crosscompile_target.is_aarch64(include_purecap=True):
             target_flags = ""
-            self.linker_for_kernel = "lld"  # bfd won't work here
-            self.linker_for_world = "lld"
         elif self.compiling_for_mips(include_purecap=True):
             target_flags = "-fcolor-diagnostics"
             # TODO: should probably set that inside CheriBSD makefiles instead
@@ -1215,11 +1194,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
         if not self.use_bootstrapped_toolchain:
-            # We can't use LLD for the kernel yet but there is a flag to experiment with it
             kernel_options.update(self.cross_toolchain_config)
-            linker = Path(self.target_info.sdk_root_dir, "bin", "ld." + self.linker_for_kernel)
             kernel_options.remove_var("LDFLAGS")
-            kernel_options.set(LD=linker, XLD=linker)
+            kernel_options.set(LD=self.target_info.linker, XLD=self.target_info.linker)
             # The kernel build using ${BINUTIL} directly and not X${BINUTIL}:
             for binutil_name in ("AS", "AR", "NM", "OBJCOPY", "RANLIB", "SIZE", "STRINGS", "STRIPBIN"):
                 xbinutil = kernel_options.get_var("X" + binutil_name)
