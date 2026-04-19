@@ -523,11 +523,11 @@ class ThreadJoiner:
     def __init__(self, threads: "Optional[Union[threading.Thread, list[threading.Thread]]]" = None):
         if not isinstance(threads, list):
             if threads is None:
-                self.threads = []
+                self.threads: "list[threading.Thread]" = []
             else:
-                self.threads = [threads]
+                self.threads: "list[threading.Thread]" = [threads]
         else:
-            self.threads = threads
+            self.threads = typing.cast(typing.List[threading.Thread], threads)
 
     def __enter__(self) -> None:
         for thread in self.threads:

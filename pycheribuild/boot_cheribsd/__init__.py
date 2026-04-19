@@ -211,7 +211,7 @@ class SharedMount:
     @property
     def qemu_arg(self) -> str:
         if self.readonly:
-            return str(self.hostdir + "@ro")
+            return str(self.hostdir) + "@ro"
         return str(self.hostdir)
 
     def __repr__(self):
@@ -295,7 +295,7 @@ class CheriBSDSpawnMixin(MixinBase):
         for i in panic_regexes:
             assert i not in options
         try:
-            i = expect_fn(options + panic_regexes, timeout=timeout, **kwargs)
+            i = expect_fn(list(options) + panic_regexes, timeout=timeout, **kwargs)
             if i > len(options):
                 debug_kernel_panic(self)
                 if INTERACT_ON_KERNEL_PANIC:

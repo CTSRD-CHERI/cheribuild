@@ -1416,7 +1416,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             with file.open("rb") as f:
                 if f.read(4) == b"\x7fELF" and self.should_strip_elf_file(file):
                     self.verbose_print("Stripping ELF binary", file)
-                    cmd = [self.target_info.strip_tool, file]
+                    cmd: "list[str | Path]" = [self.target_info.strip_tool, file]
                     if output_path:
                         self.makedirs(output_path.parent)
                         cmd += ["-o", output_path]

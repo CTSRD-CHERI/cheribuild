@@ -60,6 +60,7 @@ class BuildBash(CrossCompileAutotoolsProject):
         super().install(**kwargs)
 
         if not self.compiling_for_host():
+            assert self.destdir is not None
             self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
             self.add_unique_line_to_file(self.destdir / "etc/shells", "/usr/local/bin/bash")
             if self.set_as_root_shell:
