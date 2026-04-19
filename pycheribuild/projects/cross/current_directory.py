@@ -38,10 +38,6 @@ from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository
 _cwd_path = Path(os.getcwd())
 
 
-def _cwd_source_dir(_, _1):
-    return _cwd_path
-
-
 def _cwd_directory_basename(_, _1):
     return _cwd_path.name
 
@@ -51,7 +47,10 @@ class CurrentDirectoryMixin:
     default_directory_basename = ComputedDefaultValue(function=_cwd_directory_basename, as_string="$SOURCE_DIR_NAME")
     inherit_default_directory_basename = True
     repository = ExternallyManagedSourceRepository()
-    source_dir = ComputedDefaultValue(function=_cwd_source_dir, as_string="$CWD")
+
+    @property
+    def source_dir(self):
+        return _cwd_path
 
 
 # noinspection PyPep8Naming
