@@ -197,14 +197,6 @@ class BuildDiskImageBase(SimpleProject):
             enum_choices=[FileSystemType.UFS, FileSystemType.ZFS],
             help="Select the type of the root file system image.",
         )
-        cls.remote_path = cls.add_config_option(
-            "remote-path",
-            show_help=False,
-            kind=str,
-            metavar="PATH",
-            help="When set rsync will be used to update the image from "
-            "the remote server instead of building it locally.",
-        )
         cls.wget_via_tmp = cls.add_bool_option(
             "wget-via-tmp",
             help="Use a directory in /tmp for recursive wget operations;"
@@ -938,18 +930,6 @@ class BuildDiskImageBase(SimpleProject):
             if self.config.verbose:
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
 
-    def copy_from_remote_host(self):
-        self.info("Copying disk image instead of building it.")
-        assert self.remote_path is not None
-        rsync_path = os.path.expandvars(self.remote_path)
-        self.info("Will copy the disk-image from ", rsync_path, sep="")
-        if not self.query_yes_no("Continue?"):
-            return
-        self.copy_remote_file(rsync_path, self.disk_image_path)
-
-    def process(self):
-        self.__process()
-
     @staticmethod
     def path_from_env(var, default=None) -> Optional[Path]:
         s = os.getenv(var)
@@ -957,7 +937,7 @@ class BuildDiskImageBase(SimpleProject):
             return Path(s)
         return default
 
-    def __process(self):
+    def process(self):
         if self.disk_image_path.is_dir():
             # Given a directory, derive the default file name inside it
             self.disk_image_path = _default_disk_image_name(self.config, self.disk_image_path, self)
@@ -978,11 +958,6 @@ class BuildDiskImageBase(SimpleProject):
                 if not self.query_yes_no("Overwrite?", default_result=True):
                     return  # we are done here
             self.delete_file(self.disk_image_path)
-
-        # we can only build disk images on FreeBSD, so copy the file if we aren't
-        if self.remote_path is not None:
-            self.copy_from_remote_host()
-            return
 
         self.makefs_cmd = self.path_from_env("MAKEFS_CMD")
         self.mkimg_cmd = self.path_from_env("MKIMG_CMD")
