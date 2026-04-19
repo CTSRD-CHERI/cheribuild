@@ -640,8 +640,8 @@ class SimpleProjectBase(AbstractProject, ABC):
         target = target_manager.get_target(target_name, required_arch=cross_target, config=caller.config, caller=caller)
         # noinspection PyProtectedMember
         result = target._get_or_create_project_no_setup(cross_target, caller.config, caller=caller)
-        assert isinstance(result, SimpleProject)
-        return result
+        assert isinstance(result, SimpleProjectBase)
+        return typing.cast("typing.Self", result)
 
     @staticmethod
     def get_instance_for_target_name(
@@ -649,7 +649,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         cross_target: CrossCompileTarget,
         config: CheriConfig,
         caller: "Optional[AbstractProject]" = None,
-    ) -> "SimpleProject":
+    ) -> "SimpleProjectBase":
         if caller is not None:
             assert caller._init_called, "Cannot call this inside __init__()"
         assert cross_target is not None
@@ -676,7 +676,9 @@ class SimpleProjectBase(AbstractProject, ABC):
         # In that case cls.target returns e.g. foo-mips, etc. and target_manager will always return the MIPS version
         # which is not what we want if there is an explicit cross_target
         root_class = getattr(cls, "synthetic_base", cls)
-        return cls.get_instance_for_target_name(root_class.target, cross_target, config, caller)
+        return typing.cast(
+            "typing.Self", cls.get_instance_for_target_name(root_class.target, cross_target, config, caller)
+        )
 
     def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
@@ -914,7 +916,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         if not cls._config_loader.is_needed_for_completion(fullname, shortname, kind):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
-            return default  # pytype: disable=bad-return-type
+            return default  # type: ignore
         # Hide stuff like --foo/install-directory from --help
         help_hidden = not show_help
 
@@ -1079,6 +1081,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @property
     def build_dir(self) -> Path:
+        assert self._initial_build_dir is not None
         return self._initial_build_dir
 
     def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "Optional[str]"):

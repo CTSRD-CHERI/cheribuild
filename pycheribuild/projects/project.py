@@ -596,7 +596,7 @@ class Project(SimpleProject):
     def can_run_binaries_on_remote_morello_board(self) -> bool:
         morello_ssh_hostname = self.config.remote_morello_board
         return (
-            morello_ssh_hostname
+            morello_ssh_hostname is not None
             and self.target_info.is_cheribsd()
             and self.compiling_for_aarch64(include_purecap=True)
             and ssh_host_accessible_cached(morello_ssh_hostname, ssh_args=(), config=self.config)

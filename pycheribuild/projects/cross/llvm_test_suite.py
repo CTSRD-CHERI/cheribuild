@@ -39,11 +39,11 @@ from .crosscompileproject import (
     DefaultInstallDir,
     GitRepository,
 )
-from .llvm import BuildCheriLLVM, BuildLLVMBase, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectRepository
 from ..simple_project import BoolConfigOption
 from ...config.chericonfig import CheriConfig
-from ...config.compilation_targets import FreeBSDTargetInfo
+from ...config.compilation_targets import BuildLLVMInterface, FreeBSDTargetInfo
 from ...utils import is_jenkins_build
 
 
@@ -61,7 +61,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
         return (cls.get_llvm_project(config).get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target,)
 
     @classmethod
-    def get_llvm_project(cls, config: CheriConfig) -> "type[BuildLLVMBase]":
+    def get_llvm_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         target_info = cls.get_crosscompile_target().target_info_cls
         if issubclass(target_info, FreeBSDTargetInfo):
             # noinspection PyProtectedMember

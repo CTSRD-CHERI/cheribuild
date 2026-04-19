@@ -39,7 +39,7 @@ from collections import OrderedDict
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar, Optional, Union
+from typing import ClassVar, Optional
 
 from .llvm import BuildLLVMMonoRepoBase
 from ..project import (
@@ -907,9 +907,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self._show_line_stdout_filter(line)
 
     @property
-    def arch_build_flags(self) -> "dict[str, Union[str, bool]]":
+    def arch_build_flags(self) -> "dict[str, str | int | bool]":
         assert isinstance(self.target_info, FreeBSDTargetInfo)
-        result = {
+        result: "dict[str, str | int | bool]" = {
             "TARGET": self.target_info.freebsd_target,
             "TARGET_ARCH": self.target_info.freebsd_target_arch,
         }

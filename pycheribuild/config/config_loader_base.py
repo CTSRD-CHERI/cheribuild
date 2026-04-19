@@ -258,7 +258,7 @@ class AbstractConfigOption(typing.Generic[T], metaclass=ABCMeta):
     def __get__(self, instance, owner) -> T: ...
 
     @abstractmethod
-    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> _LoadedConfigValue: ...
+    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> Optional[T]: ...
 
     @abstractmethod
     def _convert_type(self, loaded_result: _LoadedConfigValue) -> "Optional[T]": ...
@@ -302,7 +302,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         self.is_list = is_list
 
     def load_option(self, config: "ConfigBase", instance: "Optional[object]", _: type, raise_err_if_default=False) -> T:
-        result = self._load_option_impl(config, self.full_option_name)
+        result: Optional[_LoadedConfigValue] = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo
         # Try aliases first:
         if result is None and self.alias_names is not None:
@@ -326,13 +326,15 @@ class ConfigOptionBase(AbstractConfigOption[T]):
             if raise_err_if_default:
                 # Used in jenkins to avoid updating install directory for explicit options on commandline
                 raise ValueError("Default")
-            result = self._get_default_value(config, instance)
-            if result is not None:
-                result = _LoadedConfigValue(result, None)
+            default = self._get_default_value(config, instance)
+            if default is not None:
+                result = _LoadedConfigValue(default, None)
             self._is_default_value = True
         # Now convert it to the right type
         try:
-            result = self._convert_type(result)
+            if result is not None:
+                return typing.cast(T, self._convert_type(result))
+            return typing.cast(T, result)  # T must be Optional[...]
         except ValueError as e:
             fatal_error(
                 "Invalid value for option '",
@@ -345,7 +347,6 @@ class ConfigOptionBase(AbstractConfigOption[T]):
                 pretend=config.pretend,
             )
             sys.exit()
-        return result
 
     def _load_option_impl(self, config: "ConfigBase", target_option_name) -> "Optional[_LoadedConfigValue]":
         # target_option_name may not be the same as self.full_option_name if we are loading the fallback value
@@ -378,7 +379,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
             self._cached = self.load_option(self._loader._cheri_config, instance, owner)
         return self._cached
 
-    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> _LoadedConfigValue:
+    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> Optional[T]:
         if callable(self.default):
             return self.default(config, instance)
         else:
@@ -484,7 +485,7 @@ class ConfigOptionHandle(AbstractConfigOption[T]):
     def __get__(self, instance, owner) -> T:
         return self._get_option().__get__(instance, owner)
 
-    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> _LoadedConfigValue:
+    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> Optional[T]:
         return self._get_option()._get_default_value(config, instance)
 
     def _convert_type(self, loaded_result: _LoadedConfigValue) -> "Optional[T]":

@@ -515,7 +515,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
-            return default  # pytype: disable=bad-return-type
+            return default  # type: ignore
         if isinstance(type, builtins.type) and issubclass(type, Enum):
             # Handle enums as the argparse type
             assert "action" not in kwargs or kwargs["action"] == "append", (
