@@ -223,8 +223,8 @@ def run_tests_main(
     assert sys.path[0] == str(Path(__file__).parent.absolute()), sys.path
     assert sys.path[1] == str(Path(__file__).parent.parent.absolute()), sys.path
     boot_cheribsd.main(
-        test_function=test_function,
-        test_setup_function=default_setup_tests,
+        test_function=test_function,  # pyrefly: ignore[bad-argument-type]
+        test_setup_function=default_setup_tests,  # pyrefly: ignore[bad-argument-type]
         argparse_setup_callback=default_add_cmdline_args,
         argparse_adjust_args_callback=default_setup_args,
     )

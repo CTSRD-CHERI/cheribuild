@@ -255,15 +255,21 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
                     self.create_symlink(src, dst)
 
 
+def _upstream_gdb_install_dir(config: CheriConfig, _: AbstractProject) -> Path:
+    return config.output_root / "upstream-gdb"
+
+
 class BuildUpstreamGDB(BuildGDBBase):
     repository = GitRepository("git://sourceware.org/git/binutils-gdb.git")
     target = "upstream-gdb"
     _default_install_dir_fn = ComputedDefaultValue(
+        # pyrefly: ignore [bad-argument-type]
         function=lambda config, proj: config.output_root / "upstream-gdb" if proj._xtarget.is_native() else None,
         # NB: We set default_architecture so the unsuffixed target is native
         as_string=lambda cls: (
             "$INSTALL_ROOT/upstream-gdb" if cls._xtarget is None or cls._xtarget.is_native() else "ERROR"
         ),
+        # pyrefly: ignore [bad-argument-type]
         inherit=BuildGDBBase._default_install_dir_fn,  # ty:ignore[invalid-argument-type]
     )
 

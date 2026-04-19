@@ -47,7 +47,7 @@ import termios
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Callable, Iterable, Optional, Union
+from typing import Callable, Iterable, Optional, Sequence, Union
 
 from .colour import AnsiColour, coloured
 from .utils import ConfigBase, OSInfo, Type_T, fatal_error, status_update, warning_message
@@ -220,7 +220,7 @@ def suppress_sigttou(suppress=True):
 
 
 @contextlib.contextmanager
-def keep_terminal_sane(gave_tty_control=False, command: Optional[list] = None):
+def keep_terminal_sane(gave_tty_control=False, command: "Optional[Sequence[str | Path]]" = None):
     # Programs such as QEMU can change the terminal state and if they don't exit cleanly this state is
     # propagated to the shell that invoked cheribuild.
     # This function attempts to restore the stdin/stdout/stderr state in those cases:
@@ -279,7 +279,7 @@ def print_command(
         print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
 
 
-def get_interpreter(cmdline: "typing.Sequence[str]") -> "Optional[list[str]]":
+def get_interpreter(cmdline: "Sequence[str | Path]") -> "Optional[list[str]]":
     """
     :param cmdline: The command to check
     :return: The interpreter command if the executable does not have execute permissions
@@ -306,7 +306,7 @@ def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=N
     return err
 
 
-def check_call_handle_noexec(cmdline: "list[str]", **kwargs):
+def check_call_handle_noexec(cmdline: "Sequence[str | Path]", **kwargs):
     try:
         with keep_terminal_sane(command=cmdline):
             return subprocess.check_call(cmdline, **kwargs)
@@ -324,13 +324,13 @@ def check_call_handle_noexec(cmdline: "list[str]", **kwargs):
         ) from e
 
 
-def popen_handle_noexec(cmdline: "list[str]", **kwargs) -> subprocess.Popen:
+def popen_handle_noexec(cmdline: "Sequence[str | Path]", **kwargs) -> subprocess.Popen:
     try:
         return subprocess.Popen(cmdline, **kwargs)
     except PermissionError as e:
         interpreter = get_interpreter(cmdline)
-        if interpreter:
-            return subprocess.Popen(interpreter + cmdline, **kwargs)
+        if interpreter is not None:
+            return subprocess.Popen([*interpreter, *cmdline], **kwargs)
         raise _make_called_process_error(
             e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8")
         ) from e
@@ -500,9 +500,9 @@ def run_command(
             if exc is not None:
                 if config.pretend and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
+                    arg_str = commandline_to_str(process.args)  # type: ignore
                     fatal_error(
-                        f"Command `{commandline_to_str(process.args)}`",  # ty:ignore[invalid-argument-type]
-                        f"failed with unexpected exit code {retcode}",
+                        f"Command `{arg_str}` failed with unexpected exit code {retcode}",
                         *cwd,
                         sep="",
                         pretend=config.pretend,

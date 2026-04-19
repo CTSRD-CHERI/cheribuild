@@ -415,7 +415,7 @@ def default_source_dir_in_subdir(subdir: Path) -> ComputedDefaultValue[Path]:
     :return: A ComputedDefaultValue for projects that build in a subdirectory below the source root.
     """
     return ComputedDefaultValue(
-        function=lambda config, project: _default_source_dir(config, project, subdir),
+        function=lambda cfg, project: _default_source_dir(cfg, project, subdir),  # pyrefly: ignore[bad-argument-type]
         as_string=lambda cls: f"$SOURCE_ROOT/{subdir}/{(cls.default_directory_basename or cls.target)}",
     )
 
@@ -471,7 +471,8 @@ class Project(SimpleProject):
         return result
 
     default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
-        function=_default_build_dir, as_string=lambda cls: cls.project_build_dir_help()
+        function=_default_build_dir,  # pyrefly: ignore[bad-argument-type]
+        as_string=lambda cls: cls.project_build_dir_help(),
     )
 
     make_kind: MakeCommandKind = MakeCommandKind.DefaultMake

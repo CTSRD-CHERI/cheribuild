@@ -643,7 +643,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         if self.test_against_running_qemu_instance:
             if self.qemu_instance is not None:
                 config_contents = generate_ssh_config_file_for_qemu(
-                    ssh_port=self.qemu_instance.ssh_forwarding_port,
+                    ssh_port=self.qemu_instance.ssh_forwarding_port or 0,
                     ssh_key=self.config.test_ssh_key,
                     config=self.config,
                 )
