@@ -23,6 +23,8 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+from pycheribuild.utils import OSInfo
+
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir
 from ..project import GitRepository
 from ...config.compilation_targets import CompilationTargets
@@ -47,6 +49,26 @@ class BuildGmp(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
+        if not self.compiling_for_host():
+            # libtool hardcodes AR/RANLIB/NM from configure time, so they must be set in the configure
+            # environment (not just make_args) to ensure the generated libtool script uses the right
+            # tools. On macOS, the system `ar` silently produces empty ELF archives.
+            # FreeBSD builds uses standard LLVM toolchain and so needs to take care of this,
+            # Morello SDK already took care to add ar → llvm-ar in the bin directory.
+            self.add_configure_and_make_env_arg("AR", self.target_info.ar)
+            self.add_configure_and_make_env_arg("RANLIB", self.target_info.ranlib)
+            self.add_configure_and_make_env_arg("NM", self.target_info.nm)
+            if OSInfo.IS_MAC and not (self.CC.parent / "ld").exists():
+                # Some toolchains (Homebrew LLVM, cheribuild upstream-llvm) deliberately omit an
+                # `ld` binary to avoid shadowing Apple's linker. Without it, clang falls back to
+                # Apple ld for cross-link tests in configure, which rejects ELF linker flags.
+                # Make the linker selection explicit in CFLAGS so autoconf link tests (which omit
+                # LDFLAGS) also use lld. Toolchains that ship an `ld` wrapper (e.g. morello-sdk)
+                # already handle this correctly and don't need the override.
+                ccinfo = self.get_compiler_info(self.CC)
+                self.COMMON_FLAGS.extend(
+                    ccinfo.linker_override_flags(self.target_info.linker, for_cflags=True)
+                )
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             # configure script has checks that rely on implicit prototypes.
             # TODO: Fix and upstream
