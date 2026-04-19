@@ -945,7 +945,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # Must be called after __init__() to ensure that CHERI LLVM/upstream LLVM have been built
         # before querying the compiler.
         if self.crossbuild:
-            assert not OSInfo.IS_FREEBSD
             self.add_cross_build_options()
 
         # external toolchain options:
@@ -1259,13 +1258,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.warning("Do not know the full path to any kernel build directories, will clean the whole tree!")
         if builddirs is None:
             builddirs = [self.build_dir]
-        keep_root = False
-        keep_dirs = []
-        if self.crossbuild:
-            # avoid rebuilding bmake when crossbuilding:
-            # XXX: Should keep_root be conditional on crossbuild?
-            keep_root = not cleaning_kerneldirs
-            keep_dirs = ["bmake-install"]
+        # avoid rebuilding bmake when crossbuilding:
+        keep_dirs = ["bmake-install"] if self.crossbuild else []
+        keep_root = not cleaning_kerneldirs
         joiner = ThreadJoiner()
         for builddir in builddirs:
             joiner += self.async_clean_directory(builddir, keep_root=keep_root, keep_dirs=keep_dirs)
@@ -1622,6 +1617,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self._copykernel(kernconfs=kernconfs, rootfs_dir=self.install_dir, dest_dir=self.config.output_root)
 
     def add_cross_build_options(self) -> None:
+        assert self.crossbuild
         self.make_args.set_env(
             CC=self.host_CC,
             CXX=self.host_CXX,
@@ -1652,8 +1648,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return ""
 
     def process(self) -> None:
-        if not OSInfo.IS_FREEBSD:
-            assert self.crossbuild
         _clear_dangerous_make_env_vars()
 
         if self.config.list_kernels:
@@ -1928,9 +1922,6 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         self.info("freebsd-universe is a compile-only target")
 
     def process(self) -> None:
-        if not OSInfo.IS_FREEBSD and not self.crossbuild:
-            self.info("Can't build FreeBSD on a non-FreeBSD host (yet)!")
-            return
         _clear_dangerous_make_env_vars()
         super().process()
 
