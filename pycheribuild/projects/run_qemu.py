@@ -738,13 +738,6 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.remote_kernel_path = cls.add_config_option(
-            "remote-kernel-path",
-            kind=str,
-            show_help=True,
-            help="When set rsync will be used to update the kernel image from a remote host before launching QEMU. "
-            "Useful when building and running on separate machines.",
-        )
         cls.kernel_config = cls.add_config_option(
             "alternative-kernel",
             show_help=True,
@@ -816,20 +809,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
             else:
                 self.info(conf, path)
 
-    def _copy_kernel_image_from_remote_host(self):
-        assert self.remote_kernel_path is not None
-        scp_path = os.path.expandvars(self.remote_kernel_path)
-        self.info("Copying kernel image from build machine:", scp_path)
-        self.makedirs(self.current_kernel.parent)
-        assert self.current_kernel is not None
-        self.copy_remote_file(scp_path, self.current_kernel)
-
     def process(self):
         if self.config.list_kernels:
             self._list_kernel_configs()
             return
-        if self.remote_kernel_path is not None:
-            self._copy_kernel_image_from_remote_host()
         super().process()
 
 
@@ -1008,8 +991,6 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
         if self.config.use_minimal_benchmark_kernel:
             kernel_config = self.kernel_project.default_kernel_config(ConfigPlatform.QEMU, benchmark=True)
             self.current_kernel = self.kernel_project.get_kernel_install_path(kernel_config)
-            if str(self.remote_kernel_path).endswith("MFS_ROOT"):
-                self.remote_kernel_path += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self)
 
 
