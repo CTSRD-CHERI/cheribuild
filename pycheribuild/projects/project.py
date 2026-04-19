@@ -536,7 +536,8 @@ class Project(SimpleProject):
                 install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
             else:
                 install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-        assert install_dir is not None
+        if install_dir is None:
+            return DefaultInstallDir.CUSTOM_INSTALL_DIR
         return install_dir
 
     default_install_dir: Optional[DefaultInstallDir] = None
@@ -990,7 +991,6 @@ class Project(SimpleProject):
                     self._install_prefix = Path("/", relative_to_rootfs)
                     self.destdir = self.rootfs_dir
             elif install_dir_kind in (
-                None,
                 DefaultInstallDir.DO_NOT_INSTALL,
                 DefaultInstallDir.IN_BUILD_DIRECTORY,
                 DefaultInstallDir.CUSTOM_INSTALL_DIR,
