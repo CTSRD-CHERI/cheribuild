@@ -1259,15 +1259,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.warning("Do not know the full path to any kernel build directories, will clean the whole tree!")
         if builddirs is None:
             builddirs = [self.build_dir]
-        clean_kwargs = {}
+        keep_root = False
+        keep_dirs = []
         if self.crossbuild:
             # avoid rebuilding bmake when crossbuilding:
             # XXX: Should keep_root be conditional on crossbuild?
-            clean_kwargs["keep_root"] = not cleaning_kerneldirs
-            clean_kwargs["keep_dirs"] = ["bmake-install"]
+            keep_root = not cleaning_kerneldirs
+            keep_dirs = ["bmake-install"]
         joiner = ThreadJoiner()
         for builddir in builddirs:
-            joiner += self.async_clean_directory(builddir, **clean_kwargs)
+            joiner += self.async_clean_directory(builddir, keep_root=keep_root, keep_dirs=keep_dirs)
         return joiner
 
     def _list_kernel_configs(self) -> None:

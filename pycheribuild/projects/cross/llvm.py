@@ -882,27 +882,27 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     def setup_config_options(cls, include_lld_revision=True, include_lldb_revision=False, **kwargs):
         super().setup_config_options(**kwargs)
 
-        def add_subproject_ptions(name):
-            rev = cls.add_config_option(
+        def add_subproject_options(name):
+            rev: str = cls.add_config_option(
                 name + "-git-revision",
                 kind=str,
                 metavar="REVISION",
                 help="The git revision for tools/" + name,
-            )
-            repo = cls.add_config_option(
+            )  # ty:ignore[invalid-assignment]
+            repo: str = cls.add_config_option(
                 name + "-repository",
                 kind=str,
                 metavar="REPOSITORY",
                 default=cls.github_base_url + name + ".git",
                 help="The git repository for tools/" + name,
-            )
+            )  # ty:ignore[invalid-assignment]
             return repo, rev
 
-        cls.clang_repository, cls.clang_revision = add_subproject_ptions("clang")
+        cls.clang_repository, cls.clang_revision = add_subproject_options("clang")
         if include_lld_revision:  # not built yet
-            cls.lld_repository, cls.lld_revision = add_subproject_ptions("lld")
+            cls.lld_repository, cls.lld_revision = add_subproject_options("lld")
         if include_lldb_revision:  # not built yet
-            cls.lldb_repository, cls.lldb_revision = add_subproject_ptions("lldb")
+            cls.lldb_repository, cls.lldb_revision = add_subproject_options("lldb")
 
     def setup(self):
         super().setup()

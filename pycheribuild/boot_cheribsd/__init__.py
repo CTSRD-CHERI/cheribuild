@@ -720,7 +720,12 @@ def checked_run_cheribsd_command(
     )
     cheri_trap_indices = tuple()
     error_output_index = None
-    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT_RE, pexpect.TIMEOUT]
+    results: PatternListType = [
+        "__COMMAND SUCCESSFUL__",
+        "__COMMAND FAILED__",
+        PEXPECT_CONTINUATION_PROMPT_RE,
+        pexpect.TIMEOUT,
+    ]
     if not ignore_cheri_trap:
         cheri_trap_indices = (len(results), len(results) + 1)
         results.append(CHERI_TRAP_MIPS)
@@ -1609,9 +1614,10 @@ def _main(
                 "No SSH key specified, but test script needs SSH. Please pass --test-ssh-key=/path/to/id_foo.pub",
                 exit=True,
             )
-        elif not Path(args.ssh_key).exists():
+        ssh_key_path = Path(typing.cast(str, args.ssh_key))
+        if not ssh_key_path.exists():
             failure("Specified SSH key do not exist: ", args.ssh_key, exit=True)
-        if Path(args.ssh_key).suffix != ".pub":
+        if ssh_key_path.suffix != ".pub":
             failure("--ssh-key should point to the public key and not ", args.ssh_key, exit=True)
     if args.test_archive or args.test_ld_preload:
         if args.use_smb_instead_of_ssh and not args.shared_mount_directories:

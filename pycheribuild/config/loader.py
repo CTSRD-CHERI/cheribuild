@@ -555,6 +555,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                         always_complete_options=False,  # don't print -/-- by default
                         exclude=self.completion_excludes,  # hide these options from the output
                         print_suppressed=True,  # also include target-specific options
+                        # pyrefly: ignore [bad-argument-type]
                         output_stream=output,  # ty:ignore[invalid-argument-type]
                         exit_method=sys.exit,
                     )  # ensure that cprofile data is written

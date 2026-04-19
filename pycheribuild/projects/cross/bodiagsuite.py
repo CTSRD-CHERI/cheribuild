@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import shutil
+from pathlib import Path
 
 from .crosscompileproject import (
     BuildType,
@@ -164,14 +165,15 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             bmake = shutil.which("make")
         if bmake is None:
             self.fatal("Could not find bmake")
+            bmake = "/path/to/fake/bmake"
         # Ensure the run directory exists
         self.makedirs(self.build_dir / "run")
         if self.with_clean:
             self.clean_directory(self.build_dir / "run", keep_root=False)
         testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
-        extra_args = []
-        tools = []
+        extra_args: "list[str | Path]" = []
+        tools: "list[str]" = []
         if self.compiling_for_cheri():
             tools.append("cheri")
             if self.config.subobject_bounds and self.config.subobject_bounds != "conservative":

@@ -41,7 +41,7 @@ import typing
 from abc import ABC, ABCMeta
 from pathlib import Path
 from types import MappingProxyType
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Sequence, TypeVar, Union
 
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue, MipsFloatAbi, RiscvFloatAbi
 from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionHandle, DefaultValueOnlyConfigOption
@@ -89,7 +89,7 @@ __all__ = [
     "flush_stdio",
 ]
 
-T = typing.TypeVar("T")
+T = TypeVar("T")
 
 
 def flush_stdio(stream) -> None:
@@ -1287,7 +1287,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     def run_with_logfile(
         self,
-        args: "typing.Sequence[str | Path]",
+        args: "Sequence[str | Path]",
         logfile_name: str,
         *,
         stdout_filter: "Optional[Callable[[bytes], None]]" = None,
@@ -1327,7 +1327,6 @@ class SimpleProjectBase(AbstractProject, ABC):
 
         if self.config.write_logfile and logfile_path.is_file() and not append_to_logfile:
             logfile_path.unlink()  # remove old logfile
-        args = list(map(str, args))  # make sure all arguments are strings
 
         if not self.config.write_logfile:
             if stdout_filter is None:
@@ -1362,7 +1361,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         proc: subprocess.Popen,
         logfile: "Optional[typing.IO]",
         stdout_filter: "Optional[Callable[[bytes], None]]",
-        args: "list[str]",
+        args: "Sequence[str | Path]",
     ):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None

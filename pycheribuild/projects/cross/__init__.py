@@ -32,4 +32,5 @@
 from pathlib import Path
 
 files = sorted(Path(__file__).parent.glob("*.py"))
+# pyrefly: ignore [unresolvable-dunder-all]
 __all__ = [f.name[:-3] for f in files if f.is_file() and f.name != "__init__.py"]
