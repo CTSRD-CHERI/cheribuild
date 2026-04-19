@@ -40,7 +40,7 @@ from .utils import ConfigBase, OSInfo, warning_message
 
 
 class QemuOptions:
-    machine_flags: list[str]
+    machine_flags: "list[str]"
 
     def __init__(
         self, xtarget: CrossCompileTarget, want_debugger=False, riscv_cheri_isa: Optional[RiscvCheriISA] = None
