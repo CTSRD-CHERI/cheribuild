@@ -1243,6 +1243,20 @@ def sys_param_h_cheribsd_version(sysroot: Path) -> "Optional[int]":
     return 0
 
 
+@functools.lru_cache(maxsize=3)
+def sys_param_h_freebsd_version(sysroot: Path) -> "Optional[int]":
+    pattern = re.compile(r"#define\s+__FreeBSD_version\s+([0-9]+)")
+    try:
+        with open(sysroot / "usr/include/sys/param.h", encoding="utf-8") as f:
+            for line in f:
+                match = pattern.match(line)
+                if match:
+                    return int(match.groups()[0])
+    except FileNotFoundError:
+        return None
+    return 0
+
+
 def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", is_purecap) -> "list[str]":
     result = []
     # NB: If version is None, no CheriBSD tree exists, so we assume the new

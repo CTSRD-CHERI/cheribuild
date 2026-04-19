@@ -54,6 +54,7 @@ from .target_info import (
     MipsFloatAbi,
     TargetInfo,
     cheribsd_morello_version_dependent_flags,
+    sys_param_h_freebsd_version,
     sys_param_h_cheribsd_version,
 )
 from ..processutils import extract_version, get_compiler_info, get_version_output
@@ -386,8 +387,26 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     shortname: str = "FreeBSD"
-    FREEBSD_VERSION: int = 13
+    # should we omit the version completely and rely on the runtime resolution?
+    # might be risky if toolchain (e.g., clang) or build system (e.g., configure/cmake code) expects a specific version.
+    DEFAULT_FREEBSD_VERSION: int = 16
     uses_upstream_llvm = True
+
+    @classmethod
+    def _get_sysroot_freebsd_version(cls, target: "CrossCompileTarget", config: "CheriConfig") -> int:
+        rootfs_target = target.get_rootfs_target()
+        prefix = "rootfs" if cls.is_cheribsd() else "freebsd"
+        sysroot_dir = config.output_root / (prefix + rootfs_target.build_suffix(config, include_os=False))
+        version = sys_param_h_freebsd_version(sysroot_dir)
+        if not version:
+            warning_message(
+                "Could not determine FreeBSD version from",
+                sysroot_dir / "usr/include/sys/param.h",
+                "- falling back to FreeBSD",
+                cls.DEFAULT_FREEBSD_VERSION,
+            )
+            return cls.DEFAULT_FREEBSD_VERSION
+        return version // 100000
 
     @property
     def cmake_system_name(self) -> str:
@@ -395,7 +414,16 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def toolchain_system_version(self) -> str:
-        return str(self.FREEBSD_VERSION) + ".0"
+        version = sys_param_h_freebsd_version(self.sysroot_dir)
+        if not version:
+            warning_message(
+                "Could not determine FreeBSD version from",
+                self.sysroot_dir / "usr/include/sys/param.h",
+                "- falling back to FreeBSD",
+                self.DEFAULT_FREEBSD_VERSION,
+            )
+            version = self.DEFAULT_FREEBSD_VERSION * 100000
+        return str(version // 100000) + ".0"
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         # Determine the toolchain based on --freebsd/toolchain=<>
@@ -435,7 +463,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool):
         common_suffix = "-unknown-freebsd"
         if include_version:
-            common_suffix += str(cls.FREEBSD_VERSION)
+            common_suffix += str(cls._get_sysroot_freebsd_version(target, config))
         # TODO: do we need any special cases here?
         return target.cpu_architecture.value + common_suffix
 
@@ -677,7 +705,6 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname: str = "CheriBSD"
     os_prefix: Optional[str] = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
-    FREEBSD_VERSION: int = 13
     uses_upstream_llvm = False
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
@@ -750,7 +777,8 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
             assert target.is_aarch64(
                 include_purecap=True,
             ), "AArch64 is the only CHERI target supported with the Morello toolchain"
-            return "aarch64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
+            version = str(cls._get_sysroot_freebsd_version(target, config)) if include_version else ""
+            return "aarch64-unknown-freebsd{}".format(version)
         return super().triple_for_target(target, config, include_version=include_version)
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
