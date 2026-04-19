@@ -12,7 +12,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+import copy
 import os
 import subprocess
 import threading
@@ -341,13 +341,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
 
     def _clone_qemu_options(self, base: QemuOptions) -> QemuOptions:
         """Create a fresh QemuOptions with copied fields to avoid in-loop mutation."""
-        new_opts = QemuOptions(self.crosscompile_target)
-        # Copy simple fields
-        new_opts.memory_size = getattr(base, "memory_size", None)
-        new_opts.add_network_device = getattr(base, "add_network_device", False)
-        # Copy flags list defensively
-        new_opts.machine_flags = list(getattr(base, "machine_flags", []))
-        return new_opts
+        return copy.deepcopy(base)
 
     @staticmethod
     def _add_aarch64_loader(options: QemuOptions, image: Union[str, Path]) -> None:

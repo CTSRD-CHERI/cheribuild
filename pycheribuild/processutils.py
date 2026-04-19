@@ -312,9 +312,9 @@ def check_call_handle_noexec(cmdline: "Sequence[str | Path]", **kwargs):
             return subprocess.check_call(cmdline, **kwargs)
     except PermissionError as e:
         interpreter = get_interpreter(cmdline)
-        if interpreter:
+        if interpreter is not None:
             with keep_terminal_sane(command=cmdline):
-                return subprocess.check_call(interpreter + cmdline, **kwargs)
+                return subprocess.check_call([*interpreter, *cmdline], **kwargs)
         raise _make_called_process_error(
             e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8")
         ) from e

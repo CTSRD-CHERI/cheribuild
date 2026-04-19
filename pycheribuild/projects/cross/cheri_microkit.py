@@ -379,7 +379,7 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
                 "-cpu",
                 "morello",
                 "-smp",
-                1,
+                "1",
             ]
             self.qemu_options.machine_flags += ["-device", "loader,file=" + bootable_img + ",addr=0x70000000,cpu-num=0"]
 
