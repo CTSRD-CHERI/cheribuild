@@ -1169,7 +1169,7 @@ def _check_source_dir(target: str, expected: str, config_file: bytes, cmdline: "
     config = _parse_config_file_and_args(config_file, *cmdline)
     project = _get_target_instance(target, config)
     # noinspection PyProtectedMember
-    assert str(project._initial_source_dir) == expected
+    assert str(project.source_dir) == expected
 
 
 def test_backwards_compat_old_suffixes_freebsd_mips():
@@ -1272,7 +1272,6 @@ def test_mfs_root_kernel_config_options():
     assert config_options == [
         "_cross_toolchain_root",
         "_initial_build_dir",
-        "_initial_source_dir",
         "_install_dir",
         "_linkage",
         "auto_var_init",
@@ -1344,10 +1343,10 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     mfs_riscv64_hybrid = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-hybrid", config, BuildCheriBsdMfsKernel)
     cheribsd_riscv64_purecap = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
     cheribsd_riscv64_hybrid = _get_target_instance("cheribsd-riscv64-hybrid", config, BuildCHERIBSD)
-    assert str(cheribsd_riscv64_purecap._initial_source_dir) == "/base-target-dir-riscv64"
-    assert str(cheribsd_riscv64_hybrid._initial_source_dir) == "/generic-base-target-dir"
-    assert str(mfs_riscv64._initial_source_dir) == "/generic-mfs-target-dir"
-    assert str(mfs_riscv64_hybrid._initial_source_dir) == "/mfs-target-dir-riscv64-hybrid"
+    assert str(cheribsd_riscv64_purecap.source_dir) == "/base-target-dir-riscv64"
+    assert str(cheribsd_riscv64_hybrid.source_dir) == "/generic-base-target-dir"
+    assert str(mfs_riscv64.source_dir) == "/generic-mfs-target-dir"
+    assert str(mfs_riscv64_hybrid.source_dir) == "/mfs-target-dir-riscv64-hybrid"
 
     _parse_arguments(
         [

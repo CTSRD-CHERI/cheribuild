@@ -22,8 +22,7 @@ class MockProject(Project):
     def __init__(self, config: MockConfig, name: str):
         self.target = name
         self.default_directory_basename = name
-        self.expected_src = config.source_root / "sources" / name
-        self._initial_source_dir = self.expected_src
+        self.source_dir = config.source_root / "sources" / name
         self.expected_install = config.source_root / "install" / name
         self._install_dir = self.expected_install
         self.expected_build = Path(config.source_root, "build", name + "-build")
@@ -32,7 +31,6 @@ class MockProject(Project):
 
     def setup(self):
         super().setup()
-        assert self.source_dir == self.expected_src
         assert self.build_dir == self.expected_build
         assert self.install_dir == self.expected_install
         self.source_dir.mkdir(parents=True)

@@ -30,7 +30,6 @@
 import contextlib
 import copy
 import datetime
-import inspect
 import os
 import re
 import shutil
@@ -54,7 +53,7 @@ from .repository import (
     SubversionRepository,
     TargetBranchInfo,
 )
-from .simple_project import ReuseOtherProjectBuildDir, SimpleProject, _default_stdout_filter
+from .simple_project import PathConfigOption, ReuseOtherProjectBuildDir, SimpleProject, _default_stdout_filter
 from ..config.chericonfig import (
     BuildType,
     CheriConfig,
@@ -63,7 +62,6 @@ from ..config.chericonfig import (
     RiscvCheriISA,
     supported_build_type_strings,
 )
-from ..config.config_loader_base import ConfigOptionHandle
 from ..config.target_info import (
     AbstractProject,
     AutoVarInit,
@@ -400,10 +398,10 @@ def _default_install_dir_str(project: "type[Project]") -> str:
     return str(install_dir.value)
 
 
-def _default_source_dir(config: CheriConfig, project: "Project", subdir: Path = Path()) -> "Optional[Path]":
+def _default_source_dir(config: CheriConfig, project: "Project", subdir: Path = Path()) -> "Path":
     if project.repository is not None and isinstance(project.repository, ReuseOtherProjectRepository):
-        # For projects that reuse other source directories, we return None to use the default for the source project.
-        return None
+        # For projects that reuse other source directories, we return a fake path placeholder
+        return Path("/fake/path/placeholder")
     if project.default_directory_basename:
         return Path(config.source_root / subdir / project.default_directory_basename)
     return Path(config.source_root / subdir / project.target)
@@ -433,7 +431,7 @@ class Project(SimpleProject):
     do_not_add_to_targets: bool = True
     set_pkg_config_path: bool = True  # set the PKG_CONFIG_* environment variables when building
     can_run_parallel_install: bool = False  # Most projects don't work well with parallel installation
-    default_source_dir: ComputedDefaultValue[Optional[Path]] = ComputedDefaultValue(
+    default_source_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
         function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename
     )
     # Some projects (e.g. python) need a native build for build tools, etc.
@@ -447,8 +445,12 @@ class Project(SimpleProject):
     default_build_tests: bool = True  # whether to build tests by default
     show_optional_tests_in_help: bool = True  # whether to show the --foo/build-tests in --help
     add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
-    _initial_source_dir: Path
-    source_dir: Path
+    source_dir: Path = PathConfigOption(
+        "source-directory",
+        metavar="DIR",
+        default=default_source_dir,
+        help="Override default source directory",
+    )
     configure_command: Path = Path("/invalid/configure/command")
     supported_riscv_cheri_standard: Optional[RiscvCheriISA] = None
 
@@ -643,13 +645,6 @@ class Project(SimpleProject):
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        if cls.source_dir is None:
-            cls._initial_source_dir = cls.add_path_option(
-                "source-directory",
-                metavar="DIR",
-                default=cls.default_source_dir,
-                help="Override default source directory for " + cls.target,
-            )
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
         default_xtarget = cls.default_architecture()
@@ -937,20 +932,7 @@ class Project(SimpleProject):
                 self.config,
                 self,
             )
-        if isinstance(self.repository, ReuseOtherProjectRepository):
-            initial_source_dir = inspect.getattr_static(self, "_initial_source_dir")
-            assert isinstance(initial_source_dir, ConfigOptionHandle)
-            # noinspection PyProtectedMember
-            assert initial_source_dir._get_default_value(self.config, self) is None, (
-                "initial source dir != None for ReuseOtherProjectRepository"
-            )
-        if self.source_dir is None:
-            self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
-        else:
-            if isinstance(self.source_dir, ComputedDefaultValue):
-                self.source_dir = self.source_dir(self.config, self)  # ty:ignore[invalid-assignment]
-            self._initial_source_dir = self.source_dir
-
+        self.source_dir = self.repository.get_real_source_dir(self, self.source_dir)
         if self.build_in_source_dir:
             assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
             if self.config.debug_output:
@@ -1359,7 +1341,7 @@ class Project(SimpleProject):
         self.repository.update(
             self,
             src_dir=self.source_dir,
-            base_project_source_dir=self._initial_source_dir,
+            base_project_source_dir=self.source_dir,
             revision=self.git_revision,
             skip_submodules=self.skip_git_submodules,
         )
@@ -1705,11 +1687,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.skip_update:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
-                assert self._initial_source_dir is not None
                 self.repository.ensure_cloned(
                     self,
                     src_dir=self.source_dir,
-                    base_project_source_dir=self._initial_source_dir,
+                    base_project_source_dir=self.source_dir,
                     skip_submodules=self.skip_git_submodules,
                 )
         else:

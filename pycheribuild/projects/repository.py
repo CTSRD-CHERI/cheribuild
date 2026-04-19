@@ -104,8 +104,7 @@ class ReuseOtherProjectRepository(SourceRepository):
         self.do_update = do_update
 
     def ensure_cloned(self, current_project: "Project", **kwargs) -> None:
-        # noinspection PyProtectedMember
-        src = self.get_real_source_dir(current_project, current_project._initial_source_dir)
+        src = self.get_real_source_dir(current_project, current_project.source_dir)
         if not src.exists():
             current_project.fatal(
                 f"Source repository for target {current_project.target} does not exist.",
@@ -116,8 +115,8 @@ class ReuseOtherProjectRepository(SourceRepository):
                 ),
             )
 
-    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Optional[Path]) -> Path:
-        if base_project_source_dir is not None:
+    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
+        if base_project_source_dir != Path("/fake/path/placeholder"):
             return base_project_source_dir
         return self.source_project.get_source_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
 
