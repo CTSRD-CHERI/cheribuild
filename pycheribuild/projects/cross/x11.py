@@ -110,7 +110,7 @@ class BuildXCBProto(X11AutotoolsProject):
         if self.config.pretend and not shutil.which("automake"):
             automake_version = (0, 0, 0)
         else:
-            automake_version = get_program_version(
+            automake_version: "tuple[int, ...]" = get_program_version(
                 Path("automake"), config=self.config, regex=rb"automake\s+\(GNU automake\)\s+(\d+)\.(\d+)\.?(\d+)?"
             )
         if automake_version >= (1, 16, 4):

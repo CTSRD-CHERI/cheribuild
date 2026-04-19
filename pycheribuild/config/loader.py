@@ -338,7 +338,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
             action = parser_obj.add_argument("--" + name, **kwargs)
         if self.default is not None and action.help is not None and has_default_help_text:
             if action.help != argparse.SUPPRESS:
-                action.help = action.help + " (default: '" + self.default_str + "')"
+                action.help += f" (default: '{self.default_str}')"
         action.default = None  # we don't want argparse default values!
         assert not action.type  # we handle the type of the value manually
         return action

@@ -54,7 +54,14 @@ from ..project import (
     ReuseOtherProjectBuildDir,
     ReuseOtherProjectRepository,
 )
-from ..simple_project import SimpleProject, TargetAliasWithDependencies, _clear_line_sequence, flush_stdio
+from ..simple_project import (
+    BoolConfigOption,
+    IntConfigOption,
+    SimpleProject,
+    TargetAliasWithDependencies,
+    _clear_line_sequence,
+    flush_stdio,
+)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ConfigOptionHandle
 from ...config.target_info import AutoVarInit, CompilerType, CrossCompileTarget
@@ -1575,6 +1582,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     return new
 
                 pwd_mkdb_cmd = self.objdir / "tmp/legacy/usr/bin/pwd_mkdb"
+                assert self.destdir is not None
                 self.rewrite_file(self.destdir / "etc/master.passwd", rewrite_passwd)
                 self.run_cmd(
                     [pwd_mkdb_cmd, "-p", "-d", self.install_dir / "etc", self.install_dir / "etc/master.passwd"]
@@ -1645,7 +1653,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     BUILDENV_SHELL="env -u PROMPT_COMMAND 'PS1="
                     + self.target
                     + "-buildenv:\\w> ' "
-                    + shutil.which("bash")
+                    + (shutil.which("bash") or "bash")
                     + " --norc --noprofile"
                 )
             else:
@@ -1840,32 +1848,25 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     hide_options_from_help: bool = True  # hide this from --help for now
     build_toolchain = CompilerType.BOOTSTRAPPED
 
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.tinderbox = cls.add_bool_option("tinderbox", help="Use `make tinderbox` instead of `make universe`")
-        cls.worlds_only = cls.add_bool_option("worlds-only", help="Only build worlds (skip building kernels)")
-        cls.kernels_only = cls.add_bool_option(
-            "kernels-only",
-            help="Only build kernels (skip building worlds)",
-            default=ComputedDefaultValue(
-                function=lambda conf, proj: conf.skip_world, as_string="true if --skip-world is set"
-            ),
-        )
-
-        cls.jflag_in_subjobs = cls.add_config_option(
-            "jflag-in-subjobs",
-            help="Number of jobs in each world/kernel build",
-            kind=int,
-            default=ComputedDefaultValue(jflag_in_subjobs, "default -j flag / 2"),
-        )
-
-        cls.jflag_for_universe = cls.add_config_option(
-            "jflag-for-universe",
-            help="Number of parallel world/kernel builds",
-            kind=int,
-            default=ComputedDefaultValue(jflag_for_universe, "default -j flag / 4"),
-        )
+    tinderbox = BoolConfigOption("tinderbox", help="Use `make tinderbox` instead of `make universe`")
+    worlds_only = BoolConfigOption("worlds-only", help="Only build worlds (skip building kernels)")
+    kernels_only = BoolConfigOption(
+        "kernels-only",
+        help="Only build kernels (skip building worlds)",
+        default=ComputedDefaultValue(
+            function=lambda conf, proj: conf.skip_world, as_string="true if --skip-world is set"
+        ),
+    )
+    jflag_in_subjobs = IntConfigOption(
+        "jflag-in-subjobs",
+        help="Number of jobs in each world/kernel build",
+        default=ComputedDefaultValue(jflag_in_subjobs, "default -j flag / 2"),
+    )
+    jflag_for_universe = IntConfigOption(
+        "jflag-for-universe",
+        help="Number of parallel world/kernel builds",
+        default=ComputedDefaultValue(jflag_for_universe, "default -j flag / 4"),
+    )
 
     def compile(self, **kwargs) -> None:
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)

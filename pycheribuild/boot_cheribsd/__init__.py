@@ -251,7 +251,7 @@ class CheriBSDSpawnMixin(MixinBase):
         log_patterns=True,
         timeout_msg="timeout",
         **kwargs,
-    ):
+    ) -> int:
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         if log_patterns:
             info("Expecting regex ", coloured(AnsiColour.cyan, str(patterns)))
@@ -290,7 +290,7 @@ class CheriBSDSpawnMixin(MixinBase):
 
     def _expect_and_handle_panic_impl(
         self, options: PatternListType, timeout_msg, *, ignore_timeout=True, expect_fn, timeout, **kwargs
-    ):
+    ) -> int:
         panic_regexes = [PANIC, STOPPED, PANIC_KDB, PANIC_PAGE_FAULT, PANIC_MORELLO_CAP_ABORT, PANIC_IN_BACKTRACE]
         for i in panic_regexes:
             assert i not in options
@@ -307,6 +307,7 @@ class CheriBSDSpawnMixin(MixinBase):
             failure(timeout_msg, " after ", timeout if timeout > 0 else self.timeout, " seconds", exit=False)
             if ignore_timeout:
                 info(str(e))
+                return -1
             else:
                 raise e
 
@@ -1112,7 +1113,9 @@ def boot_and_login(
             success("===> got DHCPACK")
             # we have a network, keep waiting for the login prompt
             i = child.expect(
-                boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=15 * 60, timeout_msg="timeout awaiting login prompt"
+                [*boot_expect_strings, *FATAL_ERROR_MESSAGES],
+                timeout=15 * 60,
+                timeout_msg="timeout awaiting login prompt",
             )
         if i == boot_expect_strings.index(LOGIN):
             success("===> got login prompt")
