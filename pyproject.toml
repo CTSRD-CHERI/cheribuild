@@ -96,7 +96,6 @@ invalid-assignment = "error"
 # Too many issues to fix for now
 unresolved-attribute = "ignore"
 invalid-parameter-default = "ignore"
-invalid-return-type = "ignore"
 invalid-method-override = "ignore"
 call-top-callable = "ignore"
 invalid-super-argument = "ignore"

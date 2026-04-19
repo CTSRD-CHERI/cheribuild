@@ -398,8 +398,7 @@ def popen(
         cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), config=config, print_verbose_only=print_verbose_only
     )
     if not run_in_pretend_mode and config.pretend:
-        # noinspection PyTypeChecker
-        return FakePopen()  # pytype: disable=bad-return-type
+        return FakePopen()  # type: ignore
     return popen_handle_noexec(cmdline, **kwargs)
 
 
@@ -858,7 +857,7 @@ def get_program_version(
         stdout = get_version_output(program, command_args=command_args, config=config)
     except subprocess.CalledProcessError as e:
         fatal_error("Failed to determine version for", program, ":", e, pretend=config.pretend)
-        return 0, 0, 0
+        return 0, 0, 0  # type: ignore
     if regex is None:
         prefix = re.escape(program_name) + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")

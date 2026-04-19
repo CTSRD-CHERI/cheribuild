@@ -668,7 +668,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "list-kernels", group=loader.action_group, help="List available kernel configs to run and exit"
         )
 
-        self.remote_morello_board = loader.add_optional_option(
+        self.remote_morello_board: Optional[str] = loader.add_optional_option(
             "remote-morello-board",
             type=str,
             help="SSH hostname of a Morello board. When set, some projects will run their "
