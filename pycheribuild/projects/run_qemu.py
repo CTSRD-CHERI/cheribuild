@@ -32,7 +32,6 @@ import os
 import shutil
 import socket
 import sys
-import typing
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -150,15 +149,12 @@ class LaunchQEMUBase(SimpleProject):
     @classmethod
     def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_qemu = typing.cast(
-            QEMUType,
-            cls.add_config_option(
-                "use-qemu",
-                kind=QEMUType,
-                default=QEMUType.DEFAULT,
-                enum_choice_strings=[t.value for t in QEMUType],
-                help="The QEMU type to run with. When set to 'custom', the 'custom-qemu-path' option must also be set.",
-            ),
+        cls.use_qemu = cls.add_config_option(
+            "use-qemu",
+            kind=QEMUType,
+            default=QEMUType.DEFAULT,
+            enum_choice_strings=[t.value for t in QEMUType],
+            help="The QEMU type to run with. When set to 'custom', the 'custom-qemu-path' option must also be set.",
         )
         cls.custom_qemu_path = cls.add_optional_path_option("custom-qemu-path", help="Path to the custom QEMU binary")
         cls.extra_qemu_options = cls.add_list_option(
@@ -173,7 +169,7 @@ class LaunchQEMUBase(SimpleProject):
             help="If set QEMU will log to a timestamped file in this directory. "
             "Will be ignored if the 'logfile' option is set",
         )
-        cls.use_telnet = cls.add_config_option(
+        cls.use_telnet = cls.add_optional_config_option(
             "monitor-over-telnet",
             kind=int,
             metavar="PORT",
@@ -739,13 +735,14 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.kernel_config = cls.add_config_option(
+        cls.kernel_config = cls.add_optional_config_option(
             "alternative-kernel",
+            kind=str,
             show_help=True,
             help="Select the kernel to run by specifying the kernel build configuration name."
             "The list of available kernel configurations is given by --list-kernels",
         )
-        cls.kernel_abi = cls.add_config_option(
+        cls.kernel_abi = cls.add_optional_config_option(
             "kernel-abi",
             show_help=True,
             kind=KernelABI,

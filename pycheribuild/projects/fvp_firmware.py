@@ -279,7 +279,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.edk2_platforms_rev = cls.add_config_option(
+        cls.edk2_platforms_rev = cls.add_optional_config_option(
             "edk2-platforms-git-revision", kind=str, metavar="REVISION", help="The git revision for edk2-platforms"
         )
 

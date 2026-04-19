@@ -69,7 +69,7 @@ def _parse_arguments(
     ConfigLoaderBase._cheri_config._cached_deps = collections.defaultdict(dict)
     assert isinstance(ConfigLoaderBase._cheri_config, DefaultCheriConfig)
     target_manager.reset()
-    ConfigLoaderBase._cheri_config.loader._config_path = config_file  # ty:ignore[invalid-assignment]
+    ConfigLoaderBase._cheri_config.loader._config_path = config_file
     sys.argv = ["cheribuild.py", *args]
     ConfigLoaderBase._cheri_config.loader.reset()
     ConfigLoaderBase._cheri_config.loader.is_running_unit_tests = True

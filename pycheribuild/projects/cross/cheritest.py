@@ -50,7 +50,9 @@ class _BuildCheriMipsTestBase(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.single_test = cls.add_config_option("single-test", help="Run a single test instead of all of them")
+        cls.single_test = cls.add_optional_config_option(
+            "single-test", kind=str, help="Run a single test instead of all of them"
+        )
 
     def setup(self):
         super().setup()

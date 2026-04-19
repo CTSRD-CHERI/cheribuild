@@ -265,7 +265,7 @@ class MakeOptions:
             self.__project.check_required_system_tool(value)
         self.__can_pass_j_flag = can_pass_j_flag
 
-    def all_commandline_args(self, config) -> "list[str]":
+    def all_commandline_args(self, config) -> "list[str | Path]":
         return self.get_commandline_args(config=config, targets=[])
 
     def get_commandline_args(
@@ -276,7 +276,7 @@ class MakeOptions:
         verbose=False,
         continue_on_error=False,
         config: CheriConfig,
-    ) -> "list[str]":
+    ) -> "list[str | Path]":
         assert self.kind
         result = list(self.__command_args)
         actual_build_tool = self.kind
@@ -602,6 +602,10 @@ class Project(SimpleProject):
             and ssh_host_accessible_cached(morello_ssh_hostname, ssh_args=(), config=self.config)
         )
 
+    def remote_morello_board_hostname(self) -> str:
+        assert self.config.remote_morello_board is not None
+        return self.config.remote_morello_board
+
     def can_use_lto(self, ccinfo: CompilerInfo) -> bool:
         if ccinfo.compiler == "apple-clang":
             return True
@@ -711,12 +715,12 @@ class Project(SimpleProject):
             and isinstance(cls.repository, GitRepository)
             and "git_revision" not in cls.__dict__
         ):
-            cls.git_revision = cls.add_config_option(
+            cls.git_revision = cls.add_optional_config_option(
                 "git-revision",
+                kind=str,
                 metavar="REVISION",
                 help="The git revision to checkout prior to building. Useful if "
-                "HEAD is broken for one "
-                "project but you still want to update the other projects.",
+                "HEAD is broken for one project but you still want to update the other projects.",
             )
             # TODO: can argparse action be used to store to the class member directly?
             # seems like I can create a new action a pass a reference to the repository:
@@ -734,7 +738,7 @@ class Project(SimpleProject):
                 help="The URL of the git repository",
                 default=cls.repository.url,
                 metavar="REPOSITORY",
-            )  # ty:ignore[invalid-assignment]
+            )
         cls.use_lto = cls.add_bool_option(
             "use-lto", help="Build with link-time optimization (LTO)", default=cls.lto_by_default
         )
@@ -749,16 +753,13 @@ class Project(SimpleProject):
             help="Build static or dynamic (or use the project default)",
         )
 
-        cls.build_type = typing.cast(
-            BuildType,
-            cls.add_config_option(
-                "build-type",
-                default=cls.default_build_type,
-                kind=BuildType,
-                enum_choice_strings=supported_build_type_strings,
-                help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
-                " does not pass any additional flags to the configure command).",
-            ),
+        cls.build_type = cls.add_config_option(
+            "build-type",
+            default=cls.default_build_type,
+            kind=BuildType,
+            enum_choice_strings=supported_build_type_strings,
+            help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
+            " does not pass any additional flags to the configure command).",
         )
 
         if cls.has_optional_tests and "build_tests" not in cls.__dict__:
@@ -1263,7 +1264,7 @@ class Project(SimpleProject):
         options: "Optional[MakeOptions]" = None,
         parallel: bool = True,
         compilation_db_name: "Optional[str]" = None,
-    ) -> "list[str]":
+    ) -> "list[str | Path]":
         if not options:
             options = self.make_args
         if not make_command:

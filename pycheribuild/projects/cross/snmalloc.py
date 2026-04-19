@@ -62,13 +62,15 @@ class SNMalloc(CrossCompileCMakeProject):
 
         cls.quarantine = cls.add_bool_option("quarantine", help="Quarantine deallocations")
 
-        cls.qpathresh = cls.add_config_option(
+        cls.qpathresh = cls.add_optional_config_option(
             "qpathresh", kind=int, help="Quarantine physical memory per allocator threshold"
         )
-        cls.qpacthresh = cls.add_config_option("qpacthresh", kind=int, help="Quarantine chunk per allocator threshold")
-        cls.qcsc = cls.add_config_option("qcsc", kind=int, help="Quarantine chunk size class")
+        cls.qpacthresh = cls.add_optional_config_option(
+            "qpacthresh", kind=int, help="Quarantine chunk per allocator threshold"
+        )
+        cls.qcsc = cls.add_optional_config_option("qcsc", kind=int, help="Quarantine chunk size class")
 
-        cls.decommit = cls.add_config_option("decommit", kind=str, help="Specify memory decommit policy")
+        cls.decommit = cls.add_optional_config_option("decommit", kind=str, help="Specify memory decommit policy")
 
         cls.zero = cls.add_bool_option("zero", help="Specify memory decommit policy")
 

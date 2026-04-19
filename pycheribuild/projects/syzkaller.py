@@ -38,7 +38,7 @@ from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .go import BuildGo
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind
-from .simple_project import BoolConfigOption, PathConfigOption, SimpleProject
+from .simple_project import BoolConfigOption, OptionalPathConfigOption, PathConfigOption, SimpleProject
 from ..config.computed_default_value import ComputedDefaultValue
 from ..config.target_info import CPUArchitecture
 from ..processutils import commandline_to_str
@@ -158,7 +158,9 @@ class BuildSyzkaller(CrossCompileProject):
 
 class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
-    syz_config = PathConfigOption("syz-config", help="Path to the syzkaller configuration file to use.", show_help=True)
+    syz_config = OptionalPathConfigOption(
+        "syz-config", help="Path to the syzkaller configuration file to use.", show_help=True
+    )
     syz_ssh_key = PathConfigOption(
         "ssh-privkey",
         show_help=True,

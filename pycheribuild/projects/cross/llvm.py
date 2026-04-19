@@ -884,19 +884,19 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
         super().setup_config_options(**kwargs)
 
         def add_subproject_options(name):
-            rev: str = cls.add_config_option(
+            rev: Optional[str] = cls.add_optional_config_option(
                 name + "-git-revision",
                 kind=str,
                 metavar="REVISION",
                 help="The git revision for tools/" + name,
-            )  # ty:ignore[invalid-assignment]
+            )
             repo: str = cls.add_config_option(
                 name + "-repository",
                 kind=str,
                 metavar="REPOSITORY",
                 default=cls.github_base_url + name + ".git",
                 help="The git repository for tools/" + name,
-            )  # ty:ignore[invalid-assignment]
+            )
             return repo, rev
 
         cls.clang_repository, cls.clang_revision = add_subproject_options("clang")

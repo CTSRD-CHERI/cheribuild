@@ -78,6 +78,8 @@ __all__ = [
     "BoolConfigOption",
     "IntConfigOption",
     "ListConfigOption",
+    "OptionalIntConfigOption",
+    "OptionalPathConfigOption",
     "PathConfigOption",
     "ReuseOtherProjectBuildDir",
     "SimpleProject",
@@ -181,7 +183,7 @@ if typing.TYPE_CHECKING:
     def PathConfigOption(  # noqa: N802
         name: str,
         help: str,
-        default: "typing.Union[Path, ComputedDefaultValue[Path]]" = None,
+        default: "typing.Union[Path, ComputedDefaultValue[Path]]",
         **kwargs,
     ) -> "Path":
         return typing.cast(Path, default)
@@ -892,16 +894,16 @@ class SimpleProjectBase(AbstractProject, ABC):
         cls,
         name: str,
         *,
+        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T]",
         show_help=False,
         altname: "Optional[str]" = None,
         kind: "Union[type[T], Callable[[str], T]]" = str,
-        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]" = None,
         only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
         extra_fallback_config_names: "Optional[list[str]]" = None,
         _allow_unknown_targets=False,
         use_default_fallback_config_names=True,
         **kwargs,
-    ) -> Optional[T]:
+    ) -> T:
         fullname = cls.target + "/" + name
         # We abuse shortname to implement altname
         if altname is not None:
@@ -989,6 +991,17 @@ class SimpleProjectBase(AbstractProject, ABC):
         )
 
     @classmethod
+    def add_optional_config_option(
+        cls,
+        name: str,
+        *,
+        kind: "Union[type[T], Callable[[str], T]]" = str,
+        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]" = None,
+        **kwargs,
+    ) -> Optional[T]:
+        return cls.add_config_option(name, kind=kind, default=default, **kwargs)
+
+    @classmethod
     def add_bool_option(
         cls,
         name: str,
@@ -998,11 +1011,8 @@ class SimpleProjectBase(AbstractProject, ABC):
         default: "Union[bool, ComputedDefaultValue[bool]]" = False,
         **kwargs,
     ) -> bool:
-        return typing.cast(
-            bool,
-            cls.add_config_option(
-                name, default=default, kind=bool, altname=altname, only_add_for_targets=only_add_for_targets, **kwargs
-            ),
+        return cls.add_config_option(
+            name, default=default, kind=bool, altname=altname, only_add_for_targets=only_add_for_targets, **kwargs
         )
 
     @classmethod
@@ -1023,7 +1033,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def add_optional_path_option(cls, name: str, **kwargs) -> Optional[Path]:
-        return cls.add_config_option(name, kind=Path, **kwargs)
+        return cls.add_optional_config_option(name, kind=Path, **kwargs)
 
     @classmethod
     def add_path_option(
@@ -1033,7 +1043,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]",
         **kwargs,
     ) -> Path:
-        return typing.cast(Path, cls.add_config_option(name, kind=Path, default=default, **kwargs))
+        return cls.add_config_option(name, kind=Path, default=default, **kwargs)
 
     with_clean = BoolConfigOption(
         "clean",
