@@ -451,7 +451,7 @@ class Project(SimpleProject):
         default=default_source_dir,
         help="Override default source directory",
     )
-    configure_command: Path = Path("/invalid/configure/command")
+    configure_command: Optional[Path] = None
     supported_riscv_cheri_standard: Optional[RiscvCheriISA] = None
 
     @classmethod
@@ -1954,13 +1954,12 @@ class _CMakeAndMesonSharedLogic(Project):
             self.configure_args.append("-D" + option + "=" + str(value))
 
     def _get_configure_tool_version(self) -> "tuple[int, ...]":
-        cmd = Path(self.configure_command)
         assert self.configure_command is not None
-        if not cmd.is_absolute() or not Path(self.configure_command).exists():
+        if not self.configure_command.is_absolute() or not self.configure_command.exists():
             self.fatal("Could not find", self._configure_tool_name, "binary:", self.configure_command)
             return 0, 0, 0
-        assert cmd.is_absolute()
-        return get_program_version(cmd, config=self.config, **self._get_version_args)
+        assert self.configure_command.is_absolute()
+        return get_program_version(self.configure_command, config=self.config, **self._get_version_args)
 
     @property
     def _get_version_args(self) -> dict:
@@ -1971,7 +1970,7 @@ class _CMakeAndMesonSharedLogic(Project):
 
     def setup(self):
         super().setup()
-        if not Path(self.configure_command).is_absolute():
+        if self.configure_command is not None and not self.configure_command.is_absolute():
             abspath = shutil.which(self.configure_command)
             if abspath:
                 self.configure_command = Path(abspath)
@@ -2057,7 +2056,12 @@ class AutotoolsProject(Project):
         if self._can_use_autogen_sh and (self.configure_command.parent / "autogen.sh").is_file():
             generate_configure = not self.configure_command.exists()
             # We should also run autogen.sh if configure_command is not tracked by git and --clean is passed
-            if not generate_configure and self.config.clean and isinstance(self.repository, GitRepository):
+            if (
+                not generate_configure
+                and self.config.clean
+                and isinstance(self.repository, GitRepository)
+                and self.configure_command is not None
+            ):
                 generate_configure = not GitRepository.is_tracked(self, self.source_dir, self.configure_command)
             # We need to pass NOCONFIGURE=1, to avoid invoking the configure script directly plus any environment
             # variables that might affect the autoconf lookup (e.g. ACLOCAL_PATH).
