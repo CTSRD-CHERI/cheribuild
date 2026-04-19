@@ -375,7 +375,7 @@ subprocess.check_call(["{self.CC}", "-B{fake_cc_dir}"] + args + ["-fuse-ld=bfd",
             EDK2_TOOLCHAIN="CLANG38",
             VERBOSE=1,
             IASL_PREFIX=str(iasl.parent) + "/",
-            PATH=str(fake_cc_dir) + ":" + os.getenv("PATH"),
+            PATH=str(fake_cc_dir) + ":" + os.getenv("PATH", ""),
         ):
             platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():

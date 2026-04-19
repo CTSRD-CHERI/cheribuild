@@ -1771,7 +1771,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kerndir = "kernel." + kernconf
         return rootfs / "boot" / kerndir / "kernel"
 
-    def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
+    def get_kernel_install_path(self, kernconf: str) -> Path:
         """
         Get the installed kernel path for the given kernel configuration. If no kernel config
         is given, the default kernel configuration is selected.
@@ -2260,7 +2260,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kernel_abi=None)]
 
-    def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
+    def get_kernel_install_path(self, kernconf: str) -> Path:
         """Get the installed kernel path for an MFS kernel config that has been built."""
         path = self.config.cheribsd_image_root / (
             "kernel" + self.crosscompile_target.build_suffix(self.config, include_os=False) + "." + kernconf
@@ -2375,7 +2375,7 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
             self.objdir / "tmp/obj-tools/usr.sbin/makefs",
         ]
         release_args.set_env(
-            PATH=":".join(map(str, extra_path_entries)) + ":" + release_args.env_vars.get("PATH", os.getenv("PATH"))
+            PATH=":".join(map(str, extra_path_entries)) + ":" + release_args.env_vars.get("PATH", os.getenv("PATH", ""))
         )
 
         # DESTDIR for install target is where to install the media, as you'd

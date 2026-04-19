@@ -87,7 +87,7 @@ class BuildPython(CrossCompileAutotoolsProject):
                 # Doesn't work since that remove all flags, need to set PATH instead
                 # PYTHON_FOR_BUILD=str(native_python),
                 # PYTHON_FOR_REGEN=str(native_python),
-                PATH=str(native_python.parent) + ":" + os.getenv("PATH"),
+                PATH=str(native_python.parent) + ":" + os.getenv("PATH", ""),
                 READELF=str(self.sdk_bindir / "llvm-readelf"),
                 AR=str(self.sdk_bindir / "llvm-ar"),
                 ac_cv_file__dev_ptmx="no",  # no /dev/ptmx file on cheribsd

@@ -29,6 +29,7 @@
 #
 import os
 import sys
+import typing
 from pathlib import Path
 from typing import ClassVar, Iterable, Optional
 
@@ -218,7 +219,7 @@ class BuildLLVMBase(CMakeProject):
             self.common_warning_flags.append("-Wno-cheri-inefficient")
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.use_lto else 4
-        if os.cpu_count() >= 24:
+        if typing.cast(int, os.cpu_count()) >= 24:
             link_jobs *= 4  # Increase number of link jobs for powerful servers
         # non-shared debug builds take lots of ram -> use fewer parallel jobs
         if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmake_options:

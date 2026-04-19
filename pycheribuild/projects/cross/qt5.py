@@ -153,7 +153,7 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
     def configure(self, **kwargs):
         if not self.compiling_for_host():
             native_bin = self.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir / "bin"
-            self.configure_environment["PATH"] = str(native_bin) + ":" + os.getenv("PATH")
+            self.configure_environment["PATH"] = str(native_bin) + ":" + os.getenv("PATH", "")
         super().configure()
 
 
@@ -902,7 +902,7 @@ class BuildQtWayland(BuildQtModuleWithQMake):
     def process(self):
         wayland_native = BuildWayland.get_instance(self, cross_target=CompilationTargets.NATIVE)
         # This build relies in wayland-scanner being found in $PATH
-        with self.set_env(PATH=str(wayland_native.install_dir / "bin") + ":" + os.getenv("PATH")):
+        with self.set_env(PATH=str(wayland_native.install_dir / "bin") + ":" + os.getenv("PATH", "")):
             super().process()
 
 

@@ -728,13 +728,13 @@ class Project(SimpleProject):
             # def __call__(self, parser, namespace, values, option_string=None):
             #     print('%r %r %r' % (namespace, values, option_string))
             #     setattr(namespace, self.dest, values)
-            cls._repository_url = cls.add_config_option(
+            cls._repository_url: str = cls.add_config_option(
                 "repository",
                 kind=str,
                 help="The URL of the git repository",
                 default=cls.repository.url,
                 metavar="REPOSITORY",
-            )
+            )  # ty:ignore[invalid-assignment]
         cls.use_lto = cls.add_bool_option(
             "use-lto", help="Build with link-time optimization (LTO)", default=cls.lto_by_default
         )

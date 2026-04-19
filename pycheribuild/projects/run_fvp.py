@@ -199,10 +199,10 @@ VOLUME /diskimg
         tcp_ports: "Optional[list[int]]" = None,
         interactive=True,
         **kwargs,
-    ) -> CompletedProcess:
+    ) -> "CompletedProcess[bytes]":
         if tcp_ports is None:
             tcp_ports = []
-        display = os.getenv("DISPLAY", None)
+        display = os.getenv("DISPLAY", "")
         if not display or not interactive:
             x11 = False  # Don't bother with the GUI
         interactive_headless = interactive and not x11
