@@ -889,7 +889,6 @@ class MercurialRepository(SourceRepository):
         if up_to_date is True:
             current_project.info("Skipping update: Current directory is up-to-date or ahead of tip.")
             return
-        assert up_to_date is False
         current_project.verbose_print(coloured(AnsiColour.blue, "Current directory is behind tip."))
 
         # make sure we run git stash if we discover any local changes

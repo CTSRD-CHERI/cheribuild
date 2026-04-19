@@ -93,7 +93,6 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
                 xml.write()
         except Exception as e:
             boot_cheribsd.failure("Could not update JUnit XML", tests_xml_path, ": ", e, exit=False)
-            return False
 
 
 def add_args(parser: argparse.ArgumentParser):
