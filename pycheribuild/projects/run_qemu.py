@@ -230,7 +230,7 @@ class LaunchQEMUBase(SimpleProject):
         self._project_specific_options = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(
-            self.crosscompile_target,
+            self.qemu_xtarget,
             want_debugger=self.config.wait_for_debugger,
             riscv_cheri_isa=self.config.riscv_cheri_isa,
             enable_mte=self.config.qemu_enable_mte,
@@ -238,6 +238,18 @@ class LaunchQEMUBase(SimpleProject):
         self.qemu_user_networking = True
         self.rootfs_path: Optional[Path] = None
         self._after_disk_options = []
+
+    @classmethod
+    def get_qemu_xtarget(cls) -> CrossCompileTarget:
+        # two roles of get_crosscompile_target:
+        # 1. pick the boot artifacts to run 
+        # (dependencies, OS disk image class resolution, rootfs path, kernel selection, config names, test plumbing, etc. all depend on this)
+        # 2. pick the QEMU binary/config to use
+        return cls.get_crosscompile_target()
+
+    @property
+    def qemu_xtarget(self) -> CrossCompileTarget:
+        return self.get_qemu_xtarget()
 
     @staticmethod
     def riscv_bios_arguments(xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=True) -> "list[str]":
@@ -279,7 +291,7 @@ class LaunchQEMUBase(SimpleProject):
         if cls._cached_chosen_qemu is not None:
             return cls._cached_chosen_qemu
 
-        xtarget = cls.get_crosscompile_target()
+        xtarget = cls.get_qemu_xtarget()
         can_provide_src_via_smb = False
         supported_qemu_classes = []
         if xtarget.is_mips(include_purecap=True):
@@ -978,6 +990,24 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+
+
+class LaunchMorelloFreeBSD(LaunchFreeBSD):
+    target = "run-morello-freebsd"
+    # hide_options_from_help = True
+    _always_add_suffixed_targets = True
+
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return (CompilationTargets.FREEBSD_AARCH64,)
+
+    @classmethod
+    def default_architecture(cls) -> Optional[CrossCompileTarget]:
+        return CompilationTargets.FREEBSD_AARCH64
+
+    @classmethod
+    def get_qemu_xtarget(cls) -> CrossCompileTarget:
+        return CompilationTargets.CHERIBSD_MORELLO_PURECAP
 
 
 class LaunchMinimalCheriBSD(LaunchCheriBSD):

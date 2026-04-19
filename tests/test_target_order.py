@@ -245,6 +245,15 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             ],
         ),
         pytest.param(
+            "run-morello-freebsd-aarch64",
+            True,
+            [
+                "freebsd-aarch64",
+                "qemu",
+                "disk-image-freebsd-aarch64",
+            ],
+        ),
+        pytest.param(
             "run-riscv64",
             True,
             [
