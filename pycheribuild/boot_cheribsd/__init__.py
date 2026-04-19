@@ -1305,26 +1305,27 @@ def mount_via_p9fs(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) 
     except CheriBSDCommandFailed:
         d.mounted = False
         return False
-    if not d.readonly and qemu.cheribsd_issue_2617_fixed is None:
-        try:
-            # Check if we are affected by https://github.com/CTSRD-CHERI/cheribsd/issues/2617
-            checked_run_cheribsd_command(
-                qemu,
-                f"echo test > /tmp/issue_2617.txt && mv -f /tmp/issue_2617.txt {d.in_target}/issue_2617.txt",
-                pretend_result=1,
-            )
-            qemu.cheribsd_issue_2617_fixed = True
-        except CheriBSDCommandFailed:
-            info("P9FS driver is not new enough to support running tests. Will unmount again.")
-            qemu.cheribsd_issue_2617_fixed = False
-            checked_run_cheribsd_command(qemu, f"rm -f /tmp/issue_2617.txt {d.in_target}/issue_2617.txt")
-            checked_run_cheribsd_command(qemu, f"umount {d.in_target}")
+    if not d.readonly:
+        if qemu.cheribsd_issue_2617_fixed is None:
+            try:
+                # Check if we are affected by https://github.com/CTSRD-CHERI/cheribsd/issues/2617
+                checked_run_cheribsd_command(
+                    qemu,
+                    f"echo test > /tmp/issue_2617.txt && mv -f /tmp/issue_2617.txt {d.in_target}/issue_2617.txt",
+                    pretend_result=1,
+                )
+                qemu.cheribsd_issue_2617_fixed = True
+            except CheriBSDCommandFailed:
+                info("P9FS driver is not new enough to support running tests. Will unmount again.")
+                qemu.cheribsd_issue_2617_fixed = False
+                checked_run_cheribsd_command(qemu, f"rm -f /tmp/issue_2617.txt {d.in_target}/issue_2617.txt")
+                checked_run_cheribsd_command(qemu, f"umount {d.in_target}")
+                d.mounted = False
+                return False
+        if qemu.cheribsd_issue_2617_fixed is False:
             d.mounted = False
             return False
-    if qemu.cheribsd_issue_2617_fixed is False:
-        d.mounted = False
-        return False
-        return True
+    return True
 
 
 def mount_via_smb(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -> bool:
