@@ -32,6 +32,7 @@
 import getpass
 import os
 import subprocess
+from pathlib import Path
 
 from .simple_project import SimpleProject
 from ..utils import OSInfo
@@ -44,10 +45,14 @@ class DockerAdduser(SimpleProject):
         super().__init__(*args, **kwargs)
         self._initial_build_dir = self.config.build_root / (self.target + "-build")
 
+    # FIXME: this should probably be subclassing Project once there is a way to opt out of having a source dir.
+    @property
+    def build_dir(self) -> Path:
+        assert self._initial_build_dir is not None
+        return self._initial_build_dir
+
     def process(self):
-        assert self.build_dir is not None
-        if not self.build_dir.is_dir():
-            self.makedirs(self.build_dir)
+        self.makedirs(self.build_dir)
 
         try:
             user = getpass.getuser()
