@@ -119,7 +119,7 @@ class BuildXCBProto(X11AutotoolsProject):
             self.replace_in_file(self.build_dir / "xcb-proto.pc", {"${PYTHON_PREFIX}": str(self.install_prefix)})
 
 
-class BuildXorgProto(X11AutotoolsProject):
+class BuildXorgProto(X11MesonProject):
     target = "xorgproto"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/proto/xorgproto.git")
 
@@ -218,7 +218,7 @@ class BuildLibXext(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxext.git")
 
 
-class BuildLibXfixes(X11AutotoolsProject):
+class BuildLibXfixes(X11MesonProject):
     target = "libxfixes"
     dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxfixes.git")
@@ -231,7 +231,7 @@ class BuildLibXi(X11AutotoolsProject):
     builds_docbook_xml = True
 
 
-class BuildLibXrender(X11AutotoolsProject):
+class BuildLibXrender(X11MesonProject):
     target = "libxrender"
     dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxrender.git")
@@ -410,7 +410,7 @@ class BuildLibXTst(X11AutotoolsProject):
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
-class BuildLibXKBFile(X11AutotoolsProject):
+class BuildLibXKBFile(X11MesonProject):
     target = "libxkbfile"
     dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git")
