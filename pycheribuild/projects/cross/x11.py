@@ -237,7 +237,7 @@ class BuildLibXrender(X11MesonProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxrender.git")
 
 
-class BuildLibXrandr(X11AutotoolsProject):
+class BuildLibXrandr(X11MesonProject):
     target = "libxrandr"
     dependencies = ("libxext", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxrandr.git")
@@ -274,7 +274,7 @@ class BuildLibXt(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxt.git")
 
 
-class BuildLibXDamage(X11AutotoolsProject):
+class BuildLibXDamage(X11MesonProject):
     target = "libxdamage"
     dependencies = ("libx11", "libxfixes")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxdamage.git")
@@ -318,7 +318,7 @@ class BuildXAuth(X11AutotoolsProject):
             )
 
 
-class BuildXEyes(X11AutotoolsProject):
+class BuildXEyes(X11MesonProject):
     target = "xeyes"
     dependencies = ("libxi", "libxmu", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xeyes.git")
@@ -370,7 +370,7 @@ class BuildPixman(X11MesonProject):
             self.add_meson_options(**{"a64-neon": "disabled"})
 
 
-class BuildLibFontenc(X11AutotoolsProject):
+class BuildLibFontenc(X11MesonProject):
     target = "libfontenc"
     dependencies = ("xorg-font-util",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libfontenc.git")
@@ -392,7 +392,7 @@ class BuildLibcvt(X11MesonProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcvt.git")
 
 
-class BuildLibXFt(X11AutotoolsProject):
+class BuildLibXFt(X11MesonProject):
     target = "libxft"
     dependencies = ("fontconfig", "freetype2", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxft.git")
@@ -416,7 +416,7 @@ class BuildLibXKBFile(X11MesonProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git")
 
 
-class BuildLibXScrnSaver(X11AutotoolsProject):
+class BuildLibXScrnSaver(X11MesonProject):
     target = "libxscrnsaver"
     dependencies = ("libx11", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxscrnsaver.git")
@@ -463,7 +463,7 @@ class BuildXKeyboardConfig(X11MesonProject):
         super().install(**kwargs)
 
 
-class BuildXKkbcomp(X11AutotoolsProject):
+class BuildXKkbcomp(X11MesonProject):
     target = "xkbcomp"
     dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xkbcomp.git")
@@ -475,13 +475,13 @@ class BuildXProp(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xprop.git")
 
 
-class BuildLibXCursor(X11AutotoolsProject):
+class BuildLibXCursor(X11MesonProject):
     target = "libxcursor"
     dependencies = ("libx11", "libxfixes", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcursor.git")
 
 
-class BuildXBitMaps(X11AutotoolsProject):
+class BuildXBitMaps(X11MesonProject):
     target = "xbitmaps"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/data/bitmaps.git")
 
@@ -638,19 +638,22 @@ class BuildXServer(X11MesonProject):
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
-class BuildTWM(X11AutotoolsProject):
+class BuildTWM(X11MesonProject):
     # Simple window manager to use with XVnc (KWin has too many dependencies)
     target = "twm"
-    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/twm.git")
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/t wm.git")
     dependencies = ("libx11", "libxt", "libsm", "libice", "libxext", "libxrandr", "libxmu")
 
     def setup(self):
         super().setup()
         if self.compiling_for_cheri():
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+            self.cross_warning_flags.append("-Wno-error=capability-to-integer-cast")
+        if self.get_compiler_info(self.CC).is_clang:
+            self.cross_warning_flags.append("-Wno-error=newline-eof")
 
 
-class BuildLibXcomposite(X11AutotoolsProject):
+class BuildLibXcomposite(X11MesonProject):
     target = "libxcomposite"
     dependencies = ("libxfixes",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcomposite.git")
@@ -696,13 +699,21 @@ class BuildLibPCIAccess(X11MesonProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libpciaccess.git")
 
 
+# FIXME: meson build system does not work correctly yet, doesn't set include paths for xorgproto
 class BuildLibXshmFence(X11AutotoolsProject):
     target = "libxshmfence"
     dependencies = ("xorgproto",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxshmfence.git")
 
+    def setup(self):
+        super().setup()
+        # https://cgit.freebsd.org/ports/tree/x11/libxshmfence/Makefile?id=f2969ff0a50dade07cc0a2ee4181e34be956d49f#n15
+        if self.target_info.is_freebsd():
+            # self.add_meson_options(**{"shared-memory-dir": "/tmp"})
+            self.configure_args.append("--with-shared-memory-dir=/tmp")
 
-class BuildLibXxf86vm(X11AutotoolsProject):
+
+class BuildLibXxf86vm(X11MesonProject):
     target = "libxxf86vm"
     dependencies = ("xorgproto", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxxf86vm.git")
