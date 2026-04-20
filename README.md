@@ -53,7 +53,7 @@ If you are building CHERI on a FreeBSD machine, the following command will insta
 the most commonly used cheribuild targets:
 
 ```shell
-pkg install autoconf automake bison cmake expat glib gsed llvm mercurial meson ninja pkgconf pixman samba
+pkg install autoconf automake bison cmake expat glib gmake gsed libtool llvm mercurial meson mpfr ninja pkgconf pixman python3 samba420 texinfo
 ```
 
 #### Arch Linux
