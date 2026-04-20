@@ -23,7 +23,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
+from .crosscompileproject import CrossCompileCMakeProject
 from ..project import GitRepository
 
 
@@ -40,22 +40,25 @@ class BuildSDL(CrossCompileCMakeProject):
         self.cross_warning_flags.append("-Wno-error=incompatible-function-pointer-types")
 
 
-class BuildSDLMixer(CrossCompileAutotoolsProject):
+class BuildSDLMixer(CrossCompileCMakeProject):
     target = "sdl-mixer"
     repository = GitRepository("https://github.com/libsdl-org/SDL_mixer.git", default_branch="SDL2", force_branch=True)
     dependencies = ("sdl",)
 
     def setup(self) -> None:
         super().setup()
-        self.configure_args.append("--disable-music-flac")
+        self.add_cmake_options(
+            SDL2MIXER_INSTALL=True,
+            SDL2MIXER_VENDORED=True,  # Use the bundled dependencies for now
+            SDL2MIXER_FLAC=False,  # bad pointer alignment code: -Werror,-Wcheri-capability-misuse
+        )
 
 
-class BuildSDLNet(CrossCompileAutotoolsProject):
+class BuildSDLNet(CrossCompileCMakeProject):
     target = "sdl-net"
     repository = GitRepository("https://github.com/libsdl-org/SDL_net.git", default_branch="SDL2", force_branch=True)
     dependencies = ("sdl",)
 
     def setup(self):
         super().setup()
-        self.configure_args.append("--disable-sdltest")
-        self.configure_args.append("--disable-examples")
+        self.add_cmake_options(SDL2NET_SAMPLES=False, SDL2NET_INSTALL=True)
