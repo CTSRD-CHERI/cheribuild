@@ -238,19 +238,19 @@ class FileSystemUtils:
     # whether to create a new file called src.basename() inside dest, whether
     # to use dest.parent or dest, etc.
     def create_symlink(
-        self, src: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None, print_verbose_only=True
+        self, to: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None, print_verbose_only=True
     ):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
         if relative:
-            if src.is_absolute():
-                src = self.relative_path(src, dest.parent if dest.is_absolute() else cwd)
+            if to.is_absolute():
+                to = self.relative_path(to, dest.parent if dest.is_absolute() else cwd)
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
-            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
+            run_command("ln", "-fsn", to, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
         else:
-            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
+            run_command("ln", "-fsn", to, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
 
     def create_symlinks(
         self,
