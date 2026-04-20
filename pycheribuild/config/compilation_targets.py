@@ -390,7 +390,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     shortname: str = "FreeBSD"
-    FREEBSD_VERSION: int = 13
+    FREEBSD_VERSION: int = 16
     uses_upstream_llvm = True
 
     @property
@@ -680,7 +680,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname: str = "CheriBSD"
     os_prefix: Optional[str] = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
-    FREEBSD_VERSION: int = 13
+    FREEBSD_VERSION: int = 15
     uses_upstream_llvm = False
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
