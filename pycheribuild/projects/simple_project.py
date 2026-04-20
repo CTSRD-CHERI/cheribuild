@@ -1046,10 +1046,6 @@ class SimpleProjectBase(AbstractProject, ABC):
         self._last_stdout_line_can_be_overwritten = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
-    @property
-    def build_dir(self) -> Optional[Path]:
-        return self._initial_build_dir
-
     def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "Optional[str]"):
         if not cheribuild_target:
             return
@@ -1268,7 +1264,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     def run_with_logfile(
         self,
         args: "Sequence[str | Path]",
-        logfile_name: str,
+        logfile_path: Path,
         *,
         stdout_filter: "Optional[Callable[[bytes], None]]" = None,
         cwd: "Optional[Path]" = None,
@@ -1281,7 +1277,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
         :param append_to_logfile: whether to append to the logfile if it exists
         :param args: the command to run (e.g. ["make", "-j32"])
-        :param logfile_name: the name of the logfile (e.g. "build.log")
+        :param logfile_path: the path to the logfile (e.g. "$build_dir/build.log")
         :param cwd the directory to run make in (defaults to self.build_dir)
         :param stdout_filter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
@@ -1294,9 +1290,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             new_env = os.environ.copy()
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
             new_env.update(env)
-        assert not logfile_name.startswith("/")
-        if self.config.write_logfile and self.build_dir is not None:
-            logfile_path = self.build_dir / (logfile_name + ".log")
+        if self.config.write_logfile:
             print("Saving build log to", logfile_path)
         else:
             logfile_path = Path(os.devnull)

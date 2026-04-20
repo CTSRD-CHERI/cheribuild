@@ -634,8 +634,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 bios_args = run_instance.get_riscv_bios_args()
                 assert len(bios_args) == 2 and bios_args[0] == "-bios"
                 cmd.extend(["--bios", bios_args[1]])
-        if mount_builddir and self.project.build_dir and not has_test_extra_arg_override("--build-dir"):
-            cmd.extend(["--build-dir", self.project.build_dir])
+        build_dir: "Optional[Path]" = getattr(self.project, "build_dir", None)
+        if mount_builddir and build_dir is not None and not has_test_extra_arg_override("--build-dir"):
+            cmd.extend(["--build-dir", build_dir])
         if mount_sourcedir and self.project.source_dir and not has_test_extra_arg_override("--source-dir"):
             cmd.extend(["--source-dir", self.project.source_dir])
         if mount_sysroot and not has_test_extra_arg_override("--sysroot-dir"):

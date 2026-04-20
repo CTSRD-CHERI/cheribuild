@@ -1297,7 +1297,7 @@ class Project(SimpleProject):
         *,
         make_command: "Optional[str]" = None,
         options: "Optional[MakeOptions]" = None,
-        logfile_name: "Optional[str]" = None,
+        logfile_name: str = "",
         cwd: "Optional[Path]" = None,
         append_to_logfile=False,
         compilation_db_name="compile_commands.json",
@@ -1319,9 +1319,7 @@ class Project(SimpleProject):
         if not logfile_name:
             logfile_name = Path(make_command).name
             if make_targets_list:
-                logfile_name += "." + (
-                    make_targets_list if isinstance(make_targets_list, str) else "_".join(make_targets_list)
-                )
+                logfile_name += "." + "_".join(make_targets_list)
 
         starttime = time.time()
         if not self.config.write_logfile and stdout_filter == _default_stdout_filter:
@@ -1334,7 +1332,7 @@ class Project(SimpleProject):
         env = options.env_vars
         self.run_with_logfile(
             all_args,
-            logfile_name=logfile_name,
+            logfile_path=self.build_dir / logfile_name,
             stdout_filter=stdout_filter,
             cwd=cwd,
             env=env,
@@ -1446,7 +1444,7 @@ class Project(SimpleProject):
                 self.fatal("Configure command ", configure_path, "does not exist!")
             self.run_with_logfile(
                 [str(configure_path), *self.configure_args],
-                logfile_name="configure",
+                logfile_path=self.build_dir / "configure.log",
                 cwd=cwd,
                 env=self.configure_environment,
             )
