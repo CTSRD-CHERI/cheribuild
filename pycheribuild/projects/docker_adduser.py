@@ -45,6 +45,7 @@ class DockerAdduser(SimpleProject):
         self._initial_build_dir = self.config.build_root / (self.target + "-build")
 
     def process(self):
+        assert self.build_dir is not None
         if not self.build_dir.is_dir():
             self.makedirs(self.build_dir)
 

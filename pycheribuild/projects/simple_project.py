@@ -81,7 +81,6 @@ __all__ = [
     "OptionalIntConfigOption",
     "OptionalPathConfigOption",
     "PathConfigOption",
-    "ReuseOtherProjectBuildDir",
     "SimpleProject",
     "SimpleProjectBase",
     "TargetAlias",
@@ -129,26 +128,6 @@ class PerProjectConfigOption(typing.Generic[T]):
 
     def __get__(self, instance: "SimpleProjectBase", owner: "type[SimpleProjectBase]") -> T:
         raise ValueError("Should have been replaced!")
-
-
-class ReuseOtherProjectBuildDir:
-    def __init__(
-        self,
-        build_project: "type[SimpleProjectBase]",
-        *,
-        subdirectory=".",
-        dir_for_target: "Optional[CrossCompileTarget]" = None,
-        do_update=False,
-    ):
-        self.build_project = build_project
-        self.subdirectory = subdirectory
-        self.dir_for_target = dir_for_target
-        self.do_update = do_update
-
-    def get_real_build_dir(self, caller: "SimpleProjectBase", base_project_build_dir: Optional[Path]) -> Path:
-        if base_project_build_dir is not None:
-            return base_project_build_dir
-        return self.build_project.get_build_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
 
 
 if typing.TYPE_CHECKING:
@@ -382,10 +361,6 @@ class SimpleProjectBase(AbstractProject, ABC):
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
         return cls._supported_architectures
-
-    @classmethod
-    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
-        return cls._get_instance_no_setup(caller, cross_target).build_dir
 
     @classmethod
     def is_toolchain_target(cls) -> bool:
@@ -1070,19 +1045,9 @@ class SimpleProjectBase(AbstractProject, ABC):
         self._system_deps_checked = False
         self._last_stdout_line_can_be_overwritten = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
-        if self._build_dir is not None:
-            assert isinstance(self._build_dir, ReuseOtherProjectBuildDir)
-            initial_build_dir = inspect.getattr_static(self, "_initial_build_dir")
-            assert isinstance(initial_build_dir, ConfigOptionHandle)
-            # noinspection PyProtectedMember
-            assert initial_build_dir._get_default_value(self.config, self) is None, (
-                "initial build dir != None for ReuseOtherProjectBuildDir"
-            )
-            self._initial_build_dir = self._build_dir.get_real_build_dir(self, self._initial_build_dir)
 
     @property
-    def build_dir(self) -> Path:
-        assert self._initial_build_dir is not None
+    def build_dir(self) -> Optional[Path]:
         return self._initial_build_dir
 
     def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "Optional[str]"):
@@ -1330,7 +1295,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
             new_env.update(env)
         assert not logfile_name.startswith("/")
-        if self.config.write_logfile:
+        if self.config.write_logfile and self.build_dir is not None:
             logfile_path = self.build_dir / (logfile_name + ".log")
             print("Saving build log to", logfile_path)
         else:
