@@ -678,7 +678,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         root_class = getattr(cls, "synthetic_base", cls)
         return typing.cast(
             "typing.Self", cls.get_instance_for_target_name(root_class.target, cross_target, config, caller)
-        )
+        )  # pytype: disable=invalid-annotation
 
     def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
@@ -896,10 +896,10 @@ class SimpleProjectBase(AbstractProject, ABC):
         cls,
         name: str,
         *,
+        kind: "Union[type[T], Callable[[str], T]]" = str,
         default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T]",
         show_help=False,
         altname: "Optional[str]" = None,
-        kind: "Union[type[T], Callable[[str], T]]" = str,
         only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
         extra_fallback_config_names: "Optional[list[str]]" = None,
         _allow_unknown_targets=False,
@@ -1002,7 +1002,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]" = None,
         **kwargs,
     ) -> Optional[T]:
-        return cls.add_config_option(name, kind=kind, default=default, **kwargs)
+        return cls.add_config_option(name, kind=kind, default=default, **kwargs)  # pytype: disable=bad-return-type
 
     @classmethod
     def add_bool_option(
@@ -1015,8 +1015,8 @@ class SimpleProjectBase(AbstractProject, ABC):
         **kwargs,
     ) -> bool:
         return cls.add_config_option(
-            name, default=default, kind=bool, altname=altname, only_add_for_targets=only_add_for_targets, **kwargs
-        )
+            name, kind=bool, default=default, altname=altname, only_add_for_targets=only_add_for_targets, **kwargs
+        )  # pytype: disable=bad-return-type
 
     @classmethod
     def add_list_option(
@@ -1046,7 +1046,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]",
         **kwargs,
     ) -> Path:
-        return cls.add_config_option(name, kind=Path, default=default, **kwargs)
+        return cls.add_config_option(name, kind=Path, default=default, **kwargs)  # pytype: disable=bad-return-type
 
     with_clean = BoolConfigOption(
         "clean",
