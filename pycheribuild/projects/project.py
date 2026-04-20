@@ -30,6 +30,7 @@
 import contextlib
 import copy
 import datetime
+import inspect
 import os
 import re
 import shutil
@@ -53,7 +54,7 @@ from .repository import (
     SubversionRepository,
     TargetBranchInfo,
 )
-from .simple_project import PathConfigOption, ReuseOtherProjectBuildDir, SimpleProject, _default_stdout_filter
+from .simple_project import PathConfigOption, SimpleProject, _default_stdout_filter
 from ..config.chericonfig import (
     BuildType,
     CheriConfig,
@@ -62,6 +63,7 @@ from ..config.chericonfig import (
     RiscvCheriISA,
     supported_build_type_strings,
 )
+from ..config.config_loader_base import ConfigOptionHandle
 from ..config.target_info import (
     AbstractProject,
     AutoVarInit,
@@ -487,6 +489,15 @@ class Project(SimpleProject):
     @classmethod
     def get_source_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls._get_instance_no_setup(caller, cross_target).source_dir
+
+    @classmethod
+    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
+        return cls._get_instance_no_setup(caller, cross_target).build_dir
+
+    @property
+    def build_dir(self) -> Path:
+        assert self._initial_build_dir is not None
+        return self._initial_build_dir
 
     @classmethod
     def get_install_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
@@ -923,6 +934,15 @@ class Project(SimpleProject):
         if hasattr(self, "_repository_url") and isinstance(self.repository, GitRepository):
             # TODO: remove this and use a custom argparse.Action subclass
             self.repository.url = self._repository_url
+        if self._build_dir is not None:
+            assert isinstance(self._build_dir, ReuseOtherProjectBuildDir)
+            initial_build_dir = inspect.getattr_static(self, "_initial_build_dir")
+            assert isinstance(initial_build_dir, ConfigOptionHandle)
+            # noinspection PyProtectedMember
+            assert initial_build_dir._get_default_value(self.config, self) is None, (
+                "initial build dir != None for ReuseOtherProjectBuildDir"
+            )
+            self._initial_build_dir = self._build_dir.get_real_build_dir(self, self._initial_build_dir)
         self.source_dir = self.repository.get_real_source_dir(self, self.source_dir)
         if self.build_in_source_dir:
             assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
@@ -2148,3 +2168,23 @@ class MakefileProject(Project):
             self.make_args.set(**{var: value})
         else:
             self.make_args.set_env(**{var: value})
+
+
+class ReuseOtherProjectBuildDir:
+    def __init__(
+        self,
+        build_project: "type[Project]",
+        *,
+        subdirectory=".",
+        dir_for_target: "Optional[CrossCompileTarget]" = None,
+        do_update=False,
+    ):
+        self.build_project = build_project
+        self.subdirectory = subdirectory
+        self.dir_for_target = dir_for_target
+        self.do_update = do_update
+
+    def get_real_build_dir(self, caller: "Project", base_project_build_dir: Optional[Path]) -> Path:
+        if base_project_build_dir is not None:
+            return base_project_build_dir
+        return self.build_project.get_build_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
