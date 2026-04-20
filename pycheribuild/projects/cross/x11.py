@@ -461,6 +461,13 @@ class BuildXKeyboardConfig(X11MesonProject):
         for symlink in ("xorg", "xorg.lst", "xorg.xml"):
             self.delete_file(self.install_dir / "share/X11/xkb/rules" / symlink)
         super().install(**kwargs)
+        # Fix incorrect symlink that is omitting the sysroot
+        bad_symlink = self.install_dir / "share/X11/xkb"
+        if bad_symlink.is_symlink() and not str(bad_symlink.resolve()).startswith(str(self.install_dir)):
+            self.delete_file(bad_symlink)
+            self.create_symlink(self.install_dir / "share/xkeyboard-config-2", bad_symlink, relative=True)
+        if not self.config.pretend:
+            assert str(bad_symlink.resolve()).startswith(str(self.install_dir))
 
 
 class BuildXKkbcomp(X11MesonProject):
@@ -610,7 +617,8 @@ class BuildXVncServer(X11AutotoolsProject):
                 "--disable-selective-werror",
                 "--disable-xwayland",
                 "--with-fontrootdir=" + str(fonts_dir),
-                "--with-xkb-path=" + str(BuildXKeyboardConfig.get_instance(self).install_prefix / "share/X11/xkb"),
+                "--with-xkb-path="
+                + str(BuildXKeyboardConfig.get_instance(self).install_prefix / "share/xkeyboard-config-2"),
                 "--with-xkb-bin-directory=" + str(BuildXKkbcomp.get_instance(self).install_prefix / "bin"),
             ]
         )
