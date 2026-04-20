@@ -721,8 +721,6 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         base = super().freebsd_target_arch
         if self.target.is_cheri_purecap():
             purecap_suffix = "c"
-            if self.target.is_mips(include_purecap=True):
-                purecap_suffix += self.config.mips_cheri_bits_str
         else:
             purecap_suffix = ""
         return base + purecap_suffix
@@ -1668,15 +1666,11 @@ class CompilationTargets(BasicCompilationTargets):
     FREEBSD_WITH_DEFAULT_OPTIONS_RISCV64 = CrossCompileTarget(
         "riscv64", CPUArchitecture.RISCV64, FreeBSDWithDefaultOptionsTargetInfo
     )
-    FREEBSD_WITH_DEFAULT_OPTIONS_MIPS64 = CrossCompileTarget(
-        "mips64", CPUArchitecture.MIPS64, FreeBSDWithDefaultOptionsTargetInfo
-    )
     ALL_SUPPORTED_FREEBSD_WITH_DEFAULT_OPTIONS_TARGETS = (
         FREEBSD_WITH_DEFAULT_OPTIONS_AARCH64,
         FREEBSD_WITH_DEFAULT_OPTIONS_AMD64,
         FREEBSD_WITH_DEFAULT_OPTIONS_I386,
         FREEBSD_WITH_DEFAULT_OPTIONS_RISCV64,
-        FREEBSD_WITH_DEFAULT_OPTIONS_MIPS64,
     )
 
     # RTEMS targets
