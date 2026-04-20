@@ -544,7 +544,6 @@ class BuildFreeBSDBase(Project):
     default_extra_make_options: "list[str]" = [
         # "-DWITHOUT_HTML",  # should not be needed
         # "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
-        # "-DWITHOUT_SVNLITE",  # no need for SVN
         # "-DWITHOUT_GAMES",  # not needed
         # "-DWITHOUT_MAN",  # seems to be a majority of the install time
         # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
@@ -655,8 +654,6 @@ class BuildFreeBSDBase(Project):
             self.make_args.set_with_options(
                 MAN=False,
                 KERBEROS=False,
-                SVN=False,
-                SVNLITE=False,
                 MAIL=False,
                 ZFS=False,
                 SENDMAIL=False,
