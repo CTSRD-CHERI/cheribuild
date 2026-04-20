@@ -71,9 +71,6 @@ from ...utils import OSInfo, ThreadJoiner, is_jenkins_build
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":
     def inner(config: CheriConfig, project: Project):
         xtarget = project.crosscompile_target
-        # Check that we don't accidentally inherit the FreeBSD install directories for CheriBSD
-        if not isinstance(project, BuildCHERIBSD) and xtarget.is_hybrid_or_purecap_cheri():
-            raise ValueError(f"{project.target} should not build for CHERI architectures")
         return config.output_root / (prefix + project.build_configuration_suffix(xtarget))
 
     return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
@@ -876,8 +873,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
-        # Only handle FreeBSD native configs here
-        assert not xtarget.is_hybrid_or_purecap_cheri(), "Unexpected FreeBSD target"
         if platform is None:
             platform = self.get_default_kernel_platform()
         config = CheriBSDConfigTable.get_default(self.config, xtarget, platform, KernelABI.NOCHERI, **filter_kwargs)
