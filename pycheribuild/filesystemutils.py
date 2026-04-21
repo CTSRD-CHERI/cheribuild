@@ -126,10 +126,10 @@ class FileSystemUtils:
                         else:
                             all_entries_new.append(i)
                     all_entries = all_entries_new
-                print_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True, config=self.config)
+                print_command(["mv", *all_entries, tempdir], print_verbose_only=True, config=self.config)
                 for entry in all_entries:
                     if not self.config.pretend:
-                        shutil.move(entry, tempdir)
+                        shutil.move(str(entry), str(tempdir))
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
                 print_command("mv", path, tempdir, print_verbose_only=True, config=self.config)
