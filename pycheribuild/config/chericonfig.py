@@ -195,13 +195,14 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
     force_update: bool
     make_without_nice: bool
     make_jobs: int
+    loader: "ConfigLoaderBase[typing.Self]"
     # These are optional and do not exist for Jenkins
     start_with: Optional[str] = None
     start_after: Optional[str] = None
 
     def __init__(
         self,
-        loader: ConfigLoaderBase,
+        loader: "ConfigLoaderBase[typing.Self]",
         action_class: "type[CheribuildActionEnum]",
         default_action: Optional[CheribuildActionEnum] = None,
     ) -> None:

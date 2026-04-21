@@ -29,6 +29,7 @@
 #
 
 import os
+import typing
 from pathlib import Path
 
 from .chericonfig import CheribuildActionEnum, CheriConfig
@@ -83,7 +84,7 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
 
 
 class JenkinsConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, available_targets: "list[str]") -> None:
+    def __init__(self, loader: "ConfigLoaderBase[typing.Self]", available_targets: "list[str]") -> None:
         super().__init__(loader, action_class=JenkinsAction)
         self.cpu = loader.add_commandline_only_option(
             "cpu",
@@ -175,21 +176,18 @@ class JenkinsConfig(CheriConfig):
         self.strip_elf_files = loader.add_commandline_only_bool_option(
             "strip-elf-files", help="Strip ELF files before creating the tarball", default=True, negatable=True
         )
-        self._cheri_sdk_dir_override = loader.add_commandline_only_option(
+        self._cheri_sdk_dir_override = loader.add_optional_commandline_only_option(
             "cheri-sdk-path",
-            default=None,
             type=Path,
             help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)",
         )
-        self._cheri_alliance_sdk_dir_override = loader.add_commandline_only_option(
+        self._cheri_alliance_sdk_dir_override = loader.add_optional_commandline_only_option(
             "cheri-std093-sdk-path",
-            default=None,
             type=Path,
             help="Override the path to the CHERI Alliance SDK (default is $WORKSPACE/cheri-std093-sdk)",
         )
-        self._morello_sdk_dir_override = loader.add_commandline_only_option(
+        self._morello_sdk_dir_override = loader.add_optional_commandline_only_option(
             "morello-sdk-path",
-            default=None,
             type=Path,
             help="Override the path to the Morello SDK (default is $WORKSPACE/morello-sdk)",
         )
