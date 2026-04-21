@@ -134,7 +134,7 @@ class FileSystemType(Enum):
 class BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
     disk_image_path: Path
-    _source_class: "Optional[type[Project]]" = None
+    _source_class: "type[Project]"
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
     disk_image_prefix: str
