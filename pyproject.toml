@@ -106,7 +106,7 @@ python-platform = "all"
 # We use typing.Self which is 3.11. Since it's only used in unevaluated
 # contexts pretend 3.11 is the minimum version to avoid unresolved errors
 python-version = "3.11"
-extra-paths = ["./3rdparty"]
+extra-paths = ["./3rdparty/junitparser", "./3rdparty/pexpect", "./3rdparty/ptyprocess"]
 
 [[tool.ty.overrides]]
 include = ["tests/**"]
@@ -118,9 +118,9 @@ too-many-positional-arguments = "ignore" # Weird false positive with pytest.skip
 [dependency-groups]
 dev = [
     "argcomplete>=3.6.3",
-    "flake8>=7.3.0",
+    "flake8>=5.0.4",
     "libtmux>=0.38.1",
-    "pre-commit>=4.0.0",
+    "pre-commit>=3.5.0",
     "pyrefly>=0.62.0",
     "pyserial>=3.5",
     "pytest>=7.0,<9.0",
@@ -130,5 +130,5 @@ dev = [
 ]
 
 [tool.uv.dependency-groups]
-# Use a slightly newer minimum version for dev dependencies to allow resolving them.
-dev = {requires-python = ">=3.9"}
+# TODO: Use a slightly newer minimum version for dev dependencies to allow resolving them.
+# dev = {requires-python = ">=3.9"}
