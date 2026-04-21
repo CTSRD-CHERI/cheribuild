@@ -564,6 +564,29 @@ exec {lld} "$@"
         self.run_cmd("du", "-sh", self.install_dir)
 
 
+def _remove_absolute_paths(flag: str, cfg_dir: Path, root_dirs: "list[str]") -> str:
+    # Handle standalone absolute paths first (e.g. after -isystem)
+    # Note: we only replace them if they are relative to any of the interesting directories
+    if flag.startswith("/"):
+        if any(flag.startswith(root) for root in root_dirs):
+            return "<CFGDIR>/" + os.path.relpath(flag, cfg_dir)
+    if "/" not in flag or not flag.startswith("-"):
+        return flag
+    # Flags with = or , could contain more than one path (-fsomething=/path/to/x or -Wl,..,..)
+    if "=" in flag:
+        return "=".join(_remove_absolute_paths(f, cfg_dir, root_dirs) for f in flag.split("="))
+    if "," in flag:
+        return ",".join(_remove_absolute_paths(f, cfg_dir, root_dirs) for f in flag.split(","))
+    # Otherwise it's something like -I/foo/bar, so just replace starting at first slash
+    slash = flag.index("/")
+    return flag[0:slash] + _remove_absolute_paths(flag[slash:], cfg_dir, root_dirs)
+
+
+def _make_paths_relative_to_cfgdir(config: "CheriConfig", flags: Iterable[str], cfg_dir: Path) -> "list[str]":
+    root_dirs = [str(x) for x in (config.output_root, config.source_root, config.build_root, Path.home())]
+    return [_remove_absolute_paths(flag, cfg_dir, root_dirs) for flag in flags]
+
+
 class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
     do_not_add_to_targets = True
     root_cmakelists_subdirectory = Path("llvm")
@@ -578,6 +601,12 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
         if not self.included_projects:
             self.fatal("Need at least one project in --include-projects config option")
         super().configure(**kwargs)
+
+    @staticmethod
+    def generate_config_file_contents(config: "CheriConfig", flags: Iterable[str], cfg_dir: Optional[Path]) -> str:
+        if cfg_dir:
+            flags = _make_paths_relative_to_cfgdir(config, flags, cfg_dir)
+        return "\n".join(flags) + "\n"
 
     def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
         # Create a fake project class that has the required properties needed for essential_compiler_and_linker_flags
@@ -597,10 +626,11 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
         assert isinstance(tgt_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
         flags = tgt_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False, default_flags_only=True)
-        config_contents = "\n".join(flags) + "\n"
+        config_file = self.install_dir / "bin" / (prefix + ".cfg")
+        config_contents = self.generate_config_file_contents(self.config, flags, config_file.parent)
         self.makedirs(self.install_dir / "utils")
         # Note: the config file is loaded from the directory containing the real binary, not the symlink.
-        self.write_file(self.install_dir / "bin" / (prefix + ".cfg"), config_contents, overwrite=True, mode=0o644)
+        self.write_file(config_file, config_contents, overwrite=True, mode=0o644)
         for i in ("clang", "clang++", "clang-cpp"):
             self.create_symlink(self.install_dir / "bin" / i, self.install_dir / "utils" / (prefix + "-" + i))
 
