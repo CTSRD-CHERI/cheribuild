@@ -60,9 +60,12 @@ class _LoadedConfigValue:
         return repr(self.value)
 
 
-class ConfigLoaderBase(ABC):
+_ConfigType = typing.TypeVar("_ConfigType", bound=ConfigBase)
+
+
+class ConfigLoaderBase(typing.Generic[_ConfigType], ABC):
     # will be set later...
-    _cheri_config: ConfigBase
+    _cheri_config: _ConfigType
 
     option_handles: "dict[str, ConfigOptionHandle]" = {}
     _json: "dict[str, _LoadedConfigValue]" = {}
@@ -98,7 +101,7 @@ class ConfigLoaderBase(ABC):
         self,
         *args,
         type: "type[T] | Callable[[str], T]" = str,
-        default: "T | Callable[[ConfigBase, typing.Any], T]",
+        default: "T | Callable[[_ConfigType, typing.Any], T]",
         **kwargs,
     ) -> T:
         """
@@ -113,7 +116,7 @@ class ConfigLoaderBase(ABC):
         self,
         *args,
         type: "type[T] | Callable[[str], T]" = str,
-        default: "T | Callable[[ConfigBase, typing.Any], T] | None" = None,
+        default: "T | Callable[[_ConfigType, typing.Any], T] | None" = None,
         **kwargs,
     ) -> Optional[T]:
         """
@@ -158,7 +161,7 @@ class ConfigLoaderBase(ABC):
         shortname=None,
         *,
         type: "Union[type[T], Callable[[str], T]]" = str,
-        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]",
+        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[_ConfigType, typing.Any], T]]",
         _owning_class: "Optional[type]" = None,
         _fallback_names: "Optional[list[str]]" = None,
         option_cls: "Optional[type[ConfigOptionBase[T]]]" = None,
@@ -206,7 +209,7 @@ class ConfigLoaderBase(ABC):
         self,
         name: str,
         *,
-        default: "Union[ComputedDefaultValue[Path], Path, Callable[[ConfigBase, typing.Any], Path]]",
+        default: "Union[ComputedDefaultValue[Path], Path, Callable[[_ConfigType, typing.Any], Path]]",
         shortname=None,
         **kwargs,
     ) -> Path:

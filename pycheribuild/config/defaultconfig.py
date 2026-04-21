@@ -30,6 +30,7 @@
 import argparse
 import os
 import sys
+import typing
 from pathlib import Path
 
 from .chericonfig import CheribuildActionEnum, CheriConfig
@@ -98,7 +99,7 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
 
 
 class DefaultCheriConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, available_targets: "list[str]") -> None:
+    def __init__(self, loader: "ConfigLoaderBase[typing.Self]", available_targets: "list[str]") -> None:
         super().__init__(loader, action_class=CheribuildAction, default_action=CheribuildAction.BUILD)
         # The run mode:
         self.get_config_option = loader.add_optional_option(
