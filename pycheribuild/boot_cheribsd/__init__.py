@@ -50,7 +50,7 @@ import time
 import traceback
 import typing
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Sequence, Union
 
 from ..colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
@@ -233,7 +233,7 @@ if typing.TYPE_CHECKING:
     MixinBase = pexpect.spawn
 else:
     MixinBase = object
-PatternListType = typing.Sequence[Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
+PatternListType = Sequence[Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
 
 
 class CheriBSDSpawnMixin(MixinBase):
@@ -729,8 +729,8 @@ def checked_run_cheribsd_command(
     ]
     if not ignore_cheri_trap:
         cheri_trap_indices = (len(results), len(results) + 1)
-        results.append(CHERI_TRAP_MIPS)
-        results.append(CHERI_TRAP_RISCV)
+        results.append(CHERI_TRAP_MIPS)  # ty:ignore[invalid-argument-type]
+        results.append(CHERI_TRAP_RISCV)  # ty:ignore[invalid-argument-type]
     if error_output:
         error_output_index = len(results)
         results.append(error_output)
@@ -1172,7 +1172,7 @@ def _do_test_setup(
     args: argparse.Namespace,
     test_archives: "list[Path]",
     test_ld_preload_files: "list[Path]",
-    test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
+    test_setup_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]]" = None,
 ):
     shared_dirs = qemu.shared_dirs
     setup_tests_starttime = datetime.datetime.now()
@@ -1367,8 +1367,8 @@ def runtests(
     args: argparse.Namespace,
     test_archives: "list[Path]",
     test_ld_preload_files: "list[Path]",
-    test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
-    test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
+    test_setup_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]]" = None,
+    test_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]]" = None,
 ) -> bool:
     try:
         _do_test_setup(qemu, args, test_archives, test_ld_preload_files, test_setup_function)
@@ -1548,8 +1548,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
 
 def _main(
-    test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
-    test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
+    test_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]]" = None,
+    test_setup_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]]" = None,
     argparse_setup_callback: "Optional[Callable[[argparse.ArgumentParser], None]]" = None,
     argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None,
 ):
@@ -1751,8 +1751,8 @@ def _main(
 
 
 def main(
-    test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
-    test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
+    test_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]]" = None,
+    test_setup_function: "Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]]" = None,
     argparse_setup_callback: "Optional[Callable[[argparse.ArgumentParser], None]]" = None,
     argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None,
 ):
