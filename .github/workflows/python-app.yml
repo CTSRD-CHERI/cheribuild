@@ -11,8 +11,8 @@ on:
 
 env:
     RUFF_VERSION: 0.15.11
-    PYREFLY_VERSION: 0.61.1
-    TY_VERSION: 0.0.31
+    PYREFLY_VERSION: 0.62.0
+    TY_VERSION: 0.0.32
 
 jobs:
     build-docker:

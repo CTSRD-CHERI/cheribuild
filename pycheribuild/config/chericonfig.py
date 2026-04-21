@@ -296,7 +296,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             group=loader.freebsd_group,
             help="Skip the buildkernel step when building FreeBSD or CheriBSD",
         )
-        self.freebsd_kernconf = loader.add_commandline_only_option(
+        self.freebsd_kernconf = loader.add_optional_commandline_only_option(
             "kernel-config",
             "-kernconf",
             group=loader.freebsd_group,

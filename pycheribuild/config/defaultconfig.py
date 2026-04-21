@@ -166,13 +166,13 @@ class DefaultCheriConfig(CheriConfig):
 
         start_after_group = loader.dependencies_group.add_mutually_exclusive_group()
 
-        self.start_with = loader.add_commandline_only_option(
+        self.start_with = loader.add_optional_commandline_only_option(
             "start-with",
             metavar="TARGET",
             group=start_after_group,
             help="Start building at TARGET (useful when resuming an interrupted --include-depedencies build)",
         )
-        self.start_after = loader.add_commandline_only_option(
+        self.start_after = loader.add_optional_commandline_only_option(
             "start-after",
             metavar="TARGET",
             group=start_after_group,
