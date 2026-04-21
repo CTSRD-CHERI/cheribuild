@@ -94,11 +94,34 @@ class ConfigLoaderBase(ABC):
         self.docker_group = self.add_argument_group("Options controlling the use of docker for building")
 
     # noinspection PyShadowingBuiltins
-    def add_commandline_only_option(self, *args, type: "Callable[[str], T]" = str, **kwargs) -> T:
+    def add_commandline_only_option(
+        self,
+        *args,
+        type: "type[T] | Callable[[str], T]" = str,
+        default: "T | Callable[[ConfigBase, typing.Any], T]",
+        **kwargs,
+    ) -> T:
         """
         :return: A config option that is always loaded from the command line no matter what the default is
         """
-        return self.add_option(*args, type=type, option_cls=self.__command_line_only_options_cls, **kwargs)
+        return self.add_option(
+            *args, type=type, default=default, option_cls=self.__command_line_only_options_cls, **kwargs
+        )
+
+    # noinspection PyShadowingBuiltins
+    def add_optional_commandline_only_option(
+        self,
+        *args,
+        type: "type[T] | Callable[[str], T]" = str,
+        default: "T | Callable[[ConfigBase, typing.Any], T] | None" = None,
+        **kwargs,
+    ) -> Optional[T]:
+        """
+        :return: A config option that is always loaded from the command line no matter what the default is
+        """
+        return self.add_option(
+            *args, type=type, default=default, option_cls=self.__command_line_only_options_cls, **kwargs
+        )
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         assert default is False or kwargs.get("negatable") is True
@@ -114,7 +137,7 @@ class ConfigLoaderBase(ABC):
         self,
         *args,
         default: "Optional[list[T]]" = None,
-        element_type: "Union[type[T], Callable[[str], T]]",
+        element_type: "type[T] | Callable[[str], T]",
         **kwargs,
     ) -> "list[T]":
         return typing.cast(

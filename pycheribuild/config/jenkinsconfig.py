@@ -90,9 +90,9 @@ class JenkinsConfig(CheriConfig):
             default=os.getenv("CPU", "default"),
             help="Only used for backwards compatibility with old jenkins jobs",
         )
-        self.workspace = loader.add_commandline_only_option(
+        self.workspace: Path = loader.add_commandline_only_option(
             "workspace",
-            default=os.getenv("WORKSPACE"),
+            default=Path(os.getenv("WORKSPACE", "/invalid/workspace")),
             type=Path,
             help="The root directory for building (defaults to $WORKSPACE)",
         )
@@ -102,12 +102,12 @@ class JenkinsConfig(CheriConfig):
             default="cheri-clang-llvm.tar.xz",
             help="The name of the archive containing the compiler",
         )
-        self.compiler_archive_output_path = loader.add_commandline_only_option(
+        self.compiler_archive_output_path: Path = loader.add_commandline_only_option(
             "compiler-archive-output-path",
             type=Path,
             default=_infer_compiler_output_path,
             help="The path where to extract the compiler",
-        )
+        )  # ty:ignore[invalid-assignment]
         self.compiler_type = loader.add_commandline_only_option(
             "compiler-type",
             type=CompilerType,
@@ -151,18 +151,18 @@ class JenkinsConfig(CheriConfig):
         self.copy_compilation_db_to_source_dir = False
         self.make_without_nice = False
 
-        self.make_jobs = loader.add_commandline_only_option(
+        self.make_jobs: int = loader.add_commandline_only_option(
             "make-jobs",
             "j",
             type=int,
             default=default_jenkins_make_jobs_count,
             help="Number of jobs to use for compiling",
-        )
+        )  # ty:ignore[invalid-assignment]
         self.use_all_cores = loader.add_commandline_only_bool_option(
             "use-all-cores",
             help="Use all available cores for building (Note: Should only be used for LLVM or short-running jobs!)",
         )
-        self.installation_prefix = loader.add_commandline_only_option(
+        self.installation_prefix = loader.add_optional_commandline_only_option(
             "install-prefix",
             type=absolute_path_only,
             help="Override the install prefix for cross compiled projects (the path in the install image)",
@@ -204,15 +204,15 @@ class JenkinsConfig(CheriConfig):
         default_output = ComputedDefaultValue(
             lambda c, _: c.workspace / c.default_output_path, "$WORKSPACE/" + self.default_output_path
         )
-        self.output_root = loader.add_commandline_only_option(
+        self.output_root: Path = loader.add_commandline_only_option(
             "output-path", default=default_output, type=Path, help="Path for the output (relative to $WORKSPACE)"
-        )
-        self.sysroot_output_root = loader.add_commandline_only_option(
+        )  # ty:ignore[invalid-assignment]
+        self.sysroot_output_root: Path = loader.add_commandline_only_option(
             "sysroot-output-path",
             default=ComputedDefaultValue(function=lambda c, _: c.workspace, as_string="$WORKSPACE"),
             type=Path,
             help="Path for the installed sysroot (defaults to the same value as --output-path)",
-        )
+        )  # ty:ignore[invalid-assignment]
         # self.strip_install_prefix_from_archive = loader.add_commandline_only_bool_option(
         # "strip-install-prefix-from-archive",
         #    help="Only put the files inside the install prefix into the tarball (stripping the leading

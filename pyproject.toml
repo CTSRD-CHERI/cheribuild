@@ -118,14 +118,13 @@ too-many-positional-arguments = "ignore" # Weird false positive with pytest.skip
 [dependency-groups]
 dev = [
     "argcomplete>=3.6.3",
-    "flake8>=5.0.4",
+    "flake8>=7.3.0",
     "libtmux>=0.38.1",
     "pre-commit>=4.0.0",
-    "pyrefly>=0.59.1",
+    "pyrefly>=0.62.0",
     "pyserial>=3.5",
-    "pytest>=8.3.5",
-    "pytest-pycharm>=0.7.0",
-    "ruff>=0.15.8",
+    "pytest>=7.0,<9.0",
+    "ruff>=0.15.11",
     "setuptools<82",
     "ty>=0.0.26",
 ]
