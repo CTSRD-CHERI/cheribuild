@@ -50,7 +50,7 @@ from ...utils import OSInfo
 
 
 class BuildGDBBase(CrossCompileAutotoolsProject):
-    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("git://sourceware.org/git/binutils-gdb.git")
     make_kind = MakeCommandKind.GnuMake
     do_not_add_to_targets = True
@@ -291,7 +291,7 @@ class BuildUpstreamGDB(BuildGDBBase):
 
 
 class BuildGDB(BuildGDBBase):
-    path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
+    # path_in_rootfs = "/usr/local"
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_branch = "cheri-14"
     repository = GitRepository(
@@ -308,6 +308,14 @@ class BuildGDB(BuildGDBBase):
         },
         old_urls=["https://github.com/bsdjhb/gdb.git"],
     )
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        # Always install gdb as /usr/local/bin/gdb, so it's in $PATH
+        if not self.compiling_for_host() and self.crosscompile_target == get_gdb_xtarget(
+            self.crosscompile_target, self.config
+        ):
+            self.create_symlink(self.install_prefix / "bin/gdb", self.rootfs_dir / "usr/local/bin/gdb", relative=False)
 
 
 class BuildCheriAllianceGDB(BuildGDBBase):
