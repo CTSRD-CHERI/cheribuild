@@ -372,7 +372,10 @@ class BuildPixman(X11MesonProject):
 
 class BuildLibFontenc(X11MesonProject):
     target = "libfontenc"
-    dependencies = ("xorg-font-util",)
+    dependencies = (
+        "xorgproto",
+        "xorg-font-util",
+    )
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libfontenc.git")
 
 
@@ -508,6 +511,7 @@ class BuildXVncServer(X11AutotoolsProject):
         "xorg-font-util",
         "libxrender",
         "libxfont",
+        "libxshmfence",
         "libxkbfile",
         "tigervnc",
         "xkeyboard-config",
@@ -554,8 +558,7 @@ class BuildXVncServer(X11AutotoolsProject):
                 print_verbose_only=False,
             )
 
-    def update(self):
-        super().update()
+    def configure(self, **kwargs):
         tigervnc_source = BuildTigerVNC.get_instance(self).source_dir
         if (self.source_dir / "hw").is_dir():
             self.create_symlink(tigervnc_source / "unix/xserver/hw/vnc", self.source_dir / "hw/vnc")
@@ -583,9 +586,9 @@ class BuildXVncServer(X11AutotoolsProject):
                 capture_output=True,
             )
         except subprocess.CalledProcessError as e:
-            if b"Skipping patch" in e.stdout:
-                return
-            raise e
+            if b"Skipping patch" not in e.stdout:
+                raise e
+        super().configure(**kwargs)
 
     def setup(self):
         super().setup()
