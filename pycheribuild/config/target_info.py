@@ -54,7 +54,7 @@ __all__ = [
     "MipsFloatAbi",
     "NativeTargetInfo",
     "TargetInfo",
-    "cheribsd_morello_version_dependent_flags",
+    "cheribsd_version_dependent_flags",
     "sys_param_h_cheribsd_version",
 ]
 
@@ -837,9 +837,10 @@ class NativeTargetInfo(TargetInfo):
                     "Requested automatic variable initialization, but don't know how to for", compiler
                 )
         if cls.is_cheribsd():
-            if xtarget.is_aarch64(include_purecap=True):
+            if xtarget.is_hybrid_or_purecap_cheri():
                 cheribsd_version = sys_param_h_cheribsd_version(Path("/"))
-                result.extend(cheribsd_morello_version_dependent_flags(cheribsd_version, xtarget.is_cheri_purecap()))
+                result.extend(cheribsd_version_dependent_flags(cheribsd_version, xtarget))
+            if xtarget.is_aarch64(include_purecap=True):
                 if xtarget.is_cheri_purecap():
                     result.append("-mabi=purecap")
                 else:
@@ -1243,7 +1244,7 @@ def sys_param_h_cheribsd_version(sysroot: Path) -> "Optional[int]":
     return 0
 
 
-def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", is_purecap) -> "list[str]":
+def _cheribsd_morello_version_dependent_flags(cheribsd_version: int, is_purecap: bool) -> "list[str]":
     result = []
     # NB: If version is None, no CheriBSD tree exists, so we assume the new
     # ABI will be used when CheriBSD is eventually built. This ensures the
@@ -1272,6 +1273,24 @@ def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", 
     if cheribsd_version >= 20250301:
         result.append("-cheri-codeptr-relocs")
     return result
+
+
+def cheribsd_version_dependent_flags(cheribsd_version: "Optional[int]", xtarget: "CrossCompileTarget") -> "list[str]":
+    assert xtarget.is_hybrid_or_purecap_cheri(), "Should only be called for hybrid or purecap for now"
+    # NB: If version is None, no CheriBSD tree exists, so we assume the new
+    # ABI will be used when CheriBSD is eventually built. This ensures the
+    # LLVM config files for the SDK utilities get the right flags in the
+    # common case as otherwise there is a circular dependency.
+    if cheribsd_version is None:
+        cheribsd_version = 99999999
+    if xtarget.is_aarch64(include_purecap=True):
+        return _cheribsd_morello_version_dependent_flags(cheribsd_version, xtarget.is_cheri_purecap())
+    elif xtarget.is_riscv(include_purecap=True):
+        result = []
+        if xtarget.is_cheri_purecap() and cheribsd_version >= 20260417:
+            result.append("-cheri-tgot-tls")  # New TLS ABI
+        return result
+    raise ValueError("Unsupported architecture")
 
 
 # This is a separate class to avoid cyclic dependencies.

@@ -54,7 +54,7 @@ from .target_info import (
     DefaultInstallDir,
     MipsFloatAbi,
     TargetInfo,
-    cheribsd_morello_version_dependent_flags,
+    cheribsd_version_dependent_flags,
     sys_param_h_cheribsd_version,
 )
 from ..processutils import extract_version, get_compiler_info, get_version_output
@@ -740,6 +740,12 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def cheribsd_version(self) -> "Optional[int]":
         return sys_param_h_cheribsd_version(self.sysroot_dir)
 
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
+        result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
+        result.extend(cheribsd_version_dependent_flags(instance.cheribsd_version(), xtarget))
+        return result
+
 
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname: str = "CheriBSD-Morello"
@@ -760,13 +766,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         else:
             dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
         return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name, dirname)
-
-    @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
-        result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
-        version = instance.cheribsd_version()
-        result.extend(cheribsd_morello_version_dependent_flags(version, xtarget.is_cheri_purecap()))
-        return result
 
 
 # FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
