@@ -1658,10 +1658,10 @@ class CompilationTargets(BasicCompilationTargets):
         _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
-    CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
+    CHERI_LINUX_AARCH64 = CrossCompileTarget("wip-aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
     MORELLO_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
     CHERI_LINUX_MORELLO_PURECAP = CrossCompileTarget(
-        "morello-purecap",
+        "wip-morello-purecap",
         CPUArchitecture.AARCH64,
         CheriLinuxWithMorelloCompilerTargetInfo,
         is_cheri_purecap=True,
