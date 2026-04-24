@@ -48,7 +48,7 @@ class BuildMpfr(CrossCompileAutotoolsProject):
         # results in failing build
         self.check_required_system_tool("makeinfo", default="texinfo")
         if self.compiling_for_host():
-            self.check_required_pkg_config("gmp", freebsd="gmp")
+            self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev")
 
     def setup(self):
         super().setup()
