@@ -769,47 +769,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name, dirname)
 
 
-# FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
-class CheriOSTargetInfo(CheriBSDTargetInfo):
-    shortname: str = "CheriOS"
-    FREEBSD_VERSION: int = 0
-
-    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
-        raise LookupError("Should not be called")
-
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self._get_compiler_project(self.config, self.target).get_native_install_path(self.config)
-
-    @classmethod
-    def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cherios-llvm", None))
-
-    @property
-    def sysroot_dir(self):
-        return Path("/this/path/should/not/be/used")
-
-    @classmethod
-    def is_cheribsd(cls) -> bool:
-        return False
-
-    @classmethod
-    def is_freebsd(cls) -> bool:
-        return False
-
-    @classmethod
-    def is_baremetal(cls) -> bool:
-        return True
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
-        # Otherwise pick the matching sysroot
-        return ["cherios"]
-
-    @property
-    def pkgconfig_dirs(self) -> "list[str]":
-        return []
-
-
 class RTEMSTargetInfo(_ClangBasedTargetInfo):
     shortname: str = "RTEMS"
     RTEMS_VERSION: int = 5
@@ -953,6 +912,35 @@ class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
     @classmethod
     def is_baremetal(cls):
         return True
+
+
+class CheriOSTargetInfo(BaremetalClangTargetInfo):
+    os_prefix: Optional[str] = ""  # Omit the OS prefix from target names
+
+    @classmethod
+    def triple_for_target(cls, target, config, include_version: bool) -> str:
+        assert target.is_cheri_purecap()
+        if target.is_mips(include_purecap=True):
+            return f"mips64c{config.mips_cheri_bits}-qemu-elf-purecap"
+        if target.is_riscv(include_purecap=True):
+            return target.cpu_architecture.value + "-unknown-elf"
+        assert False, "Other baremetal cases have not been tested yet!"
+
+    shortname: str = "CheriOS"
+    FREEBSD_VERSION: int = 0
+
+    @classmethod
+    def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cherios-llvm", None))
+
+    @property
+    def sysroot_dir(self):
+        return Path("/this/path/should/not/be/used")
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        # Otherwise pick the matching sysroot
+        return ["cherios"]
 
 
 class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
