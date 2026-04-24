@@ -743,7 +743,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
         result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
-        result.extend(cheribsd_version_dependent_flags(instance.cheribsd_version(), xtarget))
+        if xtarget.is_hybrid_or_purecap_cheri():
+            result.extend(cheribsd_version_dependent_flags(instance.cheribsd_version(), xtarget))
         return result
 
 
