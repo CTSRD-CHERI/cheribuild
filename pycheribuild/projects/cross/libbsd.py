@@ -40,10 +40,12 @@ class BuildLibbsd(CrossCompileAutotoolsProject):
     )
     _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
     make_kind = MakeCommandKind.GnuMake
-    # `default_branch` is set because the build scripts assume that
-    # a git tag is checked out. In more detail ./get-version returns an
-    # empty string if main is checked out.
-    repository = GitRepository("https://gitlab.freedesktop.org/libbsd/libbsd.git", default_branch="0.12.2")
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/libbsd/libbsd.git",
+        temporary_url_override="https://gitlab.freedesktop.org/paul-metzger/libbsd-private-fork-pmetzger.git",
+        default_branch="0_12_2_with_alignment_macro_fix",
+        force_branch=True,
+    )
 
     @classproperty
     def default_install_dir(self):
@@ -53,28 +55,6 @@ class BuildLibbsd(CrossCompileAutotoolsProject):
     def dependencies(cls, config) -> "tuple[str, ...]":
         ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
         return ti.musl_target, "libmd"
-
-    def _apply_patch(self) -> None:
-        patch = """
-diff --git a/src/merge.c b/src/merge.c
-index 3f1b3fb..f8cb602 100644
---- a/src/merge.c
-+++ b/src/merge.c
-@@ -84,8 +84,8 @@ static void insertionsort(unsigned char *, size_t, size_t,
-  */
- /* Assumption: PSIZE is a power of 2. */
- #define EVAL(p) (unsigned char **)					\\
--	 (((unsigned char *)p + PSIZE - 1 -				\\
--	   (unsigned char *)0) & ~(PSIZE - 1))
-+	 __builtin_cheri_address_set(p, ((__builtin_cheri_address_get(p) + PSIZE - 1 -				\\
-+	   0) & ~(PSIZE - 1)))
-
- /*
-  * Arguments are as for qsort.
-"""
-        self.write_file(self.source_dir / "merge.patch", patch, overwrite=True)
-        self.run_cmd("git", "restore", ".", cwd=self.source_dir)
-        self.run_cmd("git", "apply", "merge.patch", cwd=self.source_dir)
 
     def setup(self) -> None:
         super().setup()
@@ -89,7 +69,6 @@ index 3f1b3fb..f8cb602 100644
         super().configure(**kwargs)
 
     def compile(self, **kwargs):
-        self._apply_patch()
         self.run_make()
         super().compile()
 
