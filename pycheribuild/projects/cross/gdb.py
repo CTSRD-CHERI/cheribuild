@@ -315,6 +315,7 @@ class BuildGDB(BuildGDBBase):
         if not self.compiling_for_host() and self.crosscompile_target == get_gdb_xtarget(
             self.crosscompile_target, self.config
         ):
+            self.makedirs(self.rootfs_dir / "usr/local/bin")
             self.create_symlink(self.install_prefix / "bin/gdb", self.rootfs_dir / "usr/local/bin/gdb", relative=False)
 
 
