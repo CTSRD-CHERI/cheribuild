@@ -13,6 +13,11 @@ On Linux, Ubuntu 20.04/22.04, Debian 10/11/12 and OpenSUSE Tumbleweed are suppor
 macOS 10.14 and newer is also supported.
 
 # Pre-Build Setup
+
+Some projects use meson, which requires Python `setuptools`. Since Python 3.12 removed `distutils`
+from the standard library, you may need to install `setuptools` explicitly (e.g., `pip install setuptools`
+or via your system package manager) to avoid build failures. Alternatively, use Python 3.11 or earlier.
+
 #### macOS
 When building on macOS the following commands will install the packages required for
 the most commonly used cheribuild targets:
