@@ -105,6 +105,7 @@ def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig, xtarge
 
 
 class _ClangBasedTargetInfo(TargetInfo, ABC):
+    uses_alliance_llvm: bool = False
     uses_morello_llvm: bool = False
     uses_upstream_llvm: bool = False
 
@@ -131,8 +132,9 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         elif cls.uses_upstream_llvm:
             assert not xtarget.is_hybrid_or_purecap_cheri(), "Not supported with upstream LLVM"
             llvm_target = SimpleProject.get_class_for_target_name("upstream-llvm", None)
-        elif xtarget.is_experimental_cheri093_std(config):
-            # Use the CHERI Alliance compiler when building for RISCV CHERI
+        elif xtarget.is_experimental_cheri093_std(config) or cls.uses_alliance_llvm:
+            # Use the CHERI Alliance compiler when building for RISCV CHERI or building
+            # non-CHERI aarch64/riscv64 CHERI Alliance projects (that use the Alliance LLVM).
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
@@ -869,6 +871,7 @@ class UpstreamLinuxTargetInfo(LinuxTargetInfoBase):
 
 
 class CheriLinuxTargetInfo(LinuxTargetInfoBase):
+    uses_alliance_llvm: bool = True
     kernel_target = "linux-kernel"
     musl_target = "muslc"
     compiler_rt_target = "cheri-std093-compiler-rt-builtins"
