@@ -72,9 +72,6 @@ from ...utils import OSInfo, ThreadJoiner, is_jenkins_build
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":
     def inner(config: CheriConfig, project: Project):
         xtarget = project.crosscompile_target
-        # Check that we don't accidentally inherit the FreeBSD install directories for CheriBSD
-        if not isinstance(project, BuildCHERIBSD) and xtarget.is_hybrid_or_purecap_cheri():
-            raise ValueError(f"{project.target} should not build for CHERI architectures")
         return config.output_root / (prefix + project.build_configuration_suffix(xtarget))
 
     return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
@@ -440,16 +437,11 @@ class CheriBSDConfigTable:
     X86_CONFIGS: "list[CheriBSDConfig]" = [
         CheriBSDConfig("GENERIC", {ConfigPlatform.QEMU}, default=True),
     ]
-    MIPS_CONFIGS: "list[CheriBSDConfig]" = [
-        CheriBSDConfig("MALTA64", {ConfigPlatform.QEMU}, default=True),
-    ]
 
     @classmethod
     def get_target_configs(cls, xtarget: CrossCompileTarget, config: "CheriConfig") -> "list[CheriBSDConfig]":
         if xtarget.is_any_x86():
             return cls.X86_CONFIGS
-        elif xtarget.is_mips(include_purecap=False):
-            return cls.MIPS_CONFIGS
         elif xtarget.is_riscv(include_purecap=True):
             if xtarget.is_experimental_cheri093_std(config):
                 return RISCVStdKernelConfigFactory().make_all()
@@ -544,7 +536,6 @@ class BuildFreeBSDBase(Project):
     default_extra_make_options: "list[str]" = [
         # "-DWITHOUT_HTML",  # should not be needed
         # "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
-        # "-DWITHOUT_SVNLITE",  # no need for SVN
         # "-DWITHOUT_GAMES",  # not needed
         # "-DWITHOUT_MAN",  # seems to be a majority of the install time
         # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
@@ -655,8 +646,6 @@ class BuildFreeBSDBase(Project):
             self.make_args.set_with_options(
                 MAN=False,
                 KERBEROS=False,
-                SVN=False,
-                SVNLITE=False,
                 MAIL=False,
                 ZFS=False,
                 SENDMAIL=False,
@@ -740,9 +729,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     repository: GitRepository = GitRepository("https://github.com/freebsd/freebsd.git")
     _needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     is_rootfs_target: typing.ClassVar[bool] = True  # All derived classes are also rootfs targets
-    # We still allow building FreeBSD for MIPS64. While the main branch no longer has support, this allows building
-    # the stable/13 branch using cheribuild. However, MIPS is no longer included in ALL_SUPPORTED_FREEBSD_TARGETS.
-    _supported_architectures = (*CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS, CompilationTargets.FREEBSD_MIPS64)
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
 
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd")
     add_custom_make_options: bool = True
@@ -877,8 +864,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
-        # Only handle FreeBSD native configs here
-        assert not xtarget.is_hybrid_or_purecap_cheri(), "Unexpected FreeBSD target"
         if platform is None:
             platform = self.get_default_kernel_platform()
         config = CheriBSDConfigTable.get_default(self.config, xtarget, platform, KernelABI.NOCHERI, **filter_kwargs)
@@ -923,8 +908,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     result["TARGET_CPUTYPE"] = "rvy"
                 else:
                     result["TARGET_CPUTYPE"] = "cheri"
-                if self.compiling_for_mips(include_purecap=True):
-                    result["CHERI"] = self.config.mips_cheri_bits_str
         return result
 
     def _setup_make_args(self) -> None:
@@ -1168,15 +1151,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def _setup_arch_specific_options(self) -> str:
         if self.crosscompile_target.is_any_x86() or self.crosscompile_target.is_aarch64(include_purecap=True):
             target_flags = ""
-        elif self.compiling_for_mips(include_purecap=True):
-            target_flags = "-fcolor-diagnostics"
-            # TODO: should probably set that inside CheriBSD makefiles instead
-            if self.target_info.is_cheribsd():
-                target_flags += " -mcpu=beri"
-            self.cross_toolchain_config.set_with_options(
-                RESCUE=False,  # Won't compile with CHERI clang yet
-                BOOT=False,
-            )  # bootloaders won't link with LLD yet
         elif self.compiling_for_riscv(include_purecap=True):
             target_flags = ""
         else:
@@ -1194,9 +1168,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def kernel_make_args_for_config(self, kernconfs: "list[str]", extra_make_args) -> MakeOptions:
         self._setup_make_args()  # ensure make args are complete
         kernel_options = self.make_args.copy()
-        if self.compiling_for_mips(include_purecap=True):
-            # Don't build kernel modules for MIPS
-            kernel_options.set(NO_MODULES="yes")
         if not self.use_bootstrapped_toolchain:
             kernel_options.update(self.cross_toolchain_config)
             kernel_options.remove_var("LDFLAGS")
@@ -1721,7 +1692,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             colour_diags=colour_diags,
         )
         make_args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
-        # If --libcompat-buildenv was passed skip the MIPS lib
+        # If --libcompat-buildenv was passed skip the legacy lib
         has_libcompat = self.crosscompile_target.is_hybrid_or_purecap_cheri() and is_lib  # TODO: handle lib32
         if has_libcompat and (self.config.libcompat_buildenv or libcompat_only):
             self.info("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
@@ -1732,7 +1703,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 env=make_args.env_vars,
                 cwd=self.source_dir,
             )
-        # If we are building a library, we want to build both the CHERI and the mips version (unless the
+        # If we are building a library, we want to build both the CHERI and the legacy version (unless the
         # user explicitly specified --libcompat-buildenv)
         if has_libcompat and not noncheri_only and self.libcompat_name():
             compat_target = self.libcompat_name() + "buildenv"
@@ -1800,6 +1771,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     build_dir_suffix: str = "-default-options"
     add_custom_make_options: bool = False
     hide_options_from_help: bool = True  # hide this from --help for now
+    _supported_architectures = CompilationTargets.NON_CHERI_FREEBSD_TARGETS
 
     def clean(self) -> ThreadJoiner:
         # Bootstrapping LLVM takes forever with FreeBSD makefiles
@@ -1915,7 +1887,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     use_llvm_binutils: bool = True
     has_installsysroot_target: bool = True
 
-    # NB: Full CHERI-MIPS purecap kernel support was never merged
     purecap_kernel_targets: "tuple[CrossCompileTarget, ...]" = (
         CompilationTargets.CHERIBSD_RISCV_HYBRID,
         CompilationTargets.CHERIBSD_RISCV_PURECAP,
