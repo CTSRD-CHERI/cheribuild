@@ -746,7 +746,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd")
     add_custom_make_options: bool = True
-    use_llvm_binutils: bool = False
+    bootstrap_llvm_binutils: bool = False
 
     # The compiler to use for building freebsd (bundled/upstream-llvm/cheri-llvm/custom)
     build_toolchain: "ClassVar[CompilerType]" = CompilerType.DEFAULT_COMPILER
@@ -1124,20 +1124,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
             XCPP=self.CPP,
             X_COMPILER_TYPE=xccinfo.compiler,  # This is needed otherwise the build assumes it should build with $CC
         )
-        if not self.use_llvm_binutils:
-            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
+        if self.bootstrap_llvm_binutils:
+            self.cross_toolchain_config.set_with_options(LLVM_BINUTILS_BOOTSTRAP=True)
         else:
-            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
-            # Note: the STRIP variable contains the flag to be passed to install for stripping, whereas install reads
-            # the XSTRIPBIN environment variable to determine the path to strip.
-
-            # We currently still need elftoolchain strip for installworld
-            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
-
+            # We explicitly pass the path for all binutils, so no need to bootstrap llvm-foo.
+            self.cross_toolchain_config.set_with_options(LLVM_BINUTILS_BOOTSTRAP=False)
             self.cross_toolchain_config.set(
                 XAR=cross_bindir / "llvm-ar",
                 XNM=cross_bindir / "llvm-nm",
                 XSIZE=cross_bindir / "llvm-size",
+                # Note: the STRIP variable contains the flag to be passed to install for stripping, whereas install
+                # reads the XSTRIPBIN environment variable to determine the path to strip.
                 XSTRIPBIN=cross_bindir / "llvm-strip",
                 XSTRINGS=cross_bindir / "llvm-strings",
                 XOBJCOPY=cross_bindir / "llvm-objcopy",
@@ -1912,7 +1909,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
     is_sdk_target: bool = True
     hide_options_from_help: bool = False  # FreeBSD options are hidden, but this one should be visible
-    use_llvm_binutils: bool = True
     has_installsysroot_target: bool = True
 
     # NB: Full CHERI-MIPS purecap kernel support was never merged
