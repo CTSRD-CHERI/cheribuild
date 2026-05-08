@@ -580,19 +580,82 @@ class GitRepository(SourceRepository):
                 f"You are trying to build the {current_branch} branch. You should be using {default_branch}"
             )
             if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
-                try:
-                    current_project.run_cmd("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
-                except subprocess.CalledProcessError as e:
-                    # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
-                    # to create a new branch that follows the upstream one
-                    if e.stderr.strip().endswith(b") remote tracking branches"):
-                        current_project.run_cmd(
-                            ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
-                            cwd=src_dir,
-                            capture_error=True,
+                # Check which remote this branch comes from
+                remotes = current_project.run_cmd(
+                    ["git", "remote", "-v"],
+                    cwd=src_dir,
+                    capture_output=True,
+                    run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                ).stdout.decode("utf-8")
+
+                target_url: str = self.url
+                matching_remote: Optional[str] = None
+                existing_remotes = set()
+                for line in remotes.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        remote_name = parts[0]
+                        remote_url = parts[1]
+                        existing_remotes.add(remote_name)
+                        if remote_url == target_url and matching_remote is None:
+                            matching_remote = remote_name
+                current_project.verbose_print("Found existing remotes:", ", ".join(sorted(existing_remotes)))
+
+                if matching_remote is None:
+                    current_project.info(f"Remote for {target_url} not found. Adding it.")
+                    matching_remote = "origin"
+                    while matching_remote in existing_remotes:
+                        matching_remote = "new-" + matching_remote
+                    current_project.run_cmd(["git", "remote", "add", matching_remote, target_url], cwd=src_dir)
+
+                current_project.info(f"Fetching changes from remote {matching_remote}")
+                current_project.run_cmd(["git", "fetch", matching_remote], cwd=src_dir)
+
+                expected_upstream: str = f"{matching_remote}/{default_branch}"
+                has_branch: bool = current_project.try_run_cmd(
+                    ["git", "show-ref", "--verify", f"refs/heads/{default_branch}"],
+                    cwd=src_dir,
+                    print_verbose_only=True,
+                    capture_error=True,
+                    capture_output=True,
+                    run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                )
+
+                if has_branch:
+                    try:
+                        upstream = (
+                            current_project.run_cmd(
+                                ["git", "rev-parse", "--abbrev-ref", f"{default_branch}@{{u}}"],
+                                cwd=src_dir,
+                                capture_output=True,
+                                capture_error=True,
+                                print_verbose_only=True,
+                                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                            )
+                            .stdout.decode("utf-8")
+                            .strip()
                         )
+                    except subprocess.CalledProcessError:
+                        upstream = None
+
+                    if upstream == expected_upstream:
+                        current_project.info(f"Checking out existing branch {default_branch}")
+                        checkout_args = [default_branch]
                     else:
-                        raise e
+                        new_branch_name = f"{default_branch}-cheribuild"
+                        if upstream:
+                            msg = f"Branch {default_branch} tracks wrong branch {upstream}."
+                        else:
+                            msg = f"Branch {default_branch} has no upstream."
+                        current_project.info(msg, f"Creating new branch {new_branch_name}")
+                        checkout_args = ["-b", new_branch_name, expected_upstream]
+                else:
+                    current_project.info(
+                        f"Branch {default_branch} does not exist locally. Checking it out from {expected_upstream}"
+                    )
+                    checkout_args = ["--track", expected_upstream]
+
+                current_project.run_cmd(["git", "checkout", *checkout_args], cwd=src_dir)
 
             else:
                 current_project.ask_for_confirmation(
@@ -719,6 +782,10 @@ class GitRepository(SourceRepository):
         # handle repositories that have moved:
         self._handle_old_urls(current_project, src_dir)
 
+        # Handle forced branches before fetching, so we don't try to fetch from a broken
+        # remote if we are about to switch branches anyway.
+        self._handle_branch_switch(current_project, src_dir)
+
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
@@ -727,9 +794,6 @@ class GitRepository(SourceRepository):
         if revision is not None:
             self._handle_revision_switch(current_project, src_dir, revision, skip_submodules)
             return
-
-        # Handle forced branches now that we have fetched the latest changes
-        self._handle_branch_switch(current_project, src_dir)
 
         if self._check_if_up_to_date(current_project, src_dir):
             return
