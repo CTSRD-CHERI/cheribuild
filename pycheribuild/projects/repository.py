@@ -496,6 +496,206 @@ class GitRepository(SourceRepository):
             return base_project_source_dir
         return base_project_source_dir.with_name(target_override.directory_name)
 
+    def _handle_old_urls(self, current_project: "Project", src_dir: Path) -> None:
+        if not (src_dir.exists() and self.old_urls):
+            return
+        branch_info = self.get_branch_info(src_dir, config=current_project.config)
+        if branch_info is None or branch_info.remote_name is None:
+            return
+
+        remote_url = (
+            current_project.run_cmd(
+                "git",
+                "remote",
+                "get-url",
+                branch_info.remote_name,
+                capture_output=True,
+                cwd=src_dir,
+            )
+            .stdout.strip()
+            .decode("utf-8")
+        )
+        # Strip any .git suffix to match more old URLs
+        if remote_url.endswith(".git"):
+            remote_url = remote_url[:-4]
+        # Update from the old url:
+        for old_url in self.old_urls:
+            if old_url.endswith(".git"):
+                old_url = old_url[:-4]
+            if remote_url == old_url:
+                current_project.warning(
+                    current_project.target, "still points to old repository", remote_url, "instead of", self.url
+                )
+                if current_project.query_yes_no("Update to correct URL?"):
+                    has_origin = current_project.try_run_cmd(
+                        ["git", "remote", "get-url", "origin"],
+                        capture_output=True,
+                        cwd=src_dir,
+                        print_verbose_only=True,
+                    )
+
+                    if has_origin:
+                        new_name = "old-origin"
+                        while not current_project.try_run_cmd(
+                            ["git", "remote", "rename", "origin", new_name],
+                            run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                            cwd=src_dir,
+                            capture_error=True,
+                        ):
+                            new_name = "old-" + new_name
+
+                    current_project.run_cmd(
+                        ["git", "remote", "add", "origin", self.url],
+                        run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                        cwd=src_dir,
+                    )
+                    branch_info = branch_info._replace(remote_name="origin")
+                    default_branch = self.get_default_branch(current_project, include_per_target=True)
+                    if default_branch:
+                        current_project.info(f"Switching to default branch {default_branch} for new URL")
+                        current_project.run_cmd(["git", "fetch", branch_info.remote_name], cwd=src_dir)
+                        current_project.run_cmd(
+                            ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
+                            cwd=src_dir,
+                            capture_error=True,
+                        )
+
+    def _handle_branch_switch(self, current_project: "Project", src_dir: Path) -> None:
+        if not (src_dir.exists() and (self.force_branch or self.old_branches)):
+            return
+
+        branch_info = self.get_branch_info(src_dir, config=current_project.config)
+        current_branch = branch_info.local_branch if branch_info is not None else ""
+        if branch_info is None:
+            default_branch = None
+        elif self.force_branch:
+            assert self.old_branches is None, "cannot set both force_branch and old_branches"
+            default_branch = self.get_default_branch(current_project, include_per_target=True)
+            assert default_branch, "default_branch must be set if force_branch is true!"
+        else:
+            default_branch = self.old_branches.get(current_branch)
+
+        if default_branch and current_branch != default_branch:
+            current_project.warning(
+                f"You are trying to build the {current_branch} branch. You should be using {default_branch}"
+            )
+            if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
+                try:
+                    current_project.run_cmd("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
+                except subprocess.CalledProcessError as e:
+                    # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
+                    # to create a new branch that follows the upstream one
+                    if e.stderr.strip().endswith(b") remote tracking branches"):
+                        current_project.run_cmd(
+                            ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
+                            cwd=src_dir,
+                            capture_error=True,
+                        )
+                    else:
+                        raise e
+
+            else:
+                current_project.ask_for_confirmation(
+                    "Are you sure you want to continue?",
+                    force_result=False,
+                    error_message="Wrong branch: " + current_branch,
+                )
+
+    def _handle_revision_switch(
+        self, current_project: "Project", src_dir: Path, revision: str, skip_submodules: bool
+    ) -> None:
+        # TODO: do some rev-parse stuff to check if we are on the right revision?
+        current_project.run_cmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
+        if not skip_submodules:
+            self._update_submodules(current_project, src_dir)
+
+    def _check_if_up_to_date(self, current_project: "Project", src_dir: Path) -> bool:
+        # We don't need to update if the upstream commit is an ancestor of the current HEAD.
+        # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
+        # When checking if we are up to date, we treat a missing @{upstream} reference (no upstream branch
+        # configured) as success to avoid getting an error from git pull.
+        up_to_date = self.contains_commit(
+            current_project,
+            "@{upstream}",
+            src_dir=src_dir,
+            invalid_commit_ref_result="invalid",
+        )
+        if up_to_date is True:
+            current_project.info("Skipping update: Current HEAD is up-to-date or ahead of upstream.")
+            return True
+        elif up_to_date == "invalid":
+            # Info message was already printed.
+            current_project.info("Skipping update: no upstream configured to update from.")
+            return True
+        assert up_to_date is False
+        current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
+        return False
+
+    def _handle_local_changes(self, current_project: "Project", src_dir: Path, has_autostash: bool) -> "Optional[bool]":
+        has_changes = (
+            len(
+                current_project.run_cmd(
+                    ["git", "diff", "--stat", "--ignore-submodules"],
+                    capture_output=True,
+                    cwd=src_dir,
+                    print_verbose_only=True,
+                ).stdout,
+            )
+            > 1
+        )
+        if not has_changes:
+            return False
+
+        print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
+        # TODO: add a config option to skip this query?
+        if current_project.config.force_update:
+            status_update("Updating", src_dir, "with autostash due to --force-update")
+        elif not current_project.query_yes_no(
+            "Stash the changes, update and reapply?",
+            default_result=True,
+            force_result=True,
+        ):
+            status_update("Skipping update of", src_dir)
+            return None  # Abort
+
+        if not has_autostash:
+            # TODO: ask if we should continue?
+            stash_result = current_project.run_cmd(
+                ["git", "stash", "save", "Automatic stash by cheribuild.py"],
+                capture_output=True,
+                cwd=src_dir,
+                print_verbose_only=True,
+            ).stdout
+            # print("stash_result =", stash_result)
+            if "No local changes to save" in stash_result.decode("utf-8"):
+                # print("NO REAL CHANGES")
+                return False  # probably git diff showed something from a submodule
+        return True
+
+    def _update_submodules(self, current_project: "Project", src_dir: Path) -> None:
+        current_project.run_cmd(
+            ["git", "submodule", "update", "--init", "--recursive"],
+            cwd=src_dir,
+            print_verbose_only=True,
+        )
+
+    def _do_git_pull(
+        self,
+        current_project: "Project",
+        src_dir: Path,
+        *,
+        skip_submodules: bool,
+        has_autostash: bool,
+        git_version: tuple,
+    ) -> None:
+        pull_cmd = ["git", "pull"]
+        if has_autostash:
+            pull_cmd.append("--autostash")
+        if not skip_submodules:
+            pull_cmd.append("--recurse-submodules")
+        rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
+        current_project.run_cmd([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
+
     def update(
         self,
         current_project: "Project",
@@ -517,65 +717,7 @@ class GitRepository(SourceRepository):
             return
 
         # handle repositories that have moved:
-        if src_dir.exists() and self.old_urls:
-            branch_info = self.get_branch_info(src_dir, config=current_project.config)
-            if branch_info is not None and branch_info.remote_name is not None:
-                remote_url = (
-                    current_project.run_cmd(
-                        "git",
-                        "remote",
-                        "get-url",
-                        branch_info.remote_name,
-                        capture_output=True,
-                        cwd=src_dir,
-                    )
-                    .stdout.strip()
-                    .decode("utf-8")
-                )
-                # Strip any .git suffix to match more old URLs
-                if remote_url.endswith(".git"):
-                    remote_url = remote_url[:-4]
-                # Update from the old url:
-                for old_url in self.old_urls:
-                    if old_url.endswith(".git"):
-                        old_url = old_url[:-4]
-                    if remote_url == old_url:
-                        current_project.warning(
-                            current_project.target, "still points to old repository", remote_url, "instead of", self.url
-                        )
-                        if current_project.query_yes_no("Update to correct URL?"):
-                            has_origin = current_project.try_run_cmd(
-                                ["git", "remote", "get-url", "origin"],
-                                capture_output=True,
-                                cwd=src_dir,
-                                print_verbose_only=True,
-                            )
-
-                            if has_origin:
-                                new_name = "old-origin"
-                                while not current_project.try_run_cmd(
-                                    ["git", "remote", "rename", "origin", new_name],
-                                    run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
-                                    cwd=src_dir,
-                                    capture_error=True,
-                                ):
-                                    new_name = "old-" + new_name
-
-                            current_project.run_cmd(
-                                ["git", "remote", "add", "origin", self.url],
-                                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
-                                cwd=src_dir,
-                            )
-                            branch_info = branch_info._replace(remote_name="origin")
-                            default_branch = self.get_default_branch(current_project, include_per_target=True)
-                            if default_branch:
-                                current_project.info(f"Switching to default branch {default_branch} for new URL")
-                                current_project.run_cmd(["git", "fetch", branch_info.remote_name], cwd=src_dir)
-                                current_project.run_cmd(
-                                    ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
-                                    cwd=src_dir,
-                                    capture_error=True,
-                                )
+        self._handle_old_urls(current_project, src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
@@ -583,130 +725,34 @@ class GitRepository(SourceRepository):
         current_project.run_cmd(["git", "fetch"], cwd=src_dir)
 
         if revision is not None:
-            # TODO: do some rev-parse stuff to check if we are on the right revision?
-            current_project.run_cmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
-            if not skip_submodules:
-                current_project.run_cmd(
-                    ["git", "submodule", "update", "--init", "--recursive"],
-                    cwd=src_dir,
-                    print_verbose_only=True,
-                )
+            self._handle_revision_switch(current_project, src_dir, revision, skip_submodules)
             return
 
         # Handle forced branches now that we have fetched the latest changes
-        if src_dir.exists() and (self.force_branch or self.old_branches):
-            branch_info = self.get_branch_info(src_dir, config=current_project.config)
-            current_branch = branch_info.local_branch if branch_info is not None else ""
-            if branch_info is None:
-                default_branch = None
-            elif self.force_branch:
-                assert self.old_branches is None, "cannot set both force_branch and old_branches"
-                default_branch = self.get_default_branch(current_project, include_per_target=True)
-                assert default_branch, "default_branch must be set if force_branch is true!"
-            else:
-                default_branch = self.old_branches.get(current_branch)
-            if default_branch and current_branch != default_branch:
-                current_project.warning(
-                    f"You are trying to build the {current_branch} branch. You should be using {default_branch}"
-                )
-                if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
-                    try:
-                        current_project.run_cmd("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
-                    except subprocess.CalledProcessError as e:
-                        # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
-                        # to create a new branch that follows the upstream one
-                        if e.stderr.strip().endswith(b") remote tracking branches"):
-                            current_project.run_cmd(
-                                ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
-                                cwd=src_dir,
-                                capture_error=True,
-                            )
-                        else:
-                            raise e
+        self._handle_branch_switch(current_project, src_dir)
 
-                else:
-                    current_project.ask_for_confirmation(
-                        "Are you sure you want to continue?",
-                        force_result=False,
-                        error_message="Wrong branch: " + current_branch,
-                    )
-
-        # We don't need to update if the upstream commit is an ancestor of the current HEAD.
-        # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
-        # When checking if we are up to date, we treat a missing @{upstream} reference (no upstream branch
-        # configured) as success to avoid getting an error from git pull.
-        up_to_date = self.contains_commit(
-            current_project,
-            "@{upstream}",
-            src_dir=src_dir,
-            invalid_commit_ref_result="invalid",
-        )
-        if up_to_date is True:
-            current_project.info("Skipping update: Current HEAD is up-to-date or ahead of upstream.")
+        if self._check_if_up_to_date(current_project, src_dir):
             return
-        elif up_to_date == "invalid":
-            # Info message was already printed.
-            current_project.info("Skipping update: no upstream configured to update from.")
-            return
-        assert up_to_date is False
-        current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
 
-        # make sure we run git stash if we discover any local changes
-        has_changes = (
-            len(
-                current_project.run_cmd(
-                    ["git", "diff", "--stat", "--ignore-submodules"],
-                    capture_output=True,
-                    cwd=src_dir,
-                    print_verbose_only=True,
-                ).stdout,
-            )
-            > 1
-        )
-        pull_cmd = ["git", "pull"]
-        has_autostash = False
         git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
         # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
-        if git_version >= (2, 14):
-            has_autostash = True
-            pull_cmd.append("--autostash")
+        has_autostash = git_version >= (2, 14)
 
-        if has_changes:
-            print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
-            # TODO: add a config option to skip this query?
-            if current_project.config.force_update:
-                status_update("Updating", src_dir, "with autostash due to --force-update")
-            elif not current_project.query_yes_no(
-                "Stash the changes, update and reapply?",
-                default_result=True,
-                force_result=True,
-            ):
-                status_update("Skipping update of", src_dir)
-                return
-            if not has_autostash:
-                # TODO: ask if we should continue?
-                stash_result = current_project.run_cmd(
-                    ["git", "stash", "save", "Automatic stash by cheribuild.py"],
-                    capture_output=True,
-                    cwd=src_dir,
-                    print_verbose_only=True,
-                ).stdout
-                # print("stash_result =", stash_result)
-                if "No local changes to save" in stash_result.decode("utf-8"):
-                    # print("NO REAL CHANGES")
-                    has_changes = False  # probably git diff showed something from a submodule
+        has_changes = self._handle_local_changes(current_project, src_dir, has_autostash)
+        if has_changes is None:
+            return  # Aborted
+
+        self._do_git_pull(
+            current_project,
+            src_dir,
+            skip_submodules=skip_submodules,
+            has_autostash=has_autostash,
+            git_version=git_version,
+        )
 
         if not skip_submodules:
-            pull_cmd.append("--recurse-submodules")
-        rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
-        current_project.run_cmd([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
-        if not skip_submodules:
-            current_project.run_cmd(
-                ["git", "submodule", "update", "--init", "--recursive"],
-                cwd=src_dir,
-                print_verbose_only=True,
-            )
-        if has_changes and not has_autostash:
+            self._update_submodules(current_project, src_dir)
+        if has_changes is True and not has_autostash:
             current_project.run_cmd(["git", "stash", "pop"], cwd=src_dir, print_verbose_only=True)
 
 
