@@ -1615,10 +1615,6 @@ class SimpleProjectBase(AbstractProject, ABC):
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
         return should_download
 
-    def print(self, *args, **kwargs) -> None:
-        if not self.config.quiet:
-            print(*args, **kwargs)
-
     def verbose_print(self, *args, **kwargs) -> None:
         if self.config.verbose:
             print(*args, **kwargs)

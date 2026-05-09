@@ -182,7 +182,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         env = {k: v for k, v in self.configure_environment.items() if v}
         self.configure_environment.clear()
         self.configure_environment.update(env)
-        self.print(
+        self.verbose_print(
             coloured(
                 AnsiColour.yellow,
                 "Cross configure environment:\n\t",
