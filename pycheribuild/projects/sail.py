@@ -338,7 +338,7 @@ class RunSailShell(OpamMixin, SimpleProject):
 
 class BuildSailRISCV(OpamMixin, CMakeProject):
     target = "sail-riscv"
-    repository = GitRepository("https://github.com/rems-project/sail-riscv")
+    repository = GitRepository("https://github.com/riscv/sail-riscv")
     dependencies = ("sail",)
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
@@ -346,8 +346,9 @@ class BuildSailRISCV(OpamMixin, CMakeProject):
         super().check_system_dependencies()
         self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
-    def compile(self, **kwargs) -> None:
-        self.run_make(["all", "riscv_sim_rv32d_rvfi", "riscv_sim_rv64d_rvfi"], cwd=self.build_dir, parallel=True)
+    def setup(self) -> None:
+        super().setup()
+        self.add_cmake_options(ENABLE_RISCV_TESTS=True, ENABLE_RISCV_ARCH_TESTS=True, FIRST_PARTY_TESTS=True)
 
 
 class BuildSailCheriRISCV(ProjectUsingOpam):
