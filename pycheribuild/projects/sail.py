@@ -54,7 +54,7 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.required_ocaml_version = "4.14.2"
+        self.required_ocaml_version = "5.4.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
 
@@ -180,7 +180,7 @@ class Opam2(SimpleProject):
                 base_url = "https://github.com/ocaml/opam/releases/download/"
                 self.download_file(
                     Path(td, "opam"),
-                    url=base_url + "2.0.8/opam-2.0.8-x86_64-linux",
+                    url=base_url + "2.5.1/opam-2.5.1-x86_64-linux",
                     sha256="95365a873d9e3ae6fb48e6109b5fc5df3b4e526c9d65d20652a78e263f745a35",
                 )
                 self.install_file(
