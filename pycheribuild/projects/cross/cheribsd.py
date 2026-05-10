@@ -1091,12 +1091,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
-            GCC=False,
-            CLANG=False,
-            LLD=False,  # Take a long time and not needed in the target system
-            LLDB=False,  # may be useful but means we need to build LLVM
+            TOOLCHAIN=False,  # Avoid building LLVM
             # Bootstrap compiler/ linker are not needed:
-            GCC_BOOTSTRAP=False,
             CLANG_BOOTSTRAP=False,
             LLD_BOOTSTRAP=False,
         )
