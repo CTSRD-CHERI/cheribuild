@@ -845,7 +845,7 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
         return [x + "-" for x in triples]
 
     def configure(self, **kwargs):
-        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="ARM;AArch64;RISCV;host")
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="ARM;AArch64;RISCV;Mips;host")
         # The current master branch isn't ready yet to switch over to the new pass manager
         # CLANG_ROUND_TRIP_CC1_ARGS doesn't work for us yet. See e.g. https://reviews.llvm.org/D97462#2677130
         self.add_cmake_options(CLANG_ROUND_TRIP_CC1_ARGS=False)
