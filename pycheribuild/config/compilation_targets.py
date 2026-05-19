@@ -264,6 +264,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             else:
                 project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
 
+        if xtarget.is_hybrid_or_purecap_cheri():
+            if config.subobject_bounds:
+                result.extend(["-Xclang", "-cheri-bounds=" + str(config.subobject_bounds)])
+
         if xtarget.is_mips(include_purecap=True):
             result.append("-integrated-as")
             result.append("-G0")  # no small objects in GOT optimization
@@ -286,10 +290,8 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
                 result.append("-mcpu=beri")
             if xtarget.is_cheri_purecap():
                 result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + config.mips_cheri_bits_str])
-                if config.subobject_bounds:
-                    result.extend(["-Xclang", "-cheri-bounds=" + str(config.subobject_bounds)])
-                    if config.subobject_debug:
-                        result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
+                if config.subobject_bounds and config.subobject_debug:
+                    result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
                 if config.cheri_cap_table_abi:
                     result.append("-cheri-cap-table-abi=" + config.cheri_cap_table_abi)
             else:
