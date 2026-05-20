@@ -787,7 +787,7 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
             if self._config_path.exists():
                 self._json = self.__load_json_with_includes(self._config_path)
             else:
-                if self._inferred_config_prefix:
+                if self._inferred_config_prefix and self._inferred_config_prefix not in ("docker-portable-", "docker-"):
                     # If the user invoked foo-cheribuild.py but foo-cheribuild.json does not exist that is almost
                     # certainly an error. Report it as such and don't
                     print(
