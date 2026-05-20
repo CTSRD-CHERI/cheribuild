@@ -124,6 +124,8 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.configure_args.append("--reconfigure")
         # Don't use bundled fallback dependencies, we always want to use the (potentially patched) system packages.
         self.configure_args.append("--wrap-mode=nofallback")
+        if self.config.portable_build:
+            self.configure_args.append("--prefer-static")
         self.add_meson_options(**self.build_type.to_meson_args())
         if self.use_lto:
             self.add_meson_options(

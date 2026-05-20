@@ -493,7 +493,9 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         self.docker_container = loader.add_option(
             "docker-container",
             help="Name of the docker container to use",
-            default="ctsrd/cheribuild-docker",
+            default="cheri-portable-build-container"
+            if loader.get_config_prefix() == "docker-portable-"
+            else "ctsrd/cheribuild-docker",
             group=loader.docker_group,
         )
         self.docker_reuse_container = loader.add_bool_option(
@@ -502,6 +504,11 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             help="Attach to the same container again (note: "
             "docker-container option must be an id rather than "
             "a container name",
+        )
+        self.portable_build = loader.add_bool_option(
+            "portable-build",
+            default=False,
+            help="Configure dependencies to be linked statically where possible to build portable host binaries",
         )
 
         # compilation db options:

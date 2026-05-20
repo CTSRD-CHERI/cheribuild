@@ -179,10 +179,15 @@ def real_main() -> None:
     target_manager.register_command_line_options()
     # load them from JSON/cmd line
     cheri_config.load()
-    if not cheri_config.allow_running_as_root:
+    # Running as root inside Docker/containers is safe since it is isolated from the host.
+    if (
+        not cheri_config.allow_running_as_root
+        and not Path("/.dockerenv").exists()
+        and not Path("/run/.containerenv").exists()
+    ):
         check_not_root()
     init_global_config(cheri_config)
-    if config_loader.get_config_prefix() == "docker-":
+    if config_loader.get_config_prefix() in ("docker-", "docker-portable-"):
         cheri_config.docker = True
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:
@@ -219,75 +224,6 @@ def real_main() -> None:
         x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD, CheribuildAction.BENCHMARK)
     )
 
-    if cheri_config.docker:
-        cheribuild_dir = str(Path(__file__).absolute().parent.parent)
-        # we can't pass all args
-        filtered_cheribuild_args = ["--source-root", "/source", "--build-root", "/build", "--output-root", "/output"]
-        skip_next = False
-        excluded_args = ("--source-root", "--build-root", "--output-root", "--docker-container")
-        for arg in sys.argv[1:]:
-            if skip_next:
-                skip_next = False
-                continue
-            if arg in excluded_args:
-                skip_next = True
-                continue
-            if any(arg.startswith(s + "=") for s in excluded_args):
-                continue
-            if arg == "--docker" or arg == "--docker-reuse-container":
-                continue
-            filtered_cheribuild_args.append(arg)
-        try:
-            docker_dir_mappings = [
-                # map cheribuild and the sources read-only into the container
-                "-v",
-                cheribuild_dir + ":/cheribuild:ro",
-                "-v",
-                str(cheri_config.source_root.absolute()) + ":/source",
-                # build and output are read-write:
-                "-v",
-                str(cheri_config.build_root.absolute()) + ":/build",
-                "-v",
-                str(cheri_config.output_root.absolute()) + ":/output",
-            ]
-            cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update", *filtered_cheribuild_args]
-            if cheri_config.docker_reuse_container:
-                # Use docker restart + docker exec instead of docker run
-                # FIXME: docker restart doesn't work for some reason
-                stop_cmd = ["docker", "stop", cheri_config.docker_container]
-                print_command(stop_cmd, config=cheri_config)
-                subprocess.check_call(stop_cmd)
-                start_cmd = ["docker", "start", cheri_config.docker_container]
-                print_command(start_cmd, config=cheri_config)
-                subprocess.check_call(start_cmd)
-                docker_run_cmd = ["docker", "exec", cheri_config.docker_container, *cheribuild_args]
-            else:
-                docker_run_cmd = [
-                    "docker",
-                    "run",
-                    "--user",
-                    str(os.getuid()) + ":" + str(os.getgid()),
-                    "--rm",
-                    "--interactive",
-                    "--tty",
-                    *docker_dir_mappings,
-                ]
-                docker_run_cmd += [cheri_config.docker_container, *cheribuild_args]
-            run_command(docker_run_cmd, config=cheri_config, give_tty_control=True)
-        except subprocess.CalledProcessError as e:
-            # if the image is missing print a helpful error message:
-            if e.returncode == 125:
-                status_update("It seems like the docker image", cheri_config.docker_container, "was not found.")
-                status_update("In order to build the default docker image for cheribuild (cheribuild-docker) run:")
-                print(
-                    coloured(
-                        AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."
-                    )
-                )
-                sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
-            raise
-        sys.exit()
-
     if run_everything_target in cheri_config.targets:
         cheri_config.targets = list(sorted(target_manager.target_names(cheri_config)))
     if not cheri_config.targets:
@@ -316,6 +252,87 @@ def real_main() -> None:
             update_check(cheri_config)  # no-combine
         except Exception as e:  # no-combine
             print("Failed to check for updates:", e)  # no-combine
+
+    if cheri_config.docker:
+        cheribuild_dir = str(Path(__file__).absolute().parent.parent)
+        if cheri_config.docker_container == "cheri-portable-build-container":
+            status_update(">>> Ensuring cheri-portable-build-container docker image is up-to-date...")
+            dockerfile_dir = Path(cheribuild_dir) / "docker"
+            run_command(
+                ["docker", "build", "--tag", "cheri-portable-build-container", "-f", "Dockerfile.rocky8", "."],
+                cwd=dockerfile_dir,
+                config=cheri_config,
+                run_in_pretend_mode=True,
+            )
+        # we can't pass all args
+        filtered_cheribuild_args = ["--source-root", "/source", "--build-root", "/build", "--output-root", "/output"]
+        skip_next = False
+        excluded_args = ("--source-root", "--build-root", "--output-root", "--docker-container", "--docker-run-pretend")
+        for arg in sys.argv[1:]:
+            if skip_next:
+                skip_next = False
+                continue
+            if arg in excluded_args:
+                skip_next = True
+                continue
+            if any(arg.startswith(s + "=") for s in excluded_args):
+                continue
+            if arg == "--docker" or arg == "--docker-reuse-container":
+                continue
+            filtered_cheribuild_args.append(arg)
+        try:
+            docker_dir_mappings = [
+                # map cheribuild and the sources read-only into the container
+                "-v",
+                cheribuild_dir + ":/cheribuild:ro",
+                "-v",
+                str(cheri_config.source_root.absolute()) + ":/source",
+                # build and output are read-write:
+                "-v",
+                str(cheri_config.build_root.absolute()) + ":/build",
+                "-v",
+                str(cheri_config.output_root.absolute()) + ":/output",
+            ]
+            cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update"]
+            if config_loader.get_config_prefix() == "docker-portable-":
+                cheribuild_args.append("--config-file=/cheribuild-settings/cheribuild.json")
+            cheribuild_args += filtered_cheribuild_args
+            if cheri_config.docker_reuse_container:
+                # Use docker restart + docker exec instead of docker run
+                # FIXME: docker restart doesn't work for some reason
+                stop_cmd = ["docker", "stop", cheri_config.docker_container]
+                print_command(stop_cmd, config=cheri_config)
+                subprocess.check_call(stop_cmd)
+                start_cmd = ["docker", "start", cheri_config.docker_container]
+                print_command(start_cmd, config=cheri_config)
+                subprocess.check_call(start_cmd)
+                docker_run_cmd = ["docker", "exec", cheri_config.docker_container, *cheribuild_args]
+            else:
+                docker_run_cmd = [
+                    "docker",
+                    "run",
+                    "--user",
+                    str(os.getuid()) + ":" + str(os.getgid()),
+                    "--rm",
+                    "--interactive",
+                    "--tty",
+                    *docker_dir_mappings,
+                ]
+                docker_run_cmd += [cheri_config.docker_container, *cheribuild_args]
+            run_command(docker_run_cmd, config=cheri_config, give_tty_control=True, run_in_pretend_mode=True)
+        except subprocess.CalledProcessError as e:
+            # if the image is missing print a helpful error message:
+            if e.returncode == 125:
+                status_update("It seems like the docker image", cheri_config.docker_container, "was not found.")
+                status_update("In order to build the default docker image for cheribuild (cheribuild-docker) run:")
+                print(
+                    coloured(
+                        AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."
+                    )
+                )
+                sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
+            raise
+        sys.exit()
     chosen_targets = target_manager.get_all_chosen_targets(cheri_config)
     if cheri_config.print_targets_only:
         print(

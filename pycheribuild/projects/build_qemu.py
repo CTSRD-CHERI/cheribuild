@@ -315,6 +315,11 @@ class BuildQEMUBase(AutotoolsProject):
             cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
         self.configure_args.append("--extra-cflags=" + self.commandline_to_str(cflags))
         ldflags = self.default_ldflags + self.LDFLAGS
+        if self.config.portable_build:
+            # Static glib build (libgmodule-2.0.a) relies on libdl APIs (dlopen, dlsym, dlerror, etc.),
+            # and libglib-2.0.a relies on pcre APIs (pcre_exec, etc.) which are not pulled in automatically.
+            ldflags.append("-ldl")
+            ldflags.append("-lpcre")
         if ldflags:
             self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
         cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]

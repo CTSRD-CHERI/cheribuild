@@ -208,13 +208,21 @@ class DefaultCheriConfig(CheriConfig):
         )
         self.output_root = loader.add_path_option(
             "output-root",
-            default=lambda p, cls: p.source_root / "output",
+            default=lambda p, cls: (
+                p.source_root / "output"
+                if p.loader.get_config_prefix() != "docker-portable-"
+                else Path.home() / "cheri/output-portable"
+            ),
             group=loader.path_group,
             help="The directory to store all output (default: '<SOURCE_ROOT>/output')",
         )
         self.build_root = loader.add_path_option(
             "build-root",
-            default=lambda p, cls: p.source_root / "build",
+            default=lambda p, cls: (
+                p.source_root / "build"
+                if p.loader.get_config_prefix() != "docker-portable-"
+                else Path.home() / "cheri/build-portable"
+            ),
             group=loader.path_group,
             help="The directory for all the builds (default: '<SOURCE_ROOT>/build')",
         )

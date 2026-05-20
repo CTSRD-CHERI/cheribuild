@@ -1,0 +1,8 @@
+{
+  "source-root": "/source",
+  "output-root": "/output",
+  "build-root": "/build",
+  "skip-update": true,
+  "qemu/use-smbd": false,
+  "portable-build": true
+}

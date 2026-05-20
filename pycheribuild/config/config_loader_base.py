@@ -73,6 +73,10 @@ class ConfigLoaderBase(typing.Generic[_ConfigType], ABC):
     is_generating_readme: bool = "_GENERATING_README" in os.environ
     is_running_unit_tests: bool = False
 
+    @staticmethod
+    def get_config_prefix() -> str:
+        return ""
+
     # argparse groups used in the command line loader
 
     def __init__(
