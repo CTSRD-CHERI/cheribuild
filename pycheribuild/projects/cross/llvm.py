@@ -245,6 +245,12 @@ class BuildLLVMBase(CMakeProject):
         # Ensure zlib compressed debug support is present (ON is really AUTO)
         self.add_cmake_options(LLVM_ENABLE_ZLIB="FORCE_ON")
 
+        # Enable zstd if available
+        self.add_cmake_options(LLVM_ENABLE_ZSTD="ON")
+        if self.config.portable_build:
+            # But for portable builds always require zstd and ensure we link statically
+            self.add_cmake_options(LLVM_ENABLE_ZSTD="FORCE_ON", LLVM_USE_STATIC_ZSTD=True)
+
         if self.use_modules_build:
             self.add_cmake_options(
                 LLVM_ENABLE_MODULES=True,
