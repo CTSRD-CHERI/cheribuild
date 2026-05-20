@@ -351,6 +351,11 @@ class BuildSailRISCV(OpamMixin, CMakeProject):
         self.add_cmake_options(ENABLE_RISCV_TESTS=True, ENABLE_RISCV_ARCH_TESTS=True, FIRST_PARTY_TESTS=True)
 
 
+class BuildCheriAllianceSailRiscv(BuildSailRISCV):
+    target = "cheri-alliance-sail-riscv"
+    repository = GitRepository("https://github.com/CHERI-Alliance/sail-riscv")
+
+
 class BuildSailCheriRISCV(ProjectUsingOpam):
     target = "sail-cheri-riscv"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
