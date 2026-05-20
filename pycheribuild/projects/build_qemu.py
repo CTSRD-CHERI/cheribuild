@@ -179,6 +179,7 @@ class BuildQEMUBase(AutotoolsProject):
             homebrew="gnu-sed",
             freebsd="gsed",
         )
+        self.check_required_system_tool("bzip2")
         if self.target_info.is_linux():
             # For 9pfs support, we need libcap-ng-devel and libattr-devel
             self.check_required_pkg_config("libattr", apt="libattr1-dev")
