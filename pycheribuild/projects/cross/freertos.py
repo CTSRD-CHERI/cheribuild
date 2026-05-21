@@ -30,13 +30,12 @@
 # SUCH DAMAGE.
 #
 import os
-import typing
-from typing import ClassVar
 
 from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 from ..project import ComputedDefaultValue
 from ..run_qemu import LaunchQEMUBase
+from ..simple_project import StringConfigOption
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -68,9 +67,26 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
-    demo: "ClassVar[str]"
-    demo_app: "ClassVar[str]"
-    demo_bsp: "ClassVar[str]"
+    demo = StringConfigOption(
+        "demo", metavar="DEMO", show_help=True, default=default_demo, help="The FreeRTOS Demo build."
+    )
+    demo_app = StringConfigOption(
+        "prog",
+        metavar="PROG",
+        show_help=True,
+        default=default_demo_app,
+        help="The FreeRTOS program to build.",
+    )
+    demo_bsp = StringConfigOption(
+        "bsp",
+        metavar="BSP",
+        show_help=True,
+        default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(), as_string="target-dependent default"),
+        help="The FreeRTOS BSP to build. This is only valid for the "
+        "paramterized RISC-V-Generic. The BSP option chooses "
+        "platform, RISC-V arch and RISC-V abi in the "
+        "$platform-$arch-$abi format. See RISC-V-Generic/README for more details",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,36 +119,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             self.supported_demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
 
             self.make_args.set(EXTENSION="cheri")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
-        cls.demo: str = cls.add_config_option(
-            "demo", metavar="DEMO", show_help=True, default=cls.default_demo, help="The FreeRTOS Demo build."
-        )
-
-        cls.demo_app: str = cls.add_config_option(
-            "prog",
-            metavar="PROG",
-            show_help=True,
-            default=cls.default_demo_app,
-            help="The FreeRTOS program to build.",
-        )
-
-        cls.demo_bsp: str = cls.add_config_option(
-            "bsp",
-            metavar="BSP",
-            show_help=True,
-            kind=str,
-            default=ComputedDefaultValue(
-                function=lambda _, p: p.default_demo_bsp(), as_string="target-dependent default"
-            ),
-            help="The FreeRTOS BSP to build. This is only valid for the "
-            "paramterized RISC-V-Generic. The BSP option chooses "
-            "platform, RISC-V arch and RISC-V abi in the "
-            "$platform-$arch-$abi format. See RISC-V-Generic/README for more details",
-        )  # ty:ignore[invalid-assignment]
 
     def default_demo_bsp(self):
         return (
@@ -198,43 +184,31 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
 
+    demo = StringConfigOption(
+        "demo", metavar="DEMO", show_help=True, default=default_demo, help="The FreeRTOS Demo to run."
+    )
+    demo_app = StringConfigOption(
+        "prog",
+        metavar="PROG",
+        show_help=True,
+        default=default_demo_app,
+        help="The FreeRTOS program to run.",
+    )
+    demo_bsp = StringConfigOption(
+        "bsp",
+        metavar="BSP",
+        show_help=True,
+        default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(), as_string="target-dependent default"),
+        help="The FreeRTOS BSP to run. This is only valid for the "
+        "paramterized RISC-V-Generic. The BSP option chooses "
+        "platform, RISC-V arch and RISC-V abi in the "
+        "$platform-$arch-$abi format. See RISC-V-Generic/README for more details",
+    )
+
     def setup(self):
         super().setup()
         self.kernel_project = BuildFreeRTOS.get_instance(self)
         self.current_kernel = self.kernel_project.install_dir / f"FreeRTOS/Demo/{self.demo}_{self.demo_app}.elf"
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(defaultSshPort=None, **kwargs)
-
-        cls.demo: str = cls.add_config_option(
-            "demo", metavar="DEMO", show_help=True, default=cls.default_demo, help="The FreeRTOS Demo to run."
-        )
-
-        cls.demo_app: str = cls.add_config_option(
-            "prog",
-            metavar="PROG",
-            show_help=True,
-            default=cls.default_demo_app,
-            help="The FreeRTOS program to run.",
-        )
-
-        cls.demo_bsp = typing.cast(
-            str,
-            cls.add_config_option(
-                "bsp",
-                metavar="BSP",
-                show_help=True,
-                kind=str,
-                default=ComputedDefaultValue(
-                    function=lambda _, p: p.default_demo_bsp(), as_string="target-dependent default"
-                ),
-                help="The FreeRTOS BSP to run. This is only valid for the "
-                "paramterized RISC-V-Generic. The BSP option chooses "
-                "platform, RISC-V arch and RISC-V abi in the "
-                "$platform-$arch-$abi format. See RISC-V-Generic/README for more details",
-            ),
-        )
 
     def default_demo_bsp(self):
         return (
