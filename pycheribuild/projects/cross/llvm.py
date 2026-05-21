@@ -35,7 +35,14 @@ from typing import ClassVar, Iterable, Optional
 
 from ..cmake_project import CMakeProject
 from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRepository
-from ..simple_project import SimpleProject, SimpleProjectBase
+from ..simple_project import (
+    BoolConfigOption,
+    ListConfigOption,
+    OptionalStringConfigOption,
+    SimpleProject,
+    SimpleProjectBase,
+    StringConfigOption,
+)
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (
     BuildLLVMInterface,
@@ -116,61 +123,50 @@ class BuildLLVMBase(CMakeProject):
     def can_build_with_asan(cls) -> bool:
         return True
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        if "included_projects" not in cls.__dict__:
-            cls.included_projects = cls.add_list_option(
-                "include-projects",
-                default=["llvm", "clang", "lld"],
-                help="List of LLVM subprojects that should be built",
-            )
-        cls.add_default_sysroot = False
-        cls.enable_assertions = cls.add_bool_option("assertions", help="build with assertions enabled", default=True)
-        if "skip_static_analyzer" not in cls.__dict__:
-            cls.skip_static_analyzer = cls.add_bool_option(
-                "skip-static-analyzer",
-                default=_true_unless_build_all_set,
-                help="Don't build the clang static analyzer",
-            )
-        if "skip_misc_llvm_tools" not in cls.__dict__:
-            cls.skip_misc_llvm_tools = cls.add_bool_option(
-                "skip-unused-tools",
-                default=_true_unless_build_all_set,
-                help=(
-                    "Don't build some of the LLVM tools that should not be "
-                    "needed by default (e.g. llvm-mca, llvm-pdbutil)"
-                ),
-            )
-        cls.build_everything = cls.add_bool_option(
-            "build-everything",
-            default=False,
-            help="Build everything for the projects that are enabled (e.g. documentation,examples and bindings)",
-        )
-        cls.use_llvm_cxx = cls.add_bool_option(
-            "use-in-tree-cxx-libs",
-            default=False,
-            help="Use in-tree, not host, C++ runtime",
-        )
-        cls.use_modules_build = cls.add_bool_option(
-            "use-llvm-modules-build",
-            default=False,
-            help="Use the LLVM modules build (may be faster in some cases but probably won't allow debugging)",
-        )
-        cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
-        cls.install_toolchain_only = cls.add_bool_option(
-            "install-toolchain-only",
-            default=False,
-            help="Install only toolchain binaries (i.e. no test tools)",
-        )
-        cls.build_minimal_toolchain = cls.add_bool_option(
-            "build-minimal-toolchain",
-            default=False,
-            help=(
-                "Only build the binaries required for a minimal toolchain (this is useful to avoid excessive compile "
-                "times with LTO)"
-            ),
-        )
+    included_projects = ListConfigOption(
+        "include-projects",
+        default=["llvm", "clang", "lld"],
+        help="List of LLVM subprojects that should be built",
+    )
+    add_default_sysroot = False
+    enable_assertions = BoolConfigOption("assertions", help="build with assertions enabled", default=True)
+    skip_static_analyzer = BoolConfigOption(
+        "skip-static-analyzer",
+        default=_true_unless_build_all_set,
+        help="Don't build the clang static analyzer",
+    )
+    skip_misc_llvm_tools = BoolConfigOption(
+        "skip-unused-tools",
+        default=_true_unless_build_all_set,
+        help="Don't build some of the LLVM tools that should not be needed by default (e.g. llvm-mca, llvm-pdbutil)",
+    )
+    build_everything = BoolConfigOption(
+        "build-everything",
+        default=False,
+        help="Build everything for the projects that are enabled (e.g. documentation,examples and bindings)",
+    )
+    use_llvm_cxx = BoolConfigOption(
+        "use-in-tree-cxx-libs",
+        default=False,
+        help="Use in-tree, not host, C++ runtime",
+    )
+    use_modules_build = BoolConfigOption(
+        "use-llvm-modules-build",
+        default=False,
+        help="Use the LLVM modules build (may be faster in some cases but probably won't allow debugging)",
+    )
+    dylib = BoolConfigOption("dylib", default=False, help="Build dynamic-link LLVM")
+    install_toolchain_only = BoolConfigOption(
+        "install-toolchain-only",
+        default=False,
+        help="Install only toolchain binaries (i.e. no test tools)",
+    )
+    build_minimal_toolchain = BoolConfigOption(
+        "build-minimal-toolchain",
+        default=False,
+        help="Only build the binaries required for a minimal toolchain "
+        "(this is useful to avoid excessive compile times with LTO)",
+    )
 
     minimal_toolchain_targets = [
         "clang",
@@ -695,18 +691,12 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     )
     build_all_targets: "ClassVar[bool]"
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.build_all_targets = cls.add_bool_option(
-            "build-all-targets",
-            default=_false_unless_build_all_set,
-            help=(
-                "Support code generation for all architectures instead of "
-                "only for CHERI+Host. This is off by "
-                "default to reduce compile time."
-            ),
-        )
+    build_all_targets = BoolConfigOption(
+        "build-all-targets",
+        default=_false_unless_build_all_set,
+        help="Support code generation for all architectures instead of only "
+        "for CHERI+Host. This is off by default to reduce compile time.",
+    )
 
     def setup(self):
         super().setup()
@@ -911,31 +901,48 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
 class BuildLLVMSplitRepoBase(BuildLLVMBase):
     do_not_add_to_targets = True
 
-    @classmethod
-    def setup_config_options(cls, include_lld_revision=True, include_lldb_revision=False, **kwargs):
-        super().setup_config_options(**kwargs)
-
-        def add_subproject_options(name):
-            rev: Optional[str] = cls.add_optional_config_option(
-                name + "-git-revision",
-                kind=str,
-                metavar="REVISION",
-                help="The git revision for tools/" + name,
-            )
-            repo: str = cls.add_config_option(
-                name + "-repository",
-                kind=str,
-                metavar="REPOSITORY",
-                default=cls.github_base_url + name + ".git",
-                help="The git repository for tools/" + name,
-            )
-            return repo, rev
-
-        cls.clang_repository, cls.clang_revision = add_subproject_options("clang")
-        if include_lld_revision:  # not built yet
-            cls.lld_repository, cls.lld_revision = add_subproject_options("lld")
-        if include_lldb_revision:  # not built yet
-            cls.lldb_repository, cls.lldb_revision = add_subproject_options("lldb")
+    clang_repository = StringConfigOption(
+        "clang-repository",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.github_base_url + "clang.git",
+            as_string=lambda cls: cls.github_base_url + "clang.git",
+        ),
+        extra_condition=lambda cls: "clang" in cls.included_projects,
+        help="The git repository for tools/clang",
+    )
+    clang_revision = OptionalStringConfigOption(
+        "clang-git-revision",
+        extra_condition=lambda cls: "clang" in cls.included_projects,
+        help="The git revision for tools/clang",
+    )
+    lld_repository = StringConfigOption(
+        "lld-repository",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.github_base_url + "lld.git",
+            as_string=lambda cls: cls.github_base_url + "lld.git",
+        ),
+        extra_condition=lambda cls: "lld" in cls.included_projects,
+        help="The git repository for tools/lld",
+    )
+    lld_revision = OptionalStringConfigOption(
+        "lld-git-revision",
+        extra_condition=lambda cls: "lld" in cls.included_projects,
+        help="The git revision for tools/lld",
+    )
+    lldb_repository = StringConfigOption(
+        "lldb-repository",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.github_base_url + "lldb.git",
+            as_string=lambda cls: cls.github_base_url + "lldb.git",
+        ),
+        extra_condition=lambda cls: "lldb" in cls.included_projects,
+        help="The git repository for tools/lldb",
+    )
+    lldb_revision = OptionalStringConfigOption(
+        "lldb-git-revision",
+        extra_condition=lambda cls: "lldb" in cls.included_projects,
+        help="The git revision for tools/lldb",
+    )
 
     def setup(self):
         super().setup()
