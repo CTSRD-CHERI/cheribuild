@@ -41,6 +41,7 @@ from ..project import (
     Project,
     ReuseOtherProjectRepository,
 )
+from ..simple_project import OptionalStringConfigOption
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import BaremetalClangTargetInfo, CompilationTargets
 from ...config.target_info import CrossCompileTarget
@@ -76,13 +77,8 @@ class BuildOpenSBI(Project):
     def xlen(self) -> int:
         return 32 if self.crosscompile_target.is_riscv32(include_purecap=True) else 64
 
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.fw_jump_addr = cls.add_optional_config_option("fw-jump-addr", kind=str, help="OpenSBI FW_JUMP_ADDR")
-        cls.fw_jump_fdt_addr = cls.add_optional_config_option(
-            "fw-jump-fdt-addr", kind=str, help="OpenSBI FW_JUMP_FDT_ADDR"
-        )
+    fw_jump_addr = OptionalStringConfigOption("fw-jump-addr", help="OpenSBI FW_JUMP_ADDR")
+    fw_jump_fdt_addr = OptionalStringConfigOption("fw-jump-fdt-addr", help="OpenSBI FW_JUMP_FDT_ADDR")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
