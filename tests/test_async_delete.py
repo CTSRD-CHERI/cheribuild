@@ -1,8 +1,14 @@
+import shutil
 import tempfile
 import time
 import unittest
 from pathlib import Path
 from unittest import TestCase
+
+import pytest
+
+if shutil.which("rm") is None:
+    pytest.skip("rm command not found", allow_module_level=True)
 
 from .setup_mock_chericonfig import MockConfig, setup_mock_chericonfig
 from pycheribuild.config.compilation_targets import CompilationTargets
