@@ -134,13 +134,13 @@ For example, `cheribsd-riscv64-purecap` will cross-compile CheriBSD for
 pure-capability CHERI-RISC-V, `disk-image-morello-purecap` will create a
 CheriBSD disk image for pure-capability Morello and `gdb-native` will build a
 version of CHERI-GDB that runs natively on the host machine and be used to
-remote debug CHERI-RISC-V and CHERI-MIPS.
+remote debug CHERI-RISC-V and Morello.
 
 Note that the `<architecture>` in the target says nothing about what it can do,
 only where it can do it.
 For example, `llvm-native` and `llvm-riscv64` both exist; the former is a
 CHERI-LLVM that will run natively on the host and can be used to cross compile
-for both CHERI-MIPS and CHERI-RISC-V, whilst the latter is a CHERI-LLVM built
+for CHERI-RISC-V, whilst the latter is a CHERI-LLVM built
 as a set of RISC-V binaries that will run on CheriBSD itself.
 
 Where there are multiple variants of the source, there are multiple cheribuild
@@ -167,8 +167,6 @@ CHERI-LLVM fork built as a RISC-V binary to run on CheriBSD.
 ##### Supported architectures
 - `riscv64`: RISC-V without CHERI support
 - `riscv64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) RISC-V: all pointers are CHERI capabilities.
-- `mips64`: MIPS without CHERI support
-- `mips64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) MIPS: all pointers are CHERI capabilities.
 - `aarch64`: AArch64 without CHERI support
 - `morello-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) AArch64 (Morello): all pointers are CHERI capabilities.
 - `amd64`: 64-bit Intel x86.
@@ -179,7 +177,6 @@ Most projects (the ones that don't build a full OS, but just a program or librar
 The following targets are also supported, but discouraged, as they serve little benefit over and above their non-CHERI counterparts, and so should not be used unless absolutely sure.
 If you still wish to use them despite that, they can be enabled with `--enable-hybrid-targets`.
 - `riscv64-hybrid`: RISC-V with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
-- `mips64-hybrid`: MIPS with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
 - `morello-hybrid`: AArch64 with CHERI (Morello) support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
 
 For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinction applies solely to userspace (see [below for more details](#building-and-running-cheribsd)).
@@ -198,25 +195,25 @@ For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinc
 ## Building the compiler and QEMU
 
 In order to run CheriBSD you will first need to compile QEMU (`cheribuild.py qemu`).
-You will also need to build LLVM (this includes a compiler and linker suitable for CHERI) using `cheribuild.py llvm`.
-The compiler can generate CHERI code for MIPS (64-bit only) and RISCV (32 and 64-bit).
+You will also need to build CHERI LLVM (this includes a compiler and linker suitable for CHERI) using `cheribuild.py llvm`.
+The compiler can generate CHERI code for RISCV (32 and 64-bit).
 All binaries will by default be installed to `~/cheri/sdk/bin`.
+
+For Morello, build Morello LLVM using `cheribuild.py morello-llvm`.
+Binaries from this compiler will be installed to `~/cheri/morello-sdk/bin`
 
 ## Building and running CheriBSD
 
 To build CheriBSD run `cheribuild.py cheribsd-<architecture>`, with architecture being one of
 - `riscv64`: Kernel and userspace are RISC-V without CHERI support.
-- `riscv64-purecap`: Kernel is RISC-V with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
-- `mips64`: Kernel and userspace are MIPS without CHERI support.
-- `mips64-purecap`: Kernel is MIPS with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
+- `riscv64-purecap`: Kernel is RISC-V with CHERI support (purecap), and all userspace programs built as pure-capability CHERI binaries.
 - `aarch64`: Kernel and userspace are AArch64 without CHERI support.
-- `morello-purecap`: Kernel is AArch64 with CHERI (Morello) support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
+- `morello-purecap`: Kernel is AArch64 with CHERI (Morello) support (purecap), and all userspace programs built as pure-capability CHERI binaries.
 - `amd64`: Kernel and userspace are 64-bit Intel x86.
 
 The following targets also exist but are disabled by default and discouraged (see [Supported architectures](#supported-architectures) for more details):
-- `riscv64-hybrid`: Kernel is RISC-V with CHERI support (hybrid), but most programs built as plain RISC-V.
-- `mips64-hybrid`: Kernel is MIPS with CHERI support (hybrid), but most programs built as plain RISC-V.
-- `morello-hybrid`: Kernel is AArch64 with CHERI (Morello) support (hybrid), but most programs built as plain AArch64.
+- `riscv64-hybrid`: Kernel is RISC-V with CHERI support (purecap), but most programs built as plain RISC-V.
+- `morello-hybrid`: Kernel is AArch64 with CHERI (Morello) support (purecap), but most programs built as plain AArch64.
 
 ### Disk image
 
@@ -229,7 +226,7 @@ generate SSH host keys for the image so that those don't change everytime the im
 A suitable `/etc/rc.conf` and `/etc/fstab` will also be added to this directory and can then be customized.
 
 The default path for the disk image is `~/cheri/output/cheribsd-<architecture>.img`, i.e.
-`cheribsd-riscv64-purecap.img` for pure-capability RISC-V or `cheribsd-mips64.img` for MIPS without CHERI support.
+`cheribsd-riscv64-purecap.img` for pure-capability RISC-V or `cheribsd-aarch64.img` for AArch64 without CHERI support.
 
 ### CheriBSD SSH ports
 
@@ -273,9 +270,9 @@ Host cheribsd-riscv-purecap
 
 ## Building GDB
 
-You can also build a [version of GDB that understands CHERI capabilities](https://github.com/bsdjhb/gdb/tree/mips_cheri-8.0.1)
-either as a binary for the host (`cheribuild.py gdb-native`) to debug coredumps or as a gues binary to use
-for live debugging in CheriBSD (`cheribuild.py gdb-mips64-hybrid` for MIPS and `cheribuild.py gdb-riscv64-hybrid` for RISC-V).
+You can also build a [version of GDB that understands CHERI capabilities](https://github.com/CTSRD-CHERI/gdb)
+either as a binary for the host (`cheribuild.py gdb-native`) to debug coredumps or as a guest binary to use
+for live debugging in CheriBSD (`cheribuild.py gdb-morello-purecap` for Morello and `cheribuild.py gdb-riscv64-purecap` for RISC-V).
 The guest binary will be installed in `usr/local/bin/gdb` under your CheriBSD rootfs and will be included
 when you build a new disk image (`cheribuild.py disk-image-<arch>`).
 The native GDB will be installed to your SDK binary directory (`~/cheri/sdk/bin` by default).
@@ -283,16 +280,12 @@ The native GDB will be installed to your SDK binary directory (`~/cheri/sdk/bin`
 ## Cross-compiling for CheriBSD
 
 In order to cross-compile projects such as NGINX or PostgreSQL for CheriBSD you will first need a full SDK:
-`cheribuild.py cheribsd-sdk-mips64-purecap`. Then you can then run `cheribuild.py postgres-mips64-purecap` or `cheribuild.py nginx-mips64-purecap`, etc.
-By default, these projects will be installed into your CheriBSD rootfs under /opt and will therefore be
+`cheribuild.py cheribsd-sdk-riscv64-purecap`. Then you can then run `cheribuild.py postgres-riscv64-purecap` or `cheribuild.py nginx-riscv64-purecap`, etc.
+By default, these projects will be installed into your CheriBSD rootfs under `/opt` and will therefore be
 automatically included the next time you build a disk image.
 
 See `cheribuild.py --list-targets` for a full list of targets.
 
-## Cross-compiling baremetal MIPS/CHERI
-
-There is currently experimental support to build libcxx as a baremetal library running on top of newlib.
-This can be done by running `cheribuild.py libcxx-baremetal -d`.
 ## Running inside Docker / CI Container
 
 cheribuild includes support for running builds inside a Docker container using the `--docker` option.
@@ -373,7 +366,7 @@ python3 setup.py install --user
 ```
 # NOTE: the next command doesn't seem to work on FreeBSD
 ~/.local/bin/activate-global-python-argcomplete --user
-# On FreeBSD (or if the above work for some other reason) do this:
+# On FreeBSD (or if the above doesn't work for some other reason) do this:
 echo 'eval "$(register-python-argcomplete cheribuild.py)"' >> ~/.bashrc
 ```
 
