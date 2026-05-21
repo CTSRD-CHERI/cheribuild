@@ -888,15 +888,13 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     kyua_test_files = tuple()  # don't run kyua tests by default for CheriBSD
 
     @classmethod
-    def setup_config_options(cls, **kwargs):
-        if "default_ssh_port" in kwargs:
-            # Subclass case
-            super().setup_config_options(**kwargs)
-        else:
+    def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
+        if default_ssh_port is None:
             add_to_port = cls.get_cross_target_index()
             if add_to_port != 0:  # 1 is used by run-purecap
                 add_to_port += 1
-            super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(add_to_port), **kwargs)
+            default_ssh_port = get_default_ssh_forwarding_port(add_to_port)
+        super().setup_config_options(default_ssh_port=default_ssh_port, **kwargs)
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -961,9 +959,11 @@ class LaunchMinimalCheriBSD(LaunchCheriBSD):
     _disk_image_class = BuildMinimalCheriBSDDiskImage
 
     @classmethod
-    def setup_config_options(cls, **kwargs):
-        add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+    def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
+        if default_ssh_port is None:
+            add_to_port = cls.get_cross_target_index()
+            default_ssh_port = get_default_ssh_forwarding_port(30 + add_to_port)
+        super().setup_config_options(default_ssh_port=default_ssh_port, **kwargs)
 
     @property
     def _extra_test_args(self) -> "list[str]":
@@ -975,6 +975,13 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     _freebsd_class = BuildCheriBsdMfsKernel
     _disk_image_class = None
     _uses_disk_image = False
+
+    @classmethod
+    def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
+        if default_ssh_port is None:
+            add_to_port = cls.get_cross_target_index()
+            default_ssh_port = get_default_ssh_forwarding_port(40 + add_to_port)
+        super().setup_config_options(default_ssh_port=default_ssh_port, **kwargs)
 
     # XXX: Existing code isn't ready to run these but we want to support building them
     @classmethod
