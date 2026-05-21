@@ -679,6 +679,23 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         self.project.run_cmd(cmd, give_tty_control=True)
 
 
+class FreeBSDWithDefaultOptionsTargetInfo(FreeBSDTargetInfo):
+    shortname: str = "FreeBSD-With-Default-Options"
+
+    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        return SimpleProject.get_class_for_target_name("freebsd-with-default-options", xtarget)
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        return ["freebsd-with-default-options"]
+
+    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
+        result = SimpleProject.get_instance_for_target_name(
+            "run-freebsd-with-default-options", xtarget, caller.config, caller
+        )
+        return typing.cast(LaunchFreeBSDInterface, result)
+
+
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname: str = "CheriBSD"
     os_prefix: Optional[str] = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
@@ -1626,6 +1643,30 @@ class CompilationTargets(BasicCompilationTargets):
     FREEBSD_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
     FREEBSD_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
     ALL_SUPPORTED_FREEBSD_TARGETS = (FREEBSD_AARCH64, FREEBSD_AMD64, FREEBSD_I386, FREEBSD_RISCV64)
+
+    # FreeBSD with default options targets
+    FREEBSD_WITH_DEFAULT_OPTIONS_AARCH64 = CrossCompileTarget(
+        "aarch64", CPUArchitecture.AARCH64, FreeBSDWithDefaultOptionsTargetInfo
+    )
+    FREEBSD_WITH_DEFAULT_OPTIONS_AMD64 = CrossCompileTarget(
+        "amd64", CPUArchitecture.X86_64, FreeBSDWithDefaultOptionsTargetInfo
+    )
+    FREEBSD_WITH_DEFAULT_OPTIONS_I386 = CrossCompileTarget(
+        "i386", CPUArchitecture.I386, FreeBSDWithDefaultOptionsTargetInfo
+    )
+    FREEBSD_WITH_DEFAULT_OPTIONS_RISCV64 = CrossCompileTarget(
+        "riscv64", CPUArchitecture.RISCV64, FreeBSDWithDefaultOptionsTargetInfo
+    )
+    FREEBSD_WITH_DEFAULT_OPTIONS_MIPS64 = CrossCompileTarget(
+        "mips64", CPUArchitecture.MIPS64, FreeBSDWithDefaultOptionsTargetInfo
+    )
+    ALL_SUPPORTED_FREEBSD_WITH_DEFAULT_OPTIONS_TARGETS = (
+        FREEBSD_WITH_DEFAULT_OPTIONS_AARCH64,
+        FREEBSD_WITH_DEFAULT_OPTIONS_AMD64,
+        FREEBSD_WITH_DEFAULT_OPTIONS_I386,
+        FREEBSD_WITH_DEFAULT_OPTIONS_RISCV64,
+        FREEBSD_WITH_DEFAULT_OPTIONS_MIPS64,
+    )
 
     # RTEMS targets
     RTEMS_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)

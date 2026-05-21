@@ -766,6 +766,12 @@ class SystemClangIfExistsElse:
             CompilerType.CUSTOM,
             ["--cheribsd-morello-purecap/toolchain-path", "/path/to/custom/toolchain"],
         ),
+        pytest.param(
+            "freebsd-with-default-options-riscv64",
+            "$BUILD$/freebsd-with-default-options-default-options-riscv64-build/tmp/usr/bin/clang",
+            CompilerType.BOOTSTRAPPED,
+            [],
+        ),
     ],
 )
 def test_freebsd_toolchains(
@@ -775,9 +781,13 @@ def test_freebsd_toolchains(
     extra_args: "list[str]",
 ):
     # Avoid querying bmake for the objdir
-    args = ["--" + target + "/toolchain", kind.value, "--build-root=/some/path/that/does/not/exist", "--pretend"]
+    args = ["--build-root=/some/path/that/does/not/exist", "--pretend"]
+    if "with-default-options" not in target:
+        args.extend(["--" + target + "/toolchain", kind.value])
     args.extend(extra_args)
     config = _parse_arguments(args)
+    if "with-default-options" in target:
+        assert f"{target}/toolchain" not in config.loader.option_handles
     project = _get_target_instance(target, config, BuildFreeBSD)
     if isinstance(expected_path, SystemClangIfExistsElse):
         clang_root, _, _ = project._try_find_compatible_system_clang()
@@ -823,7 +833,7 @@ def test_freebsd_toolchains(
         # FreeBSD with default options
         pytest.param("disk-image-freebsd-with-default-options-mips64", "freebsd-mips64.img"),
         pytest.param("disk-image-freebsd-with-default-options-riscv64", "freebsd-riscv64.img"),
-        # pytest.param("disk-image-freebsd-with-default-options-aarch64", "freebsd-aarch64.img"),
+        pytest.param("disk-image-freebsd-with-default-options-aarch64", "freebsd-aarch64.img"),
         pytest.param("disk-image-freebsd-with-default-options-i386", "freebsd-i386.img"),
         pytest.param("disk-image-freebsd-with-default-options-amd64", "freebsd-amd64.img"),
     ],
@@ -1594,3 +1604,32 @@ def test_list_arguments_append_action():
     assert config.skip_dependency_filters == [re.compile(r"foo-.+ and some spaces"), re.compile(r"bar.*")]
     config = _parse_arguments(["--dump-config"])
     assert config.action == [CheribuildAction.DUMP_CONFIGURATION]
+
+
+def test_freebsd_disk_image_toolchain():
+    # Avoid querying bmake for the objdir
+    args = ["--build-root=/some/path/that/does/not/exist", "--pretend"]
+    config = _parse_arguments(args)
+
+    # We want to check that disk-image-freebsd-with-default-options-riscv64
+    # uses the CC from freebsd-with-default-options-riscv64 (which is bootstrapped)
+    target = "disk-image-freebsd-with-default-options-riscv64"
+    project = _get_target_instance(target, config, BuildDiskImageBase)
+
+    expected_cc = config.build_root / "freebsd-with-default-options-default-options-riscv64-build/tmp/usr/bin/clang"
+    assert project.CC == expected_cc
+    # we should also be using freebsd-with-default-options as the base sysroot target
+    assert project.target_info.base_sysroot_targets(project.crosscompile_target, config) == [
+        "freebsd-with-default-options"
+    ]
+    # and _get_run_project should resolve to the correct run target (with arch suffix)
+    run_project = project.target_info._get_run_project(project.crosscompile_target, project)
+    assert run_project.target == "run-freebsd-with-default-options-riscv64"
+
+
+def test_run_freebsd_with_default_options():
+    config = _parse_arguments([])
+    run_target = "run-freebsd-with-default-options-riscv64"
+    project = _get_target_instance(run_target, config, SimpleProject)
+    assert project._disk_image_class.target == "disk-image-freebsd-with-default-options"
+    assert project.target_info._get_run_project(project.crosscompile_target, project).target == run_target
