@@ -41,7 +41,7 @@ from .project import (
     Project,
     ReuseOtherProjectDefaultTargetRepository,
 )
-from .simple_project import SimpleProject
+from .simple_project import OptionalStringConfigOption, SimpleProject
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..utils import OSInfo
@@ -276,12 +276,9 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     default_directory_basename = "morello-edk2"
     _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.edk2_platforms_rev = cls.add_optional_config_option(
-            "edk2-platforms-git-revision", kind=str, metavar="REVISION", help="The git revision for edk2-platforms"
-        )
+    edk2_platforms_rev = OptionalStringConfigOption(
+        "edk2-platforms-git-revision", help="The git revision for edk2-platforms"
+    )
 
     def update(self):
         super().update()
