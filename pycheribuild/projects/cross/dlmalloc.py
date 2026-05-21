@@ -29,6 +29,11 @@
 #
 
 from .crosscompileproject import CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind
+from ..simple_project import (
+    BoolConfigOption,
+    OptionalFloatConfigOption,
+    OptionalIntConfigOption,
+)
 from ...processutils import commandline_to_str
 
 
@@ -38,41 +43,22 @@ class DLMalloc(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
-        cls.just_so = cls.add_bool_option("just-so", help="Just build the .so shim")
-        cls.debug = cls.add_bool_option("debug", help="Turn on debugging features")
-
-        cls.cheri_set_bounds = cls.add_bool_option("cheri-bounds", default=True, help="Set bounds on allocations")
-
-        cls.qmabs = cls.add_optional_config_option("qmabs", kind=int, help="Quarantine memory absolute threshold")
-
-        cls.qmratio = cls.add_optional_config_option("qmratio", kind=float, help="Quarantine memory ratio threshold")
-
-        cls.qmmin = cls.add_optional_config_option(
-            "qmmin", kind=int, help="Minimum amount quarantined to trigger a revocation based on ratio"
-        )
-
-        cls.revoke = cls.add_bool_option("revoke", help="Revoke quarantine before reusing")
-
-        cls.consolidate_on_free = cls.add_bool_option(
-            "consolidate", default=True, help="Consolidate memory when quarantining"
-        )
-
-        cls.zero_memory = cls.add_bool_option("zero-memory", help="Zero allocated memory")
-
-        cls.stats_at_exit = cls.add_bool_option("stats-at-exit", default=True, help="print statistics on exit")
-
-        cls.unmap_support = cls.add_bool_option("unmap-support", default=True, help="support for unmapping")
-
-        cls.unmap_threshold = cls.add_optional_config_option(
-            "unmap-threshold",
-            kind=int,
-            help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped",
-        )
-        cls.quar_unsafe = cls.add_bool_option("unsafe-quarantine", help="Don't isolate quarantine structures")
+    just_so = BoolConfigOption("just-so", help="Just build the .so shim")
+    debug = BoolConfigOption("debug", help="Turn on debugging features")
+    cheri_set_bounds = BoolConfigOption("cheri-bounds", default=True, help="Set bounds on allocations")
+    qmabs = OptionalIntConfigOption("qmabs", help="Quarantine memory absolute threshold")
+    qmratio = OptionalFloatConfigOption("qmratio", help="Quarantine memory ratio threshold")
+    qmmin = OptionalIntConfigOption("qmmin", help="Minimum amount quarantined to trigger a revocation based on ratio")
+    revoke = BoolConfigOption("revoke", help="Revoke quarantine before reusing")
+    consolidate_on_free = BoolConfigOption("consolidate", default=True, help="Consolidate memory when quarantining")
+    zero_memory = BoolConfigOption("zero-memory", help="Zero allocated memory")
+    stats_at_exit = BoolConfigOption("stats-at-exit", default=True, help="print statistics on exit")
+    unmap_support = BoolConfigOption("unmap-support", default=True, help="support for unmapping")
+    unmap_threshold = OptionalIntConfigOption(
+        "unmap-threshold",
+        help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped",
+    )
+    quar_unsafe = BoolConfigOption("unsafe-quarantine", help="Don't isolate quarantine structures")
 
     def setup(self):
         super().setup()
