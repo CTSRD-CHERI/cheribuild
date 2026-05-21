@@ -42,7 +42,7 @@ from ..project import (
     MakeCommandKind,
     Project,
 )
-from ..simple_project import StringConfigOption
+from ..simple_project import BoolConfigOption, StringConfigOption
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import CPUArchitecture
 
@@ -199,10 +199,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
         CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
     )
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.secure_boot = cls.add_bool_option("secure-boot", default=False, help="Enable secure boot image")
+    secure_boot = BoolConfigOption("secure-boot", default=False, help="Enable secure boot image")
 
     def default_defconfig(self) -> str:
         if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
