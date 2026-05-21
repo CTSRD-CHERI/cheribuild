@@ -6,6 +6,9 @@ from unittest.mock import Mock
 
 import pytest
 
+if shutil.which("git") is None:
+    pytest.skip("git command not found", allow_module_level=True)
+
 from .setup_mock_chericonfig import setup_mock_chericonfig
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
 from pycheribuild.projects.project import Project
@@ -76,12 +79,6 @@ class MockProject(Project):
             cmdline = args
         self.events.append(("command", list(cmdline)))
         return super().run_cmd(*args, **kwargs)
-
-
-@pytest.fixture(autouse=True)
-def skip_if_git_missing():
-    if shutil.which("git") is None:
-        pytest.skip("git command not found")
 
 
 def setup_test_project(local_dir, remote_dir, target_branch="target-branch"):
