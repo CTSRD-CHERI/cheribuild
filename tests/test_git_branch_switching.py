@@ -27,7 +27,8 @@ def git_env():
 
 def create_remote_repo(path):
     path.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "init", "--initial-branch=main"], cwd=path, check=True)
+    subprocess.run(["git", "init"], cwd=path, check=True)
+    subprocess.run(["git", "checkout", "-b", "main"], cwd=path, check=True)
     (path / "file").write_text("content")
     subprocess.run(["git", "add", "file"], cwd=path, check=True)
     subprocess.run(["git", "commit", "-m", "initial commit"], cwd=path, check=True)
@@ -124,7 +125,8 @@ def get_git_revision(repo_dir: Path, ref: str = "HEAD") -> str:
 def local_repo(shared_remote: Path, tmp_path: Path):
     local_dir = tmp_path / "local"
     local_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "init", "--initial-branch=main"], cwd=local_dir, check=True)
+    subprocess.run(["git", "init"], cwd=local_dir, check=True)
+    subprocess.run(["git", "checkout", "-b", "main"], cwd=local_dir, check=True)
     (local_dir / "file").write_text("initial content")
     subprocess.run(["git", "add", "file"], cwd=local_dir, check=True)
     subprocess.run(["git", "commit", "-m", "conflicting initial commit"], cwd=local_dir, check=True)
