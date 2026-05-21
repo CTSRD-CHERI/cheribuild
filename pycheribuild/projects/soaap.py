@@ -45,11 +45,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     skip_static_analyzer = False
     _default_install_dir_fn = install_to_soaap_dir
     skip_cheri_symlinks = True
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        cls.included_projects = ["llvm", "clang"]
-        super().setup_config_options(include_lldb_revision=False, include_lld_revision=False, **kwargs)
+    included_projects = ["llvm", "clang"]
 
 
 class BuildSoaap(CMakeProject):
