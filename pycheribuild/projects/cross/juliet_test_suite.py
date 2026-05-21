@@ -36,6 +36,7 @@ from .crosscompileproject import (
     GitRepository,
 )
 from ..project import ReuseOtherProjectRepository
+from ..simple_project import OptionalStringConfigOption
 
 
 class BuildJulietTestSuite(CrossCompileCMakeProject):
@@ -45,10 +46,6 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     default_build_type = BuildType.DEBUG
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
 
     def process(self):
         if self.build_type != BuildType.DEBUG:
@@ -76,11 +73,8 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
     cwe_warning_flags = []
     cwe_setup_commands = []
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.testcase_timeout = cls.add_optional_config_option("testcase-timeout", kind=str)
-        cls.ld_preload_path = cls.add_optional_config_option("ld-preload-path", kind=str)
+    testcase_timeout = OptionalStringConfigOption("testcase-timeout", help="Juliet testcase execution timeout")
+    ld_preload_path = OptionalStringConfigOption("ld-preload-path", help="LD_PRELOAD path for Juliet testcases")
 
     def setup(self):
         super().setup()
