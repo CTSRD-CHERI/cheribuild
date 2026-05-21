@@ -309,9 +309,7 @@ else:
         def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(
-                    self._name, default=self._default, help=self._help, kind=Optional[Path], **self._kwargs
-                ),
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
             )
 
     class StringConfigOption(PerProjectConfigOption[str]):
