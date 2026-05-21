@@ -85,6 +85,7 @@ __all__ = [
     "PathConfigOption",
     "SimpleProject",
     "SimpleProjectBase",
+    "StringConfigOption",
     "TargetAlias",
     "TargetAliasWithDependencies",
     "_cached_get_homebrew_prefix",
@@ -197,6 +198,15 @@ if typing.TYPE_CHECKING:
         return typing.cast(Optional[Path], default)
 
     # noinspection PyPep8Naming
+    def StringConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[str, ComputedDefaultValue[str]]",
+        **kwargs,
+    ) -> str:
+        return typing.cast(str, default)
+
+    # noinspection PyPep8Naming
     def ListConfigOption(  # noqa: N802
         name: str,
         help: str,
@@ -302,6 +312,22 @@ else:
                 owner.add_config_option(
                     self._name, default=self._default, help=self._help, kind=Optional[Path], **self._kwargs
                 ),
+            )
+
+    class StringConfigOption(PerProjectConfigOption[str]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[str, ComputedDefaultValue[str]]",
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=str, **self._kwargs),
             )
 
     class ListConfigOption(PerProjectConfigOption[typing.List[str]]):
