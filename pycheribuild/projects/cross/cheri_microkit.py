@@ -43,6 +43,7 @@ from .crosscompileproject import (
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
 from ..project import CheriConfig, CPUArchitecture
 from ..run_qemu import LaunchQEMUBase
+from ..simple_project import BoolConfigOption, OptionalStringConfigOption, StringConfigOption
 from ...config.chericonfig import RiscvCheriISA
 
 
@@ -86,37 +87,33 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.configs = cls.add_config_option(
-            "configs",
-            metavar="CONFIGS",
-            show_help=True,
-            default="cheri",
-            help="CHERI-Microkit comma-separated configs (release, debug, benchmark, and cheri).",
-        )
-        cls.boards = cls.add_optional_config_option(
-            "boards",
-            metavar="BOARDS",
-            show_help=True,
-            kind=str,
-            default=None,
-            help="CHERI-Microkit comma-separated list of boards to build for.",
-        )
-        cls.example = cls.add_config_option(
-            "example",
-            metavar="EXAMPLE",
-            show_help=True,
-            default="hello,hierarchy,passive_server,rust",
-            help="CHERI-Microkit example to build.",
-        )
-        cls.build_all = cls.add_bool_option(
-            "build_all",
-            show_help=True,
-            default=False,
-            help="Build all Microkit configs, targets, boards, etc.",
-        )
+    configs = StringConfigOption(
+        "configs",
+        metavar="CONFIGS",
+        show_help=True,
+        default="cheri",
+        help="CHERI-Microkit comma-separated configs (release, debug, benchmark, and cheri).",
+    )
+    boards = OptionalStringConfigOption(
+        "boards",
+        metavar="BOARDS",
+        show_help=True,
+        default=None,
+        help="CHERI-Microkit comma-separated list of boards to build for.",
+    )
+    example = StringConfigOption(
+        "example",
+        metavar="EXAMPLE",
+        show_help=True,
+        default="hello,hierarchy,passive_server,rust",
+        help="CHERI-Microkit example to build.",
+    )
+    build_all = BoolConfigOption(
+        "build_all",
+        show_help=True,
+        default=False,
+        help="Build all Microkit configs, targets, boards, etc.",
+    )
 
     def compile(self, **kwargs):
         cmdline = [
