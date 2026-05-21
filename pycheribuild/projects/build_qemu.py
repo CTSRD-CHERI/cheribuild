@@ -48,7 +48,7 @@ from .project import (
     MakeCommandKind,
     Project,
 )
-from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
+from .simple_project import BoolConfigOption, SimpleProject, StringConfigOption, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
 from ..utils import OSInfo
@@ -96,6 +96,15 @@ class BuildQEMUBase(AutotoolsProject):
         default=True,
         help="Prefer full LTO over LLVM ThinLTO when using LTO",
     )
+    qemu_targets = StringConfigOption(
+        "targets",
+        show_help=True,
+        help="Build QEMU for the following targets",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: proj.default_targets,
+            as_string="QEMU default targets",
+        ),
+    )
 
     @classmethod
     def is_toolchain_target(cls):
@@ -110,16 +119,6 @@ class BuildQEMUBase(AutotoolsProject):
         if self.build_type.is_release():
             return ["-O3"]  # Build with -O3 instead of -O2, we want QEMU to be as fast as possible
         return super()._build_type_basic_compiler_flags
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.qemu_targets = cls.add_config_option(
-            "targets",
-            show_help=True,
-            help="Build QEMU for the following targets",
-            default=cls.default_targets,
-        )
 
     @classmethod
     def qemu_binary(
