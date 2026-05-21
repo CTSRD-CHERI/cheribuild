@@ -1,14 +1,9 @@
 import shutil
 import tempfile
 import time
-import unittest
 from pathlib import Path
-from unittest import TestCase
 
 import pytest
-
-if shutil.which("rm") is None:
-    pytest.skip("rm command not found", allow_module_level=True)
 
 from .setup_mock_chericonfig import MockConfig, setup_mock_chericonfig
 from pycheribuild.config.compilation_targets import CompilationTargets
@@ -52,25 +47,24 @@ class MockProject(Project):
         super()._delete_directories(*dirs)
 
 
-class TestAsyncDelete(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.config = setup_mock_chericonfig(Path("/invalid/path"))
-        MockProject.setup_config_options()
+class TestAsyncDelete:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        if shutil.which("rm") is None:
+            pytest.skip("rm command not found")
 
-    def setUp(self):
         self._tempRoot = tempfile.TemporaryDirectory()
         self.tempRoot = Path(self._tempRoot.name)
         self.config = setup_mock_chericonfig(self.tempRoot, pretend=False)
         self.config.sleep_before_delete = False
+        MockProject.setup_config_options()
 
         assert self.tempRoot == self.config.source_root
         assert self.tempRoot / "build" == self.config.build_root
         self.project = MockProject(self.config, "foo")
         self.project.setup()
         assert self.project.source_dir.exists(), self.project.source_dir
-
-    def tearDown(self):
+        yield
         self._tempRoot.cleanup()
 
     def test_create_build_dir(self):
@@ -222,7 +216,3 @@ class TestAsyncDelete(TestCase):
 
         self._assert_dir_empty(self.project.build_dir)  # dir should still be empty
         assert not moved_builddir.exists()  # tempdir should be deleted now
-
-
-if __name__ == "__main__":
-    unittest.main()
