@@ -57,6 +57,8 @@ from ..project import (
 from ..simple_project import (
     BoolConfigOption,
     IntConfigOption,
+    OptionalPathConfigOption,
+    OptionalStringConfigOption,
     SimpleProject,
     TargetAliasWithDependencies,
     _clear_line_sequence,
@@ -2252,14 +2254,11 @@ else:
 
 
 class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.build_vm_images = cls.add_bool_option(
-            "build-vm-images",
-            _allow_unknown_targets=True,
-            help="Build VM images with releases.",
-        )
+    build_vm_images = BoolConfigOption(
+        "build-vm-images",
+        _allow_unknown_targets=True,
+        help="Build VM images with releases.",
+    )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -2418,21 +2417,18 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             if not self.config.pretend:
                 sys.exit("Cannot continue...")
 
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.copy_remote_sysroot = cls.add_bool_option(
-            "copy-remote-sysroot", help="Copy sysroot from remote server instead of from local machine"
-        )
-        cls.remote_path = cls.add_optional_config_option(
-            "remote-sdk-path",
-            show_help=True,
-            metavar="PATH",
-            help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. vica:~foo/cheri/output/sdk)",
-        )
-        cls.install_dir_override = cls.add_optional_path_option(
-            "install-directory", help="Override for the sysroot install directory"
-        )
+    copy_remote_sysroot = BoolConfigOption(
+        "copy-remote-sysroot", help="Copy sysroot from remote server instead of from local machine"
+    )
+    remote_path = OptionalStringConfigOption(
+        "remote-sdk-path",
+        show_help=True,
+        metavar="PATH",
+        help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. vica:~foo/cheri/output/sdk)",
+    )
+    install_dir_override = OptionalPathConfigOption(
+        "install-directory", help="Override for the sysroot install directory"
+    )
 
     @property
     def cross_sysroot_path(self) -> Path:
