@@ -237,10 +237,6 @@ class LaunchLittlekernelQEMU(LaunchQEMUBase):
             # FIXME: GICv3 support not included in lk, have to force version 2
             self.qemu_options.machine_flags = ["-M", "virt,gic-version=2", "-cpu", "cortex-a53"]
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(defaultSshPort=None, **kwargs)
-
     def get_riscv_bios_args(self) -> "list[str]":
         # Currently we run in machine mode
         lk_instance = BuildLittleKernel.get_instance(self)
