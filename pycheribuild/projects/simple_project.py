@@ -40,6 +40,7 @@ import threading
 import time
 import typing
 from abc import ABC, ABCMeta
+from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
 from typing import Callable, Optional, Sequence, TypeVar, Union
@@ -76,6 +77,7 @@ from ..utils import (
 
 __all__ = [
     "BoolConfigOption",
+    "EnumConfigOption",
     "FloatConfigOption",
     "IntConfigOption",
     "ListConfigOption",
@@ -96,6 +98,7 @@ __all__ = [
 ]
 
 T = TypeVar("T")
+EnumTy = TypeVar("EnumTy", bound=Enum)
 
 
 def flush_stdio(stream) -> None:
@@ -135,7 +138,7 @@ class PerProjectConfigOption(typing.Generic[T]):
 
 
 if typing.TYPE_CHECKING:
-
+    # noinspection PyPep8Naming
     def BoolConfigOption(  # noqa: N802
         name: str,
         help: str,
@@ -143,6 +146,17 @@ if typing.TYPE_CHECKING:
         **kwargs,
     ) -> bool:
         return typing.cast(bool, default)
+
+    # noinspection PyPep8Naming
+    def EnumConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
+        *,
+        kind: "type[EnumTy]",
+        **kwargs,
+    ) -> EnumTy:
+        return typing.cast(EnumTy, default)
 
     # noinspection PyPep8Naming
     def IntConfigOption(  # noqa: N802
@@ -236,6 +250,26 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs),
+            )
+
+    class EnumConfigOption(PerProjectConfigOption[EnumTy], typing.Generic[EnumTy]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
+            *,
+            kind: "type[EnumTy]",
+            **kwargs,
+        ):
+            super().__init__(name, help, default, kind=kind, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            kind = self._kwargs["kind"]
+            kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=kind, **kwargs),
             )
 
     class IntConfigOption(PerProjectConfigOption[int]):
