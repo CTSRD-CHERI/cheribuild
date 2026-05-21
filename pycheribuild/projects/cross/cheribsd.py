@@ -1849,13 +1849,14 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
             return ThreadJoiner(None)
         return super().clean()
 
+    include_llvm = BoolConfigOption(
+        "build-target-llvm",
+        help="Build LLVM for the target architecture. Note: this adds significant time to the build",
+    )
+
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs) -> None:
-        super().setup_config_options(bootstrap_toolchain=True)
-        cls.include_llvm = cls.add_bool_option(
-            "build-target-llvm",
-            help="Build LLVM for the target architecture. Note: this adds significant time to the build",
-        )
+        super().setup_config_options(bootstrap_toolchain=True, **kwargs)
 
     def add_cross_build_options(self) -> None:
         # Just try to build as much as possible (but using make.py)
