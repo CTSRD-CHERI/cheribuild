@@ -35,7 +35,14 @@ from .build_qemu import BuildQEMU
 from .project import DefaultInstallDir, MakefileProject, Project
 from .repository import GitRepository
 from .sail import BuildSailCheriRISCV
-from .simple_project import BoolConfigOption, IntConfigOption, OptionalIntConfigOption, SimpleProject
+from .simple_project import (
+    BoolConfigOption,
+    IntConfigOption,
+    ListConfigOption,
+    OptionalIntConfigOption,
+    OptionalPathConfigOption,
+    SimpleProject,
+)
 from ..processutils import FakePopen, commandline_to_str, popen
 from ..utils import find_free_port
 
@@ -112,6 +119,11 @@ class RunTestRIGBase(SimpleProject):
         "test-implementation-port",
         help="Use a running test implementation instead.",
     )
+    vengine_options = ListConfigOption(
+        "extra-vengine-options",
+        metavar="OPTIONS",
+        help="Additional command line options to pass to QCVEngine",
+    )
 
     @property
     def extra_vengine_args(self) -> "list[str]":
@@ -133,15 +145,6 @@ class RunTestRIGBase(SimpleProject):
     @cached_property
     def run_implementations_with_tracing(self):
         return self.config.debug_output  # Only print traces in extremely verbose mode
-
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.vengine_options = cls.add_list_option(
-            "extra-vengine-options",
-            metavar="OPTIONS",
-            help="Additional command line options to pass to QCVEngine",
-        )
 
     def get_test_impl(self, port: int):
         if self.existing_test_impl_port is not None:
@@ -230,15 +233,7 @@ class RunTestRIGFuzz(RunTestRIGBase, ABC):
         help="Replay traces captured in the default output directory",
     )
     number_of_runs = IntConfigOption("number-of-runs", default=20, help="Number of QCVEngine runs")
-    _replay_trace_path: Optional[Path]
-
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        if getattr(cls, "_replay_trace_path", None) is None:
-            cls._replay_trace_path = cls.add_optional_path_option(
-                "replay-trace", help="Run QCV trace from file/directory"
-            )
+    _replay_trace_path = OptionalPathConfigOption("replay-trace", help="Run QCV trace from file/directory")
 
     @cached_property
     def run_implementations_with_tracing(self) -> bool:
