@@ -12,6 +12,16 @@ from pycheribuild.projects.project import Project
 from pycheribuild.projects.repository import GitRepository, TargetBranchInfo
 
 
+@pytest.fixture(scope="module", autouse=True)
+def git_env():
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("GIT_AUTHOR_NAME", "Test Author")
+        mp.setenv("GIT_AUTHOR_EMAIL", "author@example.com")
+        mp.setenv("GIT_COMMITTER_NAME", "Test Committer")
+        mp.setenv("GIT_COMMITTER_EMAIL", "committer@example.com")
+        yield
+
+
 def create_remote_repo(path):
     path.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init", "--initial-branch=main"], cwd=path, check=True)
