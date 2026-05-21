@@ -29,6 +29,12 @@
 #
 
 from .crosscompileproject import BuildType, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from ..project import ComputedDefaultValue
+from ..simple_project import (
+    BoolConfigOption,
+    OptionalIntConfigOption,
+    OptionalStringConfigOption,
+)
 
 
 class SNMalloc(CrossCompileCMakeProject):
@@ -38,49 +44,32 @@ class SNMalloc(CrossCompileCMakeProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_build_type = BuildType.DEBUG
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
-        cls.just_so = cls.add_bool_option("just-so", help="Just build the .so shim")
-        cls.debug = cls.add_bool_option("debug", help="Turn on debugging features")
-        cls.stats = cls.add_bool_option("stats", help="Turn on statistics tracking")
-
-        cls.check_client = cls.add_bool_option("check-client", help="Don't accept malformed input to free")
-
-        cls.pagemap_pointers = cls.add_bool_option(
-            "pagemap-pointers", help="Change pagemap data structure to store pointers"
-        )
-        cls.pagemap_rederive = cls.add_bool_option(
-            "pagemap-rederive", help="Rederive internal pointers using the pagemap"
-        )
-        cls.cheri_align = cls.add_bool_option("cheri-align", help="Align sizes for CHERI bounds setting")
-        cheri_bounds_default = cls._xtarget is not None and cls._xtarget.is_cheri_purecap()
-        cls.cheri_bounds = cls.add_bool_option(
-            "cheri-bounds", default=cheri_bounds_default, help="Set bounds on returned allocations"
-        )
-
-        cls.quarantine = cls.add_bool_option("quarantine", help="Quarantine deallocations")
-
-        cls.qpathresh = cls.add_optional_config_option(
-            "qpathresh", kind=int, help="Quarantine physical memory per allocator threshold"
-        )
-        cls.qpacthresh = cls.add_optional_config_option(
-            "qpacthresh", kind=int, help="Quarantine chunk per allocator threshold"
-        )
-        cls.qcsc = cls.add_optional_config_option("qcsc", kind=int, help="Quarantine chunk size class")
-
-        cls.decommit = cls.add_optional_config_option("decommit", kind=str, help="Specify memory decommit policy")
-
-        cls.zero = cls.add_bool_option("zero", help="Specify memory decommit policy")
-
-        cls.revoke = cls.add_bool_option("revoke", help="Revoke quarantine before reusing")
-        cls.revoke_dry_run = cls.add_bool_option("revoke-dry-run", help="Do everything but caprevoke()")
-        cls.revoke_paranoia = cls.add_bool_option("revoke-paranoia", help="Double-check the revoker")
-        cls.revoke_tput = cls.add_bool_option("revoke-throughput", help="Optimize for throughput")
-
-        # XXX misnamed now, but so be it
-        cls.revoke_verbose = cls.add_bool_option("revoke-verbose", help="Report revocation statistics")
+    just_so = BoolConfigOption("just-so", help="Just build the .so shim")
+    debug = BoolConfigOption("debug", help="Turn on debugging features")
+    stats = BoolConfigOption("stats", help="Turn on statistics tracking")
+    check_client = BoolConfigOption("check-client", help="Don't accept malformed input to free")
+    pagemap_pointers = BoolConfigOption("pagemap-pointers", help="Change pagemap data structure to store pointers")
+    pagemap_rederive = BoolConfigOption("pagemap-rederive", help="Rederive internal pointers using the pagemap")
+    cheri_align = BoolConfigOption("cheri-align", help="Align sizes for CHERI bounds setting")
+    cheri_bounds = BoolConfigOption(
+        "cheri-bounds",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: proj.crosscompile_target.is_cheri_purecap(),
+            as_string="True if compiling for CHERI purecap, otherwise False",
+        ),
+        help="Set bounds on returned allocations",
+    )
+    quarantine = BoolConfigOption("quarantine", help="Quarantine deallocations")
+    qpathresh = OptionalIntConfigOption("qpathresh", help="Quarantine physical memory per allocator threshold")
+    qpacthresh = OptionalIntConfigOption("qpacthresh", help="Quarantine chunk per allocator threshold")
+    qcsc = OptionalIntConfigOption("qcsc", help="Quarantine chunk size class")
+    decommit = OptionalStringConfigOption("decommit", help="Specify memory decommit policy")
+    zero = BoolConfigOption("zero", help="Specify memory decommit policy")
+    revoke = BoolConfigOption("revoke", help="Revoke quarantine before reusing")
+    revoke_dry_run = BoolConfigOption("revoke-dry-run", help="Do everything but caprevoke()")
+    revoke_paranoia = BoolConfigOption("revoke-paranoia", help="Double-check the revoker")
+    revoke_tput = BoolConfigOption("revoke-throughput", help="Optimize for throughput")
+    revoke_verbose = BoolConfigOption("revoke-verbose", help="Report revocation statistics")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
