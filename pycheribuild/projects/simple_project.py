@@ -76,8 +76,10 @@ from ..utils import (
 
 __all__ = [
     "BoolConfigOption",
+    "FloatConfigOption",
     "IntConfigOption",
     "ListConfigOption",
+    "OptionalFloatConfigOption",
     "OptionalIntConfigOption",
     "OptionalPathConfigOption",
     "PathConfigOption",
@@ -159,6 +161,24 @@ if typing.TYPE_CHECKING:
         return typing.cast(Optional[int], default)
 
     # noinspection PyPep8Naming
+    def FloatConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[float, ComputedDefaultValue[float]]",
+        **kwargs,
+    ) -> float:
+        return typing.cast(float, default)
+
+    # noinspection PyPep8Naming
+    def OptionalFloatConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[Optional[float], ComputedDefaultValue[Optional[float]]]" = None,
+        **kwargs,
+    ) -> "Optional[float]":
+        return typing.cast(Optional[float], default)
+
+    # noinspection PyPep8Naming
     def PathConfigOption(  # noqa: N802
         name: str,
         help: str,
@@ -222,6 +242,32 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+            )
+
+    class FloatConfigOption(PerProjectConfigOption[float]):
+        def __init__(self, name: str, help: str, default: "typing.Union[float, ComputedDefaultValue[float]]", **kwargs):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=float, **self._kwargs),
+            )
+
+    class OptionalFloatConfigOption(PerProjectConfigOption[Optional[float]]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[float], ComputedDefaultValue[Optional[float]]]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=float, **self._kwargs),
             )
 
     class PathConfigOption(PerProjectConfigOption[Path]):
