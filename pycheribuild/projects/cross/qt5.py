@@ -46,7 +46,7 @@ from .crosscompileproject import (
 )
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
-from ..project import default_source_dir_in_subdir
+from ..project import ComputedDefaultValue, default_source_dir_in_subdir
 from ..simple_project import BoolConfigOption, SimpleProject
 from ...utils import InstallInstructions
 
@@ -237,33 +237,29 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     has_optional_tests = True
     default_build_tests = False
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
-        # Enable assertions by default for now
-        assertions_by_default = True
-        cls.assertions = cls.add_bool_option(
-            "assertions",
-            default=assertions_by_default,
-            show_help=True,
-            help="Include assertions (even in release builds)",
-        )
-        cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
-        # Link against X11 libs by default if we aren't compiling for macOS
-        native_is_macos = cls._xtarget is not None and cls._xtarget.target_info_cls.is_macos()
-        cls.use_x11 = cls.add_bool_option(
-            "use-x11",
-            default=not native_is_macos,
-            show_help=False,
-            help="Build Qt with the XCB backend.",
-        )
-        cls.use_opengl = cls.add_bool_option(
-            "use-opengl",
-            default=True,
-            show_help=False,
-            help="Build Qt with OpenGL support",
-        )
+    build_examples = BoolConfigOption("build-examples", show_help=True, help="build the Qt examples")
+    assertions = BoolConfigOption(
+        "assertions",
+        default=True,
+        show_help=True,
+        help="Include assertions (even in release builds)",
+    )
+    minimal = BoolConfigOption("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
+    use_x11 = BoolConfigOption(
+        "use-x11",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: not proj.get_crosscompile_target().target_info_cls.is_macos(),
+            as_string="False if compiling for macOS, otherwise True",
+        ),
+        show_help=False,
+        help="Build Qt with the XCB backend.",
+    )
+    use_opengl = BoolConfigOption(
+        "use-opengl",
+        default=True,
+        show_help=False,
+        help="Build Qt with OpenGL support",
+    )
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
@@ -611,14 +607,11 @@ class BuildQt5(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qt5", default_branch="5.10", force_branch=True)
     skip_git_submodules = True  # init-repository does it for us
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.all_modules = cls.add_bool_option(
-            "all-modules",
-            show_help=True,
-            help="Build all modules (even those that don't make sense for CHERI)",
-        )
+    all_modules = BoolConfigOption(
+        "all-modules",
+        show_help=True,
+        help="Build all modules (even those that don't make sense for CHERI)",
+    )
 
     def configure(self, **kwargs):
         if not self.all_modules:
@@ -1062,6 +1055,12 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_source_dir = default_source_dir_in_subdir(Path("qt5"))
 
+    build_jsc_only = BoolConfigOption(
+        "build-jsc-only",
+        show_help=True,
+        help="only build the JavaScript interpreter executable",
+    )
+
     @property
     def llvm_binutils_dir(self) -> Path:
         if self.compiling_for_host():
@@ -1133,15 +1132,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                 self.add_cmake_options(CHERI_PURE_CAPABILITY=True)
             if not self.compiling_for_host():
                 self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.build_jsc_only = cls.add_bool_option(
-            "build-jsc-only",
-            show_help=True,
-            help="only build the JavaScript interpreter executable",
-        )
 
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
