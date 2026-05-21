@@ -29,7 +29,7 @@
 #
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..sail import BuildSailCheriMips
-from ..simple_project import BoolConfigOption
+from ..simple_project import BoolConfigOption, OptionalStringConfigOption
 
 
 class _BuildCheriMipsTestBase(Project):
@@ -47,12 +47,7 @@ class _BuildCheriMipsTestBase(Project):
         default=True,
     )
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.single_test = cls.add_optional_config_option(
-            "single-test", kind=str, help="Run a single test instead of all of them"
-        )
+    single_test = OptionalStringConfigOption("single-test", help="Run a single test instead of all of them")
 
     def setup(self):
         super().setup()
