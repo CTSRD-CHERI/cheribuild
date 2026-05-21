@@ -39,7 +39,15 @@ from typing import Optional
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
-from .simple_project import BoolConfigOption, IntConfigOption, OptionalPathConfigOption, SimpleProject
+from .simple_project import (
+    BoolConfigOption,
+    IntConfigOption,
+    ListConfigOption,
+    OptionalPathConfigOption,
+    OptionalStringConfigOption,
+    PathConfigOption,
+    SimpleProject,
+)
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
@@ -534,37 +542,30 @@ class LaunchFVPBase(SimpleProject):
     fvp_trace_mmu = BoolConfigOption("trace-mmu", default=False, help="Emit FVP MMU trace events")
     smp = BoolConfigOption("smp", help="Simulate multiple CPU cores in the FVP", default=True)
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
-        fw_default = ComputedDefaultValue(
+    firmware_path = PathConfigOption(
+        "firmware-path",
+        default=ComputedDefaultValue(
             function=lambda c, _: c.morello_sdk_dir / "firmware/morello-fvp",
             as_string="<MORELLO_SDK>/firmware/morello-fvp",
-        )
-        cls.firmware_path = cls.add_path_option(
-            "firmware-path", default=fw_default, help="Path to the UEFI firmware binaries"
-        )
-        cls.remote_disk_image_path = cls.add_optional_config_option(
-            "remote-disk-image-path",
-            help="When set rsync will be used to update the image from the remote server prior to running it.",
-        )
-        cls.extra_tcp_forwarding = cls.add_list_option(
-            "extra-tcp-forwarding",
-            help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
-        )
-        cls.license_server = cls.add_optional_config_option(
-            "license-server", help="License server to use for the model"
-        )
-        cls.arch_model_path = cls.add_path_option(
-            "simulator-path", help="Path to the FVP Model", default=Path("/usr/local/FVP_Base_RevC-Rainier")
-        )
-        cls.fvp_trace = cls.add_optional_path_option(
-            "trace", help="Enable FVP tracing plugin to output to the given file"
-        )
-        cls.fvp_trace_icount = cls.add_optional_config_option(
-            "trace-start-icount", help="Instruction count from which to start Tarmac trace"
-        )
+        ),
+        help="Path to the UEFI firmware binaries",
+    )
+    remote_disk_image_path = OptionalStringConfigOption(
+        "remote-disk-image-path",
+        help="When set rsync will be used to update the image from the remote server prior to running it.",
+    )
+    extra_tcp_forwarding = ListConfigOption(
+        "extra-tcp-forwarding",
+        help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
+    )
+    license_server = OptionalStringConfigOption("license-server", help="License server to use for the model")
+    arch_model_path = PathConfigOption(
+        "simulator-path", help="Path to the FVP Model", default=Path("/usr/local/FVP_Base_RevC-Rainier")
+    )
+    fvp_trace = OptionalPathConfigOption("trace", help="Enable FVP tracing plugin to output to the given file")
+    fvp_trace_icount = OptionalStringConfigOption(
+        "trace-start-icount", help="Instruction count from which to start Tarmac trace"
+    )
 
     @property
     def use_virtio_net(self):
