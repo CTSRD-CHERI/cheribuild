@@ -293,6 +293,17 @@ See `cheribuild.py --list-targets` for a full list of targets.
 
 There is currently experimental support to build libcxx as a baremetal library running on top of newlib.
 This can be done by running `cheribuild.py libcxx-baremetal -d`.
+## Running inside Docker / CI Container
+
+cheribuild includes support for running builds inside a Docker container using the `--docker` option.
+
+For portable builds (e.g. for building portable native host compilers and toolchains), a pre-built, highly compatible Rocky Linux 8 based container image is built automatically by GitHub Actions and pushed to the GitHub Container Registry (GHCR). This image comes pre-installed with static versions of all foundational libraries (such as static `zlib`, `pixman`, `libffi`, `glib`, and `zstd`) to guarantee maximum portability of compiled binaries.
+
+Other projects can easily pull and use this Docker image in their own CI pipelines:
+
+```bash
+docker pull ghcr.io/ctsrd-cheri/cheri-portable-build-container:latest
+```
 
 ## Adapting the build configuration
 There are a lot of options to customize the behaviour of this script: e.g. the directory for
