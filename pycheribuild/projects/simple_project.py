@@ -82,6 +82,7 @@ __all__ = [
     "OptionalFloatConfigOption",
     "OptionalIntConfigOption",
     "OptionalPathConfigOption",
+    "OptionalStringConfigOption",
     "PathConfigOption",
     "SimpleProject",
     "SimpleProjectBase",
@@ -207,6 +208,15 @@ if typing.TYPE_CHECKING:
         return typing.cast(str, default)
 
     # noinspection PyPep8Naming
+    def OptionalStringConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[str, ComputedDefaultValue[Optional[str]], None]" = None,
+        **kwargs,
+    ) -> Optional[str]:
+        return typing.cast(Optional[str], default)
+
+    # noinspection PyPep8Naming
     def ListConfigOption(  # noqa: N802
         name: str,
         help: str,
@@ -326,6 +336,24 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=str, **self._kwargs),
+            )
+
+    class OptionalStringConfigOption(PerProjectConfigOption[Optional[str]]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[str, ComputedDefaultValue[Optional[str]], None]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_optional_config_option(
+                    self._name, default=self._default, help=self._help, kind=str, **self._kwargs
+                ),
             )
 
     class ListConfigOption(PerProjectConfigOption[typing.List[str]]):
