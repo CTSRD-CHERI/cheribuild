@@ -1,12 +1,15 @@
+import inspect
 import re
 from pathlib import Path
 
 import pytest
 
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
+from pycheribuild.config.loader import ConfigOptionHandle
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
 from pycheribuild.projects.cmake_project import CMakeProject
 from pycheribuild.projects.repository import ExternallyManagedSourceRepository
+from pycheribuild.projects.simple_project import BoolConfigOption, PerProjectConfigOption, SimpleProject
 from pycheribuild.targets import target_manager
 
 
@@ -49,3 +52,61 @@ def test_add_cmake_option():
         add_options_test([], BYTE_OPTION=b"abc")
     with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'tuple'>: ('abc',)")):
         add_options_test([], TUPLE_OPTION=("abc",))
+
+
+def test_mixin_and_overridden_config_options():
+    """
+    Verify that config option descriptors declared in mixin classes are correctly
+    registered on target subclasses, and that any options overridden as static
+    fixed values in concrete classes are successfully skipped and pruned.
+    """
+
+    class TestOptionMixin:
+        mixin_option = BoolConfigOption("mixin-option", help="Mixin Option", default=True)
+
+    class TestBaseProject(SimpleProject):
+        target = "test-base-project"
+        repository = ExternallyManagedSourceRepository()
+        default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+
+        base_option = BoolConfigOption("base-option", help="Base Option", default=False)
+
+    class TestConcreteProject(TestOptionMixin, TestBaseProject):
+        target = "test-concrete-project"
+        base_option = True
+
+        def process(self):
+            pass
+
+    class TestOverrideMixinProject(TestOptionMixin, TestBaseProject):
+        target = "test-override-mixin-project"
+        mixin_option = False
+
+        def process(self):
+            pass
+
+    target_manager.reset()
+    TestConcreteProject.setup_config_options()
+    TestOverrideMixinProject.setup_config_options()
+
+    assert isinstance(inspect.getattr_static(TestConcreteProject, "mixin_option"), ConfigOptionHandle)
+    assert isinstance(inspect.getattr_static(TestConcreteProject, "base_option"), bool)
+    assert inspect.getattr_static(TestConcreteProject, "base_option") is True
+
+    assert isinstance(inspect.getattr_static(TestOverrideMixinProject, "mixin_option"), bool)
+    assert inspect.getattr_static(TestOverrideMixinProject, "mixin_option") is False
+
+    assert "mixin_option" in TestConcreteProject._local_config_options
+    assert isinstance(TestConcreteProject._local_config_options["mixin_option"], PerProjectConfigOption)
+
+    assert "mixin_option" not in TestOverrideMixinProject._local_config_options
+    assert "base_option" not in TestConcreteProject._local_config_options
+
+    config: CheriConfig = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+
+    instance = TestConcreteProject(config, crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP)
+    assert instance.mixin_option is True
+    assert instance.base_option is True
+
+    instance_override = TestOverrideMixinProject(config, crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP)
+    assert instance_override.mixin_option is False

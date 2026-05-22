@@ -128,10 +128,16 @@ class PerProjectConfigOption(typing.Generic[T]):
     def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle[T]:
         raise NotImplementedError()
 
-    # noinspection PyProtectedMember
     def __set_name__(self, owner: "type[SimpleProjectBase]", name: str):
         # we know that _local_config_options is still a dict and not a MappingProxy when called here.
-        typing.cast(typing.MutableMapping[str, PerProjectConfigOption], owner._local_config_options)[name] = self
+        local_opts = getattr(owner, "_local_config_options", None)
+        if local_opts is None:
+            local_opts = dict()
+            # If this is a parent mixin class that doesn't inherit from SimpleProjectBase,
+            # we dynamically inject the mutable dict so that the metaclass __new__ hook
+            # will automatically copy and inherit it later during subclass creation.
+            setattr(owner, "_local_config_options", local_opts)
+        typing.cast(typing.MutableMapping[str, PerProjectConfigOption], local_opts)[name] = self
 
     def __get__(self, instance: "SimpleProjectBase", owner: "type[SimpleProjectBase]") -> T:
         raise ValueError("Should have been replaced!")
@@ -384,7 +390,7 @@ else:
         def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
+                owner.add_optional_path_option(self._name, default=self._default, help=self._help, **self._kwargs),
             )
 
     class StringConfigOption(PerProjectConfigOption[str]):
@@ -1794,18 +1800,28 @@ class ProjectSubclassDefinitionHook(ABCMeta):
     def __new__(cls, name: str, bases: "tuple[type, ...]", namespace: "dict[str, typing.Any]", **kwargs):
         # We have to set _local_config_options to a new dict here, as this is the first hook that runs before
         # the __set_name__ function on class members is called (__init_subclass__ is too late).
+        merged_opts = {}
         for base in bases:
             old = getattr(base, "_local_config_options", None)
             if old is not None:
-                # Create a copy of the dictionary so that modifying it does not change the value in the base class.
-                namespace = dict(namespace)
-                namespace["_local_config_options"] = dict(old)
+                merged_opts.update(old)
+        if merged_opts or "_local_config_options" in namespace:
+            namespace = dict(namespace)
+            namespace["_local_config_options"] = {**merged_opts, **namespace.get("_local_config_options", {})}
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
     # pytype: disable=invalid-annotation
     def __init__(
         cls: "type[SimpleProjectBase]", name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs
     ) -> None:
+        # Retrieve the modifiable dict of local config options.
+        local_opts: "dict[str, PerProjectConfigOption]" = getattr(cls, "_local_config_options", {})
+        if local_opts and isinstance(local_opts, dict):
+            # Prune overridden options that have been redefined as static/non-descriptor values in this subclass
+            for key in list(local_opts.keys()):
+                current_val = inspect.getattr_static(cls, key, None)
+                if not isinstance(current_val, PerProjectConfigOption):
+                    del local_opts[key]
         super().__init__(name, bases, clsdict, **kwargs)
         # pytype: enable=invalid-annotation
         assert issubclass(cls, SimpleProjectBase)
