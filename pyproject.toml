@@ -125,6 +125,7 @@ dev = [
     "pyrefly>=0.62.0",
     "pyserial>=3.5",
     "pytest>=7.0,<9.0",
+    "pytest-xdist>=3.6.1",
     "ruff>=0.15.11",
     "setuptools<82",
     "ty>=0.0.26",
