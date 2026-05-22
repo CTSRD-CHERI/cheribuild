@@ -159,6 +159,17 @@ if typing.TYPE_CHECKING:
         return typing.cast(EnumTy, default)
 
     # noinspection PyPep8Naming
+    def OptionalEnumConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[Optional[EnumTy], ComputedDefaultValue[Optional[EnumTy]]]" = None,
+        *,
+        kind: "type[EnumTy]",
+        **kwargs,
+    ) -> "Optional[EnumTy]":
+        return typing.cast(Optional[EnumTy], default)
+
+    # noinspection PyPep8Naming
     def IntConfigOption(  # noqa: N802
         name: str,
         help: str,
@@ -258,6 +269,26 @@ else:
             name: str,
             help: str,
             default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
+            *,
+            kind: "type[EnumTy]",
+            **kwargs,
+        ):
+            super().__init__(name, help, default, kind=kind, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+            kind = self._kwargs["kind"]
+            kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=kind, **kwargs),
+            )
+
+    class OptionalEnumConfigOption(PerProjectConfigOption[Optional[EnumTy]], typing.Generic[EnumTy]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[EnumTy], ComputedDefaultValue[Optional[EnumTy]]]" = None,
             *,
             kind: "type[EnumTy]",
             **kwargs,
