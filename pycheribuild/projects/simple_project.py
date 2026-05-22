@@ -118,14 +118,27 @@ def _default_stdout_filter(_: bytes) -> None:
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
+class DefaultValueOnlyDescriptor:
+    def __init__(self, default):
+        self.default = default
+
+    def __get__(self, instance: "Optional[SimpleProjectBase]", owner: "type[SimpleProjectBase]"):
+        if instance is None:
+            return self
+        if callable(self.default):
+            return self.default(instance.config, instance)
+        return self.default
+
+
 class PerProjectConfigOption(typing.Generic[T]):
     def __init__(self, name: str, help: str, default: "typing.Any", **kwargs) -> None:
         self._name = name
         self._default = default
         self._help = help
+        self.extra_condition = kwargs.pop("extra_condition", None)
         self._kwargs = kwargs
 
-    def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle[T]:
+    def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle[T]:
         raise NotImplementedError()
 
     def __set_name__(self, owner: "type[SimpleProjectBase]", name: str):
@@ -263,10 +276,10 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs),
+                owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
             )
 
     class EnumConfigOption(PerProjectConfigOption[EnumTy], typing.Generic[EnumTy]):
@@ -281,12 +294,14 @@ else:
         ):
             super().__init__(name, help, default, kind=kind, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             kind = self._kwargs["kind"]
-            kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
+            other_kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=kind, **kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=kind, **other_kwargs, **kwargs
+                ),
             )
 
     class OptionalEnumConfigOption(PerProjectConfigOption[Optional[EnumTy]], typing.Generic[EnumTy]):
@@ -301,22 +316,26 @@ else:
         ):
             super().__init__(name, help, default, kind=kind, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             kind = self._kwargs["kind"]
-            kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
+            other_kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=kind, **kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=kind, **other_kwargs, **kwargs
+                ),
             )
 
     class IntConfigOption(PerProjectConfigOption[int]):
         def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=int, **self._kwargs, **kwargs
+                ),
             )
 
     class OptionalIntConfigOption(PerProjectConfigOption[Optional[int]]):
@@ -329,20 +348,24 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=int, **self._kwargs, **kwargs
+                ),
             )
 
     class FloatConfigOption(PerProjectConfigOption[float]):
         def __init__(self, name: str, help: str, default: "typing.Union[float, ComputedDefaultValue[float]]", **kwargs):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=float, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=float, **self._kwargs, **kwargs
+                ),
             )
 
     class OptionalFloatConfigOption(PerProjectConfigOption[Optional[float]]):
@@ -355,10 +378,12 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=float, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=float, **self._kwargs, **kwargs
+                ),
             )
 
     class PathConfigOption(PerProjectConfigOption[Path]):
@@ -371,10 +396,12 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=Path, **self._kwargs, **kwargs
+                ),
             )
 
     class OptionalPathConfigOption(PerProjectConfigOption[Optional[Path]]):
@@ -387,10 +414,12 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_optional_path_option(self._name, default=self._default, help=self._help, **self._kwargs),
+                owner.add_optional_path_option(
+                    self._name, default=self._default, help=self._help, **self._kwargs, **kwargs
+                ),
             )
 
     class StringConfigOption(PerProjectConfigOption[str]):
@@ -403,10 +432,12 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=str, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=str, **self._kwargs, **kwargs
+                ),
             )
 
     class OptionalStringConfigOption(PerProjectConfigOption[Optional[str]]):
@@ -419,11 +450,11 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_optional_config_option(
-                    self._name, default=self._default, help=self._help, kind=str, **self._kwargs
+                    self._name, default=self._default, help=self._help, kind=str, **self._kwargs, **kwargs
                 ),
             )
 
@@ -437,10 +468,10 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs),
+                owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
             )
 
 
@@ -1205,7 +1236,13 @@ class SimpleProjectBase(AbstractProject, ABC):
             # type of the ClassVar to determine if this is actually needed.
             option = inspect.getattr_static(cls, k)
             if isinstance(option, PerProjectConfigOption):
-                setattr(cls, k, v.register_config_option(cls))
+                if option.extra_condition is not None and not option.extra_condition(cls):
+                    # If the option's extra condition is not met, replace the descriptor with
+                    # DefaultValueOnlyDescriptor to dynamically evaluate the default value without
+                    # registering it in the loader.
+                    setattr(cls, k, DefaultValueOnlyDescriptor(v._default))
+                else:
+                    setattr(cls, k, v.register_config_option(cls))
 
     def __init__(self, config: CheriConfig, *, crosscompile_target: CrossCompileTarget) -> None:
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
