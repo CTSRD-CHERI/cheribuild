@@ -410,11 +410,10 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         return self._cached
 
     def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> Optional[T]:
-        if callable(self.default):
-            # pyrefly: ignore [bad-return]
-            return self.default(config, instance)
-        else:
-            return self.default
+        val = self.default
+        while callable(val):
+            val = val(config, instance)
+        return typing.cast(Optional[T], val)
 
     def _convert_type(self, loaded_result: _LoadedConfigValue) -> "Optional[T]":
         # check for None to make sure we don't call str(None) which would result in "None"
