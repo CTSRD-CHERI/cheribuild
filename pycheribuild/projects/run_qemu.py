@@ -1005,10 +1005,8 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     # XXX: Existing code isn't ready to run these but we want to support building them
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
-        return tuple(
-            set(super().supported_architectures())
-            - {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
-        )
+        exclude = {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
+        return tuple(x for x in super().supported_architectures() if x not in exclude)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
