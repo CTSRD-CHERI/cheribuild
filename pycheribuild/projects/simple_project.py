@@ -131,7 +131,9 @@ class DefaultValueOnlyDescriptor:
 
 
 class PerProjectConfigOption(typing.Generic[T]):
-    def __init__(self, name: str, help: str, default: "typing.Any", **kwargs) -> None:
+    def __init__(
+        self, name: str, *, help: "typing.Union[str, typing.Callable[[type], str]]", default: "typing.Any", **kwargs
+    ) -> None:
         self._name = name
         self._default = default
         self._help = help
@@ -160,7 +162,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def BoolConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
         **kwargs,
     ) -> bool:
@@ -169,7 +170,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def EnumConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
         *,
         kind: "type[EnumTy]",
@@ -180,7 +180,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalEnumConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[EnumTy], ComputedDefaultValue[Optional[EnumTy]]]" = None,
         *,
         kind: "type[EnumTy]",
@@ -191,7 +190,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def IntConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[int, ComputedDefaultValue[int]]",
         **kwargs,
     ) -> int:
@@ -200,7 +198,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalIntConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
         **kwargs,
     ) -> "Optional[int]":
@@ -209,7 +206,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def FloatConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[float, ComputedDefaultValue[float]]",
         **kwargs,
     ) -> float:
@@ -218,7 +214,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalFloatConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[float], ComputedDefaultValue[Optional[float]]]" = None,
         **kwargs,
     ) -> "Optional[float]":
@@ -227,7 +222,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def PathConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Path, ComputedDefaultValue[Path]]",
         **kwargs,
     ) -> "Path":
@@ -236,7 +230,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalPathConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
         **kwargs,
     ) -> "Optional[Path]":
@@ -245,7 +238,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def StringConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[str, ComputedDefaultValue[str]]",
         **kwargs,
     ) -> str:
@@ -254,7 +246,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalStringConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[str, ComputedDefaultValue[Optional[str]], None]" = None,
         **kwargs,
     ) -> Optional[str]:
@@ -263,7 +254,6 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def ListConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
         **kwargs,
     ) -> "list[T]":
@@ -271,10 +261,8 @@ if typing.TYPE_CHECKING:
 else:
 
     class BoolConfigOption(PerProjectConfigOption[bool]):
-        def __init__(
-            self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs
-        ):
-            super().__init__(name, help, default, **kwargs)
+        def __init__(self, name: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs):
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -286,13 +274,12 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
             *,
             kind: "type[EnumTy]",
             **kwargs,
         ):
-            super().__init__(name, help, default, kind=kind, **kwargs)
+            super().__init__(name, default=default, kind=kind, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             kind = self._kwargs["kind"]
@@ -308,13 +295,12 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[EnumTy], ComputedDefaultValue[Optional[EnumTy]]]" = None,
             *,
             kind: "type[EnumTy]",
             **kwargs,
         ):
-            super().__init__(name, help, default, kind=kind, **kwargs)
+            super().__init__(name, default=default, kind=kind, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             kind = self._kwargs["kind"]
@@ -327,8 +313,8 @@ else:
             )
 
     class IntConfigOption(PerProjectConfigOption[int]):
-        def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
-            super().__init__(name, help, default, **kwargs)
+        def __init__(self, name: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -342,11 +328,10 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -357,8 +342,8 @@ else:
             )
 
     class FloatConfigOption(PerProjectConfigOption[float]):
-        def __init__(self, name: str, help: str, default: "typing.Union[float, ComputedDefaultValue[float]]", **kwargs):
-            super().__init__(name, help, default, **kwargs)
+        def __init__(self, name: str, default: "typing.Union[float, ComputedDefaultValue[float]]", **kwargs):
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -372,11 +357,10 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[float], ComputedDefaultValue[Optional[float]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -390,17 +374,17 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Path, ComputedDefaultValue[Path]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            help_str = self._help(owner) if callable(self._help) else self._help
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(
-                    self._name, default=self._default, help=self._help, kind=Path, **self._kwargs, **kwargs
+                    self._name, default=self._default, help=help_str, kind=Path, **self._kwargs, **kwargs
                 ),
             )
 
@@ -408,11 +392,10 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -426,11 +409,10 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[str, ComputedDefaultValue[str]]",
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -444,11 +426,10 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[str, ComputedDefaultValue[Optional[str]], None]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -462,11 +443,10 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
@@ -1081,6 +1061,10 @@ class SimpleProjectBase(AbstractProject, ABC):
         use_default_fallback_config_names=True,
         **kwargs,
     ) -> T:
+        if callable(use_default_fallback_config_names):
+            use_default_fallback_config_names = use_default_fallback_config_names(cls)
+        if callable(show_help):
+            show_help = show_help(cls)
         fullname = cls.target + "/" + name
         # We abuse shortname to implement altname
         if altname is not None:
