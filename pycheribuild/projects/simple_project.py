@@ -1235,8 +1235,15 @@ class SimpleProjectBase(AbstractProject, ABC):
             # If the option has been overwritten to be a constant in a subclass we should not register it - check the
             # type of the ClassVar to determine if this is actually needed.
             option = inspect.getattr_static(cls, k)
-            if isinstance(option, PerProjectConfigOption):
-                if option.extra_condition is not None and not option.extra_condition(cls):
+            # Register the option if it's a raw descriptor or a ConfigOptionHandle inherited from a concrete
+            # parent target class that hasn't been registered specifically on this subclass yet (i.e. not in
+            # cls.__dict__). For example, BuildCheriAllianceQEMU (cheri-std093-qemu) inherits the 'targets' option
+            # as a ConfigOptionHandle from its concrete parent BuildQEMU (qemu), and we must register it
+            # specifically on cheri-std093-qemu so it resolves to the custom default_targets list.
+            if isinstance(option, PerProjectConfigOption) or (
+                isinstance(option, ConfigOptionHandle) and k not in cls.__dict__
+            ):
+                if v.extra_condition is not None and not v.extra_condition(cls):
                     # If the option's extra condition is not met, replace the descriptor with
                     # DefaultValueOnlyDescriptor to dynamically evaluate the default value without
                     # registering it in the loader.
