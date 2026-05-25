@@ -54,7 +54,7 @@ from .repository import (
     SubversionRepository,
     TargetBranchInfo,
 )
-from .simple_project import PathConfigOption, SimpleProject, _default_stdout_filter
+from .simple_project import ListConfigOption, PathConfigOption, SimpleProject, _default_stdout_filter
 from ..config.chericonfig import (
     BuildType,
     CheriConfig,
@@ -2023,12 +2023,9 @@ class AutotoolsProject(Project):
     make_kind: MakeCommandKind = MakeCommandKind.GnuMake
     add_host_target_build_config_options: bool = True
 
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.extra_configure_flags = cls.add_list_option(
-            "configure-options", metavar="OPTIONS", help="Additional command line options to pass to configure"
-        )
+    extra_configure_flags = ListConfigOption(
+        "configure-options", metavar="OPTIONS", help="Additional command line options to pass to configure"
+    )
 
     """
     Like Project but automatically sets up the defaults for autotools like projects
