@@ -191,3 +191,35 @@ def test_conditional_config_options():
     assert instance_cross.cond_option == 1234  # default value evaluated via descriptor
     # computed default evaluated dynamically via descriptor and different per-instance
     assert instance_cross.computed_option == 1111
+
+
+def test_subclass_option_inheritance_from_concrete_parent(tmp_path):
+    config = setup_mock_chericonfig(tmp_path)
+
+    class ParentConcreteProject(CMakeProject):
+        target = "parent-concrete"
+        _supported_architectures = (CompilationTargets.NATIVE,)
+
+        parent_option = IntConfigOption(
+            "parent-option",
+            default=100,
+            help="Parent Option",
+        )
+
+        def process(self):
+            pass
+
+    class ChildConcreteProject(ParentConcreteProject):
+        target = "child-concrete"
+        _supported_architectures = (CompilationTargets.NATIVE,)
+
+        def process(self):
+            pass
+
+    for target in target_manager.targets(config):
+        if target.name in ("parent-concrete", "child-concrete"):
+            target.project_class.setup_config_options()
+
+    # Both parent and child target classes should have their respective option registered in the config loader
+    assert "parent-concrete/parent-option" in config.loader.option_handles
+    assert "child-concrete/parent-option" in config.loader.option_handles
