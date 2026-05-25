@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from .project import MakeCommandKind, Project, _CMakeAndMesonSharedLogic
-from .simple_project import _default_stdout_filter
+from .simple_project import ListConfigOption, _default_stdout_filter
 from ..config.chericonfig import BuildType
 from ..processutils import commandline_to_str
 from ..targets import target_manager
@@ -63,7 +63,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     ctest_script_extra_args: Sequence[str] = tuple()
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
     _minimum_cmake_or_meson_version: "tuple[int, ...]" = (3, 13, 4)
-    cmake_options: "list[str]"
+    cmake_options = ListConfigOption(
+        "cmake-options", metavar="OPTIONS", help="Additional command line options to pass to CMake"
+    )
     configure_command = Path(os.getenv("CMAKE_COMMAND", "cmake"))
 
     def _toolchain_file_list_to_str(self, value: "Sequence[str | Path]") -> str:
@@ -91,13 +93,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     def _build_type_basic_compiler_flags(self):
         # No need to add any flags here, cmake does it for us already
         return []
-
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.cmake_options = cls.add_list_option(
-            "cmake-options", metavar="OPTIONS", help="Additional command line options to pass to CMake"
-        )
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
