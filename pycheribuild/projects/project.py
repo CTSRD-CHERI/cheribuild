@@ -54,7 +54,16 @@ from .repository import (
     SubversionRepository,
     TargetBranchInfo,
 )
-from .simple_project import ListConfigOption, PathConfigOption, SimpleProject, _default_stdout_filter
+from .simple_project import (
+    BoolConfigOption,
+    EnumConfigOption,
+    ListConfigOption,
+    OptionalStringConfigOption,
+    PathConfigOption,
+    SimpleProject,
+    StringConfigOption,
+    _default_stdout_filter,
+)
 from ..config.chericonfig import (
     BuildType,
     CheriConfig,
@@ -654,132 +663,137 @@ class Project(SimpleProject):
     use_lto: bool
 
     @classmethod
-    def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
-        # supported target).
-        default_xtarget = cls.default_architecture()
-        if cls._xtarget is not None or default_xtarget is not None:
-            cls._initial_build_dir = cls.add_path_option(
-                "build-directory",
-                metavar="DIR",
-                default=cls.default_build_dir,
-                help="Override default source directory for " + cls.target,
-                use_default_fallback_config_names=cls._xtarget == default_xtarget,
-            )
-        if cls.can_build_with_asan():
-            asan_default = ComputedDefaultValue(
-                function=lambda config, proj: (
-                    False if proj.crosscompile_target.is_cheri_purecap() else proj.default_use_asan
-                ),
-                as_string=str(cls.default_use_asan),
-            )
-            cls.use_asan = cls.add_bool_option(
-                "use-asan", default=asan_default, help="Build with AddressSanitizer enabled"
-            )
-        else:
-            cls.use_asan = False
-        if cls.can_build_with_msan():
-            cls.use_msan = cls.add_bool_option("use-msan", default=False, help="Build with MemorySanitizer enabled")
-        else:
-            cls.use_msan = False
+    def default_install_dir_help(cls) -> str:
+        return "Override default install directory for " + cls.target
 
-        if cls.can_build_with_ccache():
-            cls.use_ccache = cls.add_bool_option("use-ccache", default=False, help="Build with CCache")
-        else:
-            cls.use_ccache = False
-        cls.auto_var_init = cls.add_config_option(
-            "auto-var-init",
-            kind=AutoVarInit,
-            default=ComputedDefaultValue(
-                lambda config, proj: proj.default_auto_var_init,
-                lambda c: (
-                    'the value of the global --skip-update option (defaults to "' + c.default_auto_var_init.value + '")'
-                ),
+    _initial_build_dir = PathConfigOption(
+        "build-directory",
+        metavar="DIR",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.default_build_dir,
+            as_string=lambda cls: "Override default build directory for " + cls.target,
+        ),
+        extra_condition=lambda cls: cls._xtarget is not None or cls.default_architecture() is not None,
+        use_default_fallback_config_names=lambda cls: cls._xtarget == cls.default_architecture(),
+        help="Override default source directory for",
+    )
+    use_asan = BoolConfigOption(
+        "use-asan",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: (
+                False if proj.crosscompile_target.is_cheri_purecap() else proj.default_use_asan
             ),
-            help="Whether to initialize all local variables (currently only supported when compiling with clang)",
-        )
-        cls.skip_update = cls.add_bool_option(
-            "skip-update",
-            default=ComputedDefaultValue(
-                lambda config, proj: config.skip_update, "the value of the global --skip-update option"
+            as_string=lambda cls: str(cls.default_use_asan),
+        ),
+        extra_condition=lambda cls: cls.can_build_with_asan(),
+        help="Build with AddressSanitizer enabled",
+    )
+    use_msan = BoolConfigOption(
+        "use-msan",
+        default=False,
+        extra_condition=lambda cls: cls.can_build_with_msan(),
+        help="Build with MemorySanitizer enabled",
+    )
+    use_ccache = BoolConfigOption(
+        "use-ccache",
+        default=False,
+        extra_condition=lambda cls: cls.can_build_with_ccache(),
+        help="Build with CCache",
+    )
+    auto_var_init = EnumConfigOption(
+        "auto-var-init",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: proj.default_auto_var_init,
+            as_string=lambda c: (
+                'the value of the global --skip-update option (defaults to "' + c.default_auto_var_init.value + '")'
             ),
-            help="Override --skip-update/--no-skip-update for this target only ",
-        )
-        cls.force_configure = cls.add_bool_option(
-            "reconfigure",
-            altname="force-configure",
-            default=ComputedDefaultValue(
-                lambda config, proj: config.force_configure,
-                "the value of the global --reconfigure/--force-configure option",
-            ),
-            help="Override --(no-)reconfigure/--(no-)force-configure for this target only",
-        )
-
-        if not install_directory_help:
-            install_directory_help = "Override default install directory for " + cls.target
-        cls._install_dir = cls.add_path_option(
-            "install-directory", metavar="DIR", help=install_directory_help, default=cls._default_install_dir_fn
-        )
-        if (
-            "repository" in dir(cls)
-            and isinstance(cls.repository, GitRepository)
-            and "git_revision" not in cls.__dict__
-        ):
-            cls.git_revision = cls.add_optional_config_option(
-                "git-revision",
-                kind=str,
-                metavar="REVISION",
-                help="The git revision to checkout prior to building. Useful if "
-                "HEAD is broken for one project but you still want to update the other projects.",
-            )
-            # TODO: can argparse action be used to store to the class member directly?
-            # seems like I can create a new action a pass a reference to the repository:
-            # class FooAction(argparse.Action):
-            # def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            #     if nargs is not None:
-            #         raise ValueError("nargs not allowed")
-            #     super(FooAction, self).__init__(option_strings, dest, **kwargs)
-            # def __call__(self, parser, namespace, values, option_string=None):
-            #     print('%r %r %r' % (namespace, values, option_string))
-            #     setattr(namespace, self.dest, values)
-            cls._repository_url: str = cls.add_config_option(
-                "repository",
-                kind=str,
-                help="The URL of the git repository",
-                default=cls.repository.url,
-                metavar="REPOSITORY",
-            )
-        cls.use_lto = cls.add_bool_option(
-            "use-lto", help="Build with link-time optimization (LTO)", default=cls.lto_by_default
-        )
-        if cls.can_build_with_cfi():
-            cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with LLVM CFI (requires LTO)", default=False)
-        else:
-            cls.use_cfi = False
-        cls._linkage = cls.add_config_option(
-            "linkage",
-            default=Linkage.DEFAULT,
-            kind=Linkage,
-            help="Build static or dynamic (or use the project default)",
-        )
-
-        cls.build_type = cls.add_config_option(
-            "build-type",
-            default=cls.default_build_type,
-            kind=BuildType,
-            enum_choice_strings=supported_build_type_strings,
-            help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
-            " does not pass any additional flags to the configure command).",
-        )
-
-        if cls.has_optional_tests and "build_tests" not in cls.__dict__:
-            cls.build_tests = cls.add_bool_option(
-                "build-tests",
-                help="Build the tests",
-                default=cls.default_build_tests,
-                show_help=cls.show_optional_tests_in_help,
-            )
+        ),
+        kind=AutoVarInit,
+        help="Whether to initialize all local variables (currently only supported when compiling with clang)",
+    )
+    skip_update = BoolConfigOption(
+        "skip-update",
+        default=ComputedDefaultValue(
+            lambda config, proj: config.skip_update, "the value of the global --skip-update option"
+        ),
+        help="Override --skip-update/--no-skip-update for this target only ",
+    )
+    force_configure = BoolConfigOption(
+        "reconfigure",
+        altname="force-configure",
+        default=ComputedDefaultValue(
+            lambda config, proj: config.force_configure,
+            "the value of the global --reconfigure/--force-configure option",
+        ),
+        help="Override --(no-)reconfigure/--(no-)force-configure for this target only",
+    )
+    _install_dir = PathConfigOption(
+        "install-directory",
+        metavar="DIR",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project._default_install_dir_fn,
+            as_string=lambda cls: cls.default_install_dir_help(),
+        ),
+        help=lambda cls: cls.default_install_dir_help(),
+    )
+    git_revision = OptionalStringConfigOption(
+        "git-revision",
+        metavar="REVISION",
+        extra_condition=lambda cls: "repository" in dir(cls) and isinstance(cls.repository, GitRepository),
+        help="The git revision to checkout prior to building. Useful if "
+        "HEAD is broken for one project but you still want to update the other projects.",
+    )
+    _repository_url = StringConfigOption(
+        "repository",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.repository.url,
+            as_string=lambda cls: cls.repository.url,
+        ),
+        extra_condition=lambda cls: "repository" in dir(cls) and isinstance(cls.repository, GitRepository),
+        metavar="REPOSITORY",
+        help="The URL of the git repository",
+    )
+    use_lto = BoolConfigOption(
+        "use-lto",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.lto_by_default,
+            as_string=lambda cls: str(cls.lto_by_default),
+        ),
+        help="Build with link-time optimization (LTO)",
+    )
+    use_cfi = BoolConfigOption(
+        "use-cfi",
+        default=False,
+        extra_condition=lambda cls: cls.can_build_with_cfi(),
+        help="Build with LLVM CFI (requires LTO)",
+    )
+    _linkage = EnumConfigOption(
+        "linkage",
+        default=Linkage.DEFAULT,
+        kind=Linkage,
+        help="Build static or dynamic (or use the project default)",
+    )
+    build_type = EnumConfigOption(
+        "build-type",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.default_build_type,
+            as_string=lambda cls: cls.default_build_type.value,
+        ),
+        kind=BuildType,
+        enum_choice_strings=supported_build_type_strings,
+        help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
+        " does not pass any additional flags to the configure command).",
+    )
+    build_tests = BoolConfigOption(
+        "build-tests",
+        default=ComputedDefaultValue(
+            function=lambda config, project: project.default_build_tests,
+            as_string=lambda cls: str(cls.default_build_tests),
+        ),
+        extra_condition=lambda cls: cls.has_optional_tests,
+        show_help=lambda cls: cls.show_optional_tests_in_help,
+        help="Build the tests",
+    )
 
     def linkage(self) -> Linkage:
         if self.target_info.must_link_statically:
@@ -837,6 +851,7 @@ class Project(SimpleProject):
             return ["-O2"]
         elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
             return ["-Os"]
+        return []
 
     @property
     def compiler_warning_flags(self) -> "list[str]":
