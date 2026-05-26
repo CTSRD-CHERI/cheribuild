@@ -45,6 +45,13 @@ from .crosscompileproject import (
 )
 from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ReuseOtherProjectRepository
+from ..simple_project import (
+    BoolConfigOption,
+    ListConfigOption,
+    OptionalPathConfigOption,
+    PathConfigOption,
+    StringConfigOption,
+)
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...targets import target_manager
@@ -64,16 +71,12 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     # The makefiles here can't support any other tagets:
     _supported_architectures = (CompilationTargets.NATIVE,)
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.benchmark_size: str = cls.add_config_option(
-            "benchmark-size",
-            choices=("small", "large"),
-            default="large",
-            kind=str,
-            help="Size of benchmark input data to use",
-        )
+    benchmark_size = StringConfigOption(
+        "benchmark-size",
+        choices=("small", "large"),
+        default="large",
+        help="Size of benchmark input data to use",
+    )
 
     @property
     def bundle_dir(self):
@@ -342,15 +345,14 @@ class BuildSpec2006New(_BuildLLVMTestSuiteSubdir):
     # TODO: External/SPEC/CFP2006",
     _test_suite_subdirs = ["External/SPEC/CINT2006"]
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.spec_iso_path = cls.add_optional_path_option(
-            "iso-path", altname="spec-sources", help="Path to the SPEC2006 ISO image or extracted sources"
-        )
-        cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
-        cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
-        cls.benchmark_override = cls.add_list_option("benchmarks", help="override the list of benchmarks to run")
+    spec_iso_path = OptionalPathConfigOption(
+        "iso-path", altname="spec-sources", help="Path to the SPEC2006 ISO image or extracted sources"
+    )
+    fast_benchmarks_only = BoolConfigOption("fast-benchmarks-only", help="Only run fast benchmarks", default=False)
+    workload = StringConfigOption(
+        "workload", help="SPEC2006 workload type", choices=("test", "train", "ref"), default="test"
+    )
+    benchmark_override = ListConfigOption("benchmarks", help="override the list of benchmarks to run")
 
     @property
     def extracted_spec_sources(self) -> Path:
@@ -449,13 +451,10 @@ class BuildSpec2017(_BuildLLVMTestSuiteSubdir):
     target = "spec2017"
     _test_suite_subdirs = ["External/SPEC/CINT2017rate", "External/SPEC/CFP2017rate"]
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.spec_sources = cls.add_path_option(
-            "spec-sources", default=Path(), help="Path to the extracted SPEC2017 sources"
-        )
-        cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
+    spec_sources = PathConfigOption("spec-sources", default=Path(), help="Path to the extracted SPEC2017 sources")
+    workload = StringConfigOption(
+        "workload", help="SPEC2017 workload type", choices=("test", "train", "ref"), default="test"
+    )
 
     def setup(self):
         if self.spec_sources == Path():
@@ -531,10 +530,6 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
     _supported_architectures = (CompilationTargets.NATIVE,)
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
 
     @property
     def bundle_dir(self):
@@ -614,12 +609,9 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     # The makefiles here can't support any other tagets:
     _supported_architectures = (CompilationTargets.NATIVE,)
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.fixed_iterations = cls.add_bool_option(
-            "fixed-iterations", default=False, help="Run benchmarks for given number of iterations instead of duration."
-        )
+    fixed_iterations = BoolConfigOption(
+        "fixed-iterations", default=False, help="Run benchmarks for given number of iterations instead of duration."
+    )
 
     @property
     def bundle_dir(self):
@@ -694,15 +686,12 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
         CompilationTargets.CHERIBSD_RISCV_PURECAP,
     )
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.hw_counters = cls.add_config_option(
-            "enable-hw-counters",
-            choices=("pmc", "statcounters"),
-            default="statcounters",
-            help="Use hardware performance counters",
-        )
+    hw_counters = StringConfigOption(
+        "enable-hw-counters",
+        choices=("pmc", "statcounters"),
+        default="statcounters",
+        help="Use hardware performance counters",
+    )
 
     def configure(self, **kwargs):
         self.configure_args.append("--enable-unixdomain")

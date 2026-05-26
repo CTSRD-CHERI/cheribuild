@@ -962,8 +962,11 @@ class LaunchMinimalCheriBSD(LaunchCheriBSD):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+        if "default_ssh_port" in kwargs:
+            super().setup_config_options(**kwargs)
+        else:
+            add_to_port = cls.get_cross_target_index()
+            super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(30 + add_to_port), **kwargs)
 
     @property
     def _extra_test_args(self) -> "list[str]":
@@ -976,13 +979,19 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     _disk_image_class = None
     _uses_disk_image = False
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        if "default_ssh_port" in kwargs:
+            super().setup_config_options(**kwargs)
+        else:
+            add_to_port = cls.get_cross_target_index()
+            super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(40 + add_to_port), **kwargs)
+
     # XXX: Existing code isn't ready to run these but we want to support building them
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
-        return tuple(
-            set(super().supported_architectures())
-            - {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
-        )
+        exclude = {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
+        return tuple(x for x in super().supported_architectures() if x not in exclude)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -43,8 +43,15 @@ from .crosscompileproject import (
 from .llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM, extra_llvm_lit_opts
 from ..build_qemu import BuildQEMU
 from ..cmake_project import CMakeProject
-from ..project import ReuseOtherProjectDefaultTargetRepository
+from ..project import ComputedDefaultValue, ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD, LaunchFreeBSD
+from ..simple_project import (
+    BoolConfigOption,
+    IntConfigOption,
+    OptionalIntConfigOption,
+    OptionalPathConfigOption,
+    StringConfigOption,
+)
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible_uncached
@@ -121,7 +128,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                 )
 
 
-def _default_ssh_port(c, p: CMakeProject):
+def _default_ssh_port(c, p: CMakeProject) -> "typing.Optional[int]":
     xtarget = p.crosscompile_target
     if not xtarget.target_info_cls.is_cheribsd():
         return None
@@ -134,51 +141,51 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
     _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
     dependencies = ("libcxxrt",)
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.only_compile_tests = cls.add_bool_option(
-            "only-compile-tests",
-            help="Don't attempt to run tests, only compile them",
-        )
-        cls.exceptions = cls.add_bool_option("exceptions", default=True, help="Build with support for C++ exceptions")
-        cls.collect_test_binaries = cls.add_optional_path_option(
-            "collect-test-binaries",
-            metavar="TEST_PATH",
-            help="Instead of running tests copy them to $TEST_PATH",
-        )
-        cls.nfs_mounted_path = cls.add_optional_path_option(
-            "nfs-mounted-path",
-            metavar="PATH",
-            help=(
-                "Use a PATH as a directorythat is NFS mounted inside QEMU instead of using scp to copy individual tests"
-            ),
-        )
-        cls.nfs_path_in_qemu = cls.add_optional_path_option(
-            "nfs-mounted-path-in-qemu",
-            metavar="PATH",
-            help="The path used inside QEMU to refer to nfs-mounted-path",
-        )
-        cls.qemu_host = cls.add_config_option(
-            "ssh-host",
-            help="The QEMU SSH hostname to connect to for running tests",
-            default="localhost",
-        )
-        cls.qemu_port = cls.add_config_option(
-            "ssh-port",
-            help="The QEMU SSH port to connect to for running tests",
-            _allow_unknown_targets=True,
-            default=_default_ssh_port,
-            only_add_for_targets=CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
-        )
-        cls.qemu_user = cls.add_config_option("ssh-user", default="root", help="The CheriBSD used for running tests")
+    only_compile_tests = BoolConfigOption(
+        "only-compile-tests",
+        help="Don't attempt to run tests, only compile them",
+    )
+    exceptions = BoolConfigOption("exceptions", default=True, help="Build with support for C++ exceptions")
+    collect_test_binaries = OptionalPathConfigOption(
+        "collect-test-binaries",
+        metavar="TEST_PATH",
+        help="Instead of running tests copy them to $TEST_PATH",
+    )
+    nfs_mounted_path = OptionalPathConfigOption(
+        "nfs-mounted-path",
+        metavar="PATH",
+        help="Use a PATH as a directorythat is NFS mounted inside QEMU instead of using scp to copy individual tests",
+    )
+    nfs_path_in_qemu = OptionalPathConfigOption(
+        "nfs-mounted-path-in-qemu",
+        metavar="PATH",
+        help="The path used inside QEMU to refer to nfs-mounted-path",
+    )
+    qemu_host = StringConfigOption(
+        "ssh-host",
+        help="The QEMU SSH hostname to connect to for running tests",
+        default="localhost",
+    )
+    qemu_port = OptionalIntConfigOption(
+        "ssh-port",
+        help="The QEMU SSH port to connect to for running tests",
+        _allow_unknown_targets=True,
+        default=ComputedDefaultValue(
+            function=_default_ssh_port,
+            as_string="SSH forwarding port for CheriBSD target",
+        ),
+        only_add_for_targets=CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
+    )
+    qemu_user = StringConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
-        cls.test_jobs = cls.add_config_option(
-            "parallel-test-jobs",
-            help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
-            default=lambda c, p: max(c.make_jobs / 2, 1),
-            kind=int,
-        )
+    test_jobs = IntConfigOption(
+        "parallel-test-jobs",
+        help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
+        default=ComputedDefaultValue(
+            function=lambda c, p: max(c.make_jobs / 2, 1),
+            as_string="half of make jobs",
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -357,8 +364,6 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]"
     # TODO: add compiler-rt
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind", "libcxxabi", "libcxx")
-    test_against_running_qemu_instance = False
-    test_localhost_via_ssh = False
 
     def get_enabled_runtimes(self) -> "list[str]":
         return list(self._enabled_runtimes)
@@ -590,25 +595,24 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         flags = {f"{x.upper()}_{k}": v for x in self.get_enabled_runtimes() for k, v in kwargs.items()}
         self.add_cmake_options(**flags)
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        if cls.get_crosscompile_target().is_native():
-            cls.test_localhost_via_ssh = cls.add_bool_option(
-                "test-localhost-via-ssh",
-                help="Use the ssh.py executor for localhost (to check that it works correctly)",
-            )
-        if not cls.get_crosscompile_target().is_native():
-            cls.test_against_running_qemu_instance = cls.add_bool_option(
-                "test-against-running-qemu-instance",
-                help="Run tests against a currently running QEMU instance using the ssh.py executor.",
-            )
-        cls.qemu_test_jobs = cls.add_config_option(
-            "parallel-qemu-test-jobs",
-            help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
-            default=lambda c, p: max(c.make_jobs / 2, 1),
-            kind=int,
-        )
+    test_localhost_via_ssh = BoolConfigOption(
+        "test-localhost-via-ssh",
+        extra_condition=lambda cls: cls._xtarget is not None and cls._xtarget.is_native(),
+        help="Use the ssh.py executor for localhost (to check that it works correctly)",
+    )
+    test_against_running_qemu_instance = BoolConfigOption(
+        "test-against-running-qemu-instance",
+        extra_condition=lambda cls: cls._xtarget is not None and cls._xtarget.target_info_cls.is_cheribsd(),
+        help="Run tests against a currently running QEMU instance using the ssh.py executor.",
+    )
+    qemu_test_jobs = IntConfigOption(
+        "parallel-qemu-test-jobs",
+        help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
+        default=ComputedDefaultValue(
+            function=lambda c, p: max(c.make_jobs / 2, 1),
+            as_string="half of make jobs",
+        ),
+    )
 
     def _supported_libcxx_hardening_modes(self) -> "list[str]":
         # We may have a partial history, so prefer scanning the CMakeLists.txt

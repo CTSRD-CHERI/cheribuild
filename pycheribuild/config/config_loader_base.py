@@ -395,26 +395,25 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         return self._is_default_value
 
     def __get__(self, instance, owner) -> T:
-        assert instance is not None or not callable(self.default), (
+        # If instance is None, we can pass the class (owner) as a fallback for instance
+        # so that ComputedDefaultValue can query class attributes/methods if it handles it.
+        lookup_instance = instance if instance is not None else owner
+        assert lookup_instance is not None or not callable(self.default), (
             f"Tried to access read config option {self.full_option_name} without an object instance. "
             f"Config options using computed defaults can only be used with an object instance. Owner = {owner}"
         )
 
-        # TODO: would be nice if this was possible (but too much depends on accessing values without instances)
-        # if instance is None:
-        #     return self
         assert not self._owning_class or issubclass(owner, self._owning_class)
         if self._cached is None:
             # noinspection PyProtectedMember
-            self._cached = self.load_option(self._loader._cheri_config, instance, owner)
+            self._cached = self.load_option(self._loader._cheri_config, lookup_instance, owner)
         return self._cached
 
     def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> Optional[T]:
-        if callable(self.default):
-            # pyrefly: ignore [bad-return]
-            return self.default(config, instance)
-        else:
-            return self.default
+        val = self.default
+        while callable(val):
+            val = val(config, instance)
+        return typing.cast(Optional[T], val)
 
     def _convert_type(self, loaded_result: _LoadedConfigValue) -> "Optional[T]":
         # check for None to make sure we don't call str(None) which would result in "None"

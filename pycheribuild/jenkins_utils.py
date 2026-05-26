@@ -27,13 +27,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import contextlib
 import inspect
 from pathlib import Path
 from typing import Optional
 
 from .config.jenkinsconfig import CheriConfig, JenkinsConfig
 from .config.loader import CommandLineConfigOption
-from .config.target_info import CrossCompileTarget
+from .config.target_info import AbstractProject, CrossCompileTarget
 from .projects.project import ComputedDefaultValue, Project
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import fatal_error, status_update
@@ -45,7 +46,8 @@ def default_install_prefix(xtarget: CrossCompileTarget, cheri_config: CheriConfi
     return Path("/opt", dirname)
 
 
-def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix_arg: Optional[Path]):
+@contextlib.contextmanager
+def jenkins_override_install_dirs(cheri_config: CheriConfig, install_prefix_arg: Optional[Path]):
     # Ugly workaround to override all install dirs to go to the tarball
     all_targets = [
         x
@@ -64,18 +66,10 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         if target.xtarget.is_native():
             fatal_error("Cannot use non-existent sysroot for native target", target.name, pretend=False)
 
-    def expected_install_root(tgt: Target, as_template=False) -> Path:
+    def expected_install_root(p: AbstractProject, tgt: Target) -> Path:
         if tgt in sysroot_targets:
-            if as_template:
-                return Path("$SYSROOT")
-            # noinspection PyProtectedMember
-            proj = tgt._get_or_create_project_no_setup(cross_target=None, config=cheri_config, caller=None)
-            target_info = proj.target_info
-            sysroot_dir = target_info.sysroot_dir
-            return sysroot_dir
+            return p.target_info.sysroot_dir
         else:
-            if as_template:
-                return Path("$OUTPUT_ROOT")
             return cheri_config.output_root
 
     def expected_install_prefix(tgt: Target) -> Path:
@@ -86,16 +80,23 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         else:
             return install_prefix_arg
 
-    def expected_install_path(tgt: Target, as_template=False) -> Path:
-        root_dir = expected_install_root(tgt, as_template)
+    def expected_install_path(p: AbstractProject, tgt: Target) -> Path:
+        root_dir = expected_install_root(p, tgt)
         install_prefix = expected_install_prefix(tgt)
         return Path(f"{root_dir}{install_prefix}")
+
+    # Save original class-level defaults to restore them later
+    original_fns = {}
+    for target in all_targets:
+        cls = target.project_class
+        if "_default_install_dir_fn" in cls.__dict__:
+            original_fns[cls] = cls.__dict__["_default_install_dir_fn"]
 
     for target in all_targets:
         cls = target.project_class
         cls._default_install_dir_fn = ComputedDefaultValue(
-            function=lambda config, project: expected_install_path(target),
-            as_string=str(expected_install_path(target, True)),
+            function=lambda config, p: expected_install_path(p, target),
+            as_string="$SYSROOT" if target in sysroot_targets else "$OUTPUT_ROOT",
         )
 
     Target.instantiating_targets_should_warn = False
@@ -119,15 +120,27 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
             status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
             project._install_dir = from_cmdline
         else:
-            project._install_dir = expected_install_root(target)
+            project._install_dir = expected_install_root(project, target)
             project._check_install_dir_conflict = False
             # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
             # To avoid this, just use the full install path as the prefix.
             if expected_install_prefix(target) == Path("/"):
-                project._install_prefix = expected_install_path(target)
+                project._install_prefix = expected_install_path(project, target)
                 project.destdir = Path("/")
             else:
                 project._install_prefix = expected_install_prefix(target)
-                project.destdir = expected_install_root(target)
-            assert project.real_install_root_dir == expected_install_path(target)
+                project.destdir = expected_install_root(project, target)
+            assert project.real_install_root_dir == expected_install_path(project, target)
         assert isinstance(inspect.getattr_static(project, "_install_dir"), Path)
+
+    try:
+        yield
+    finally:
+        # Restore original class-level defaults to avoid test pollution
+        for target in all_targets:
+            cls = target.project_class
+            if cls in original_fns:
+                cls._default_install_dir_fn = original_fns[cls]
+            else:
+                if "_default_install_dir_fn" in cls.__dict__:
+                    del cls._default_install_dir_fn

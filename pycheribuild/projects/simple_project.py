@@ -40,6 +40,7 @@ import threading
 import time
 import typing
 from abc import ABC, ABCMeta
+from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
 from typing import Callable, Optional, Sequence, TypeVar, Union
@@ -76,13 +77,18 @@ from ..utils import (
 
 __all__ = [
     "BoolConfigOption",
+    "EnumConfigOption",
+    "FloatConfigOption",
     "IntConfigOption",
     "ListConfigOption",
+    "OptionalFloatConfigOption",
     "OptionalIntConfigOption",
     "OptionalPathConfigOption",
+    "OptionalStringConfigOption",
     "PathConfigOption",
     "SimpleProject",
     "SimpleProjectBase",
+    "StringConfigOption",
     "TargetAlias",
     "TargetAliasWithDependencies",
     "_cached_get_homebrew_prefix",
@@ -92,6 +98,7 @@ __all__ = [
 ]
 
 T = TypeVar("T")
+EnumTy = TypeVar("EnumTy", bound=Enum)
 
 
 def flush_stdio(stream) -> None:
@@ -111,39 +118,78 @@ def _default_stdout_filter(_: bytes) -> None:
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
+class DefaultValueOnlyDescriptor:
+    def __init__(self, default):
+        self.default = default
+
+    def __get__(self, instance: "Optional[SimpleProjectBase]", owner: "type[SimpleProjectBase]"):
+        if instance is None:
+            return self
+        if callable(self.default):
+            return self.default(instance.config, instance)
+        return self.default
+
+
 class PerProjectConfigOption(typing.Generic[T]):
-    def __init__(self, name: str, help: str, default: "typing.Any", **kwargs) -> None:
+    def __init__(
+        self, name: str, *, help: "typing.Union[str, typing.Callable[[type], str]]", default: "typing.Any", **kwargs
+    ) -> None:
         self._name = name
         self._default = default
         self._help = help
+        self.extra_condition = kwargs.pop("extra_condition", None)
         self._kwargs = kwargs
 
-    def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle[T]:
+    def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle[T]:
         raise NotImplementedError()
 
-    # noinspection PyProtectedMember
     def __set_name__(self, owner: "type[SimpleProjectBase]", name: str):
         # we know that _local_config_options is still a dict and not a MappingProxy when called here.
-        typing.cast(typing.MutableMapping[str, PerProjectConfigOption], owner._local_config_options)[name] = self
+        local_opts = getattr(owner, "_local_config_options", None)
+        if local_opts is None:
+            local_opts = dict()
+            # If this is a parent mixin class that doesn't inherit from SimpleProjectBase,
+            # we dynamically inject the mutable dict so that the metaclass __new__ hook
+            # will automatically copy and inherit it later during subclass creation.
+            setattr(owner, "_local_config_options", local_opts)
+        typing.cast(typing.MutableMapping[str, PerProjectConfigOption], local_opts)[name] = self
 
     def __get__(self, instance: "SimpleProjectBase", owner: "type[SimpleProjectBase]") -> T:
         raise ValueError("Should have been replaced!")
 
 
 if typing.TYPE_CHECKING:
-
+    # noinspection PyPep8Naming
     def BoolConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
         **kwargs,
     ) -> bool:
         return typing.cast(bool, default)
 
     # noinspection PyPep8Naming
+    def EnumConfigOption(  # noqa: N802
+        name: str,
+        default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
+        *,
+        kind: "type[EnumTy]",
+        **kwargs,
+    ) -> EnumTy:
+        return typing.cast(EnumTy, default)
+
+    # noinspection PyPep8Naming
+    def OptionalEnumConfigOption(  # noqa: N802
+        name: str,
+        default: "typing.Union[Optional[EnumTy], ComputedDefaultValue[Optional[EnumTy]]]" = None,
+        *,
+        kind: "type[EnumTy]",
+        **kwargs,
+    ) -> "Optional[EnumTy]":
+        return typing.cast(Optional[EnumTy], default)
+
+    # noinspection PyPep8Naming
     def IntConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[int, ComputedDefaultValue[int]]",
         **kwargs,
     ) -> int:
@@ -152,16 +198,30 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalIntConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
         **kwargs,
     ) -> "Optional[int]":
         return typing.cast(Optional[int], default)
 
     # noinspection PyPep8Naming
+    def FloatConfigOption(  # noqa: N802
+        name: str,
+        default: "typing.Union[float, ComputedDefaultValue[float]]",
+        **kwargs,
+    ) -> float:
+        return typing.cast(float, default)
+
+    # noinspection PyPep8Naming
+    def OptionalFloatConfigOption(  # noqa: N802
+        name: str,
+        default: "typing.Union[Optional[float], ComputedDefaultValue[Optional[float]]]" = None,
+        **kwargs,
+    ) -> "Optional[float]":
+        return typing.cast(Optional[float], default)
+
+    # noinspection PyPep8Naming
     def PathConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Path, ComputedDefaultValue[Path]]",
         **kwargs,
     ) -> "Path":
@@ -170,16 +230,30 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def OptionalPathConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
         **kwargs,
     ) -> "Optional[Path]":
         return typing.cast(Optional[Path], default)
 
     # noinspection PyPep8Naming
+    def StringConfigOption(  # noqa: N802
+        name: str,
+        default: "typing.Union[str, ComputedDefaultValue[str]]",
+        **kwargs,
+    ) -> str:
+        return typing.cast(str, default)
+
+    # noinspection PyPep8Naming
+    def OptionalStringConfigOption(  # noqa: N802
+        name: str,
+        default: "typing.Union[str, ComputedDefaultValue[Optional[str]], None]" = None,
+        **kwargs,
+    ) -> Optional[str]:
+        return typing.cast(Optional[str], default)
+
+    # noinspection PyPep8Naming
     def ListConfigOption(  # noqa: N802
         name: str,
-        help: str,
         default: "typing.Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
         **kwargs,
     ) -> "list[T]":
@@ -187,74 +261,181 @@ if typing.TYPE_CHECKING:
 else:
 
     class BoolConfigOption(PerProjectConfigOption[bool]):
-        def __init__(
-            self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs
-        ):
-            super().__init__(name, help, default, **kwargs)
+        def __init__(self, name: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs):
+            super().__init__(name, default=default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs),
+                owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
+            )
+
+    class EnumConfigOption(PerProjectConfigOption[EnumTy], typing.Generic[EnumTy]):
+        def __init__(
+            self,
+            name: str,
+            default: "typing.Union[EnumTy, ComputedDefaultValue[EnumTy]]",
+            *,
+            kind: "type[EnumTy]",
+            **kwargs,
+        ):
+            super().__init__(name, default=default, kind=kind, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            kind = self._kwargs["kind"]
+            other_kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=kind, **other_kwargs, **kwargs
+                ),
+            )
+
+    class OptionalEnumConfigOption(PerProjectConfigOption[Optional[EnumTy]], typing.Generic[EnumTy]):
+        def __init__(
+            self,
+            name: str,
+            default: "typing.Union[Optional[EnumTy], ComputedDefaultValue[Optional[EnumTy]]]" = None,
+            *,
+            kind: "type[EnumTy]",
+            **kwargs,
+        ):
+            super().__init__(name, default=default, kind=kind, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            kind = self._kwargs["kind"]
+            other_kwargs = {k: v for k, v in self._kwargs.items() if k != "kind"}
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=kind, **other_kwargs, **kwargs
+                ),
             )
 
     class IntConfigOption(PerProjectConfigOption[int]):
-        def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
-            super().__init__(name, help, default, **kwargs)
+        def __init__(self, name: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
+            super().__init__(name, default=default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=int, **self._kwargs, **kwargs
+                ),
             )
 
     class OptionalIntConfigOption(PerProjectConfigOption[Optional[int]]):
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=int, **self._kwargs, **kwargs
+                ),
+            )
+
+    class FloatConfigOption(PerProjectConfigOption[float]):
+        def __init__(self, name: str, default: "typing.Union[float, ComputedDefaultValue[float]]", **kwargs):
+            super().__init__(name, default=default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=float, **self._kwargs, **kwargs
+                ),
+            )
+
+    class OptionalFloatConfigOption(PerProjectConfigOption[Optional[float]]):
+        def __init__(
+            self,
+            name: str,
+            default: "typing.Union[Optional[float], ComputedDefaultValue[Optional[float]]]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, default=default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=float, **self._kwargs, **kwargs
+                ),
             )
 
     class PathConfigOption(PerProjectConfigOption[Path]):
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Path, ComputedDefaultValue[Path]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            help_str = self._help(owner) if callable(self._help) else self._help
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
+                owner.add_config_option(
+                    self._name, default=self._default, help=help_str, kind=Path, **self._kwargs, **kwargs
+                ),
             )
 
     class OptionalPathConfigOption(PerProjectConfigOption[Optional[Path]]):
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[Path], ComputedDefaultValue[Optional[Path]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_optional_path_option(
+                    self._name, default=self._default, help=self._help, **self._kwargs, **kwargs
+                ),
+            )
+
+    class StringConfigOption(PerProjectConfigOption[str]):
+        def __init__(
+            self,
+            name: str,
+            default: "typing.Union[str, ComputedDefaultValue[str]]",
+            **kwargs,
+        ):
+            super().__init__(name, default=default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(
-                    self._name, default=self._default, help=self._help, kind=Optional[Path], **self._kwargs
+                    self._name, default=self._default, help=self._help, kind=str, **self._kwargs, **kwargs
+                ),
+            )
+
+    class OptionalStringConfigOption(PerProjectConfigOption[Optional[str]]):
+        def __init__(
+            self,
+            name: str,
+            default: "typing.Union[str, ComputedDefaultValue[Optional[str]], None]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, default=default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_optional_config_option(
+                    self._name, default=self._default, help=self._help, kind=str, **self._kwargs, **kwargs
                 ),
             )
 
@@ -262,16 +443,15 @@ else:
         def __init__(
             self,
             name: str,
-            help: str,
             default: "typing.Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
             **kwargs,
         ):
-            super().__init__(name, help, default, **kwargs)
+            super().__init__(name, default=default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
-                owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs),
+                owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
             )
 
 
@@ -881,6 +1061,10 @@ class SimpleProjectBase(AbstractProject, ABC):
         use_default_fallback_config_names=True,
         **kwargs,
     ) -> T:
+        if callable(use_default_fallback_config_names):
+            use_default_fallback_config_names = use_default_fallback_config_names(cls)
+        if callable(show_help):
+            show_help = show_help(cls)
         fullname = cls.target + "/" + name
         # We abuse shortname to implement altname
         if altname is not None:
@@ -1035,8 +1219,21 @@ class SimpleProjectBase(AbstractProject, ABC):
             # If the option has been overwritten to be a constant in a subclass we should not register it - check the
             # type of the ClassVar to determine if this is actually needed.
             option = inspect.getattr_static(cls, k)
-            if isinstance(option, PerProjectConfigOption):
-                setattr(cls, k, v.register_config_option(cls))
+            # Register the option if it's a raw descriptor or a ConfigOptionHandle inherited from a concrete
+            # parent target class that hasn't been registered specifically on this subclass yet (i.e. not in
+            # cls.__dict__). For example, BuildCheriAllianceQEMU (cheri-std093-qemu) inherits the 'targets' option
+            # as a ConfigOptionHandle from its concrete parent BuildQEMU (qemu), and we must register it
+            # specifically on cheri-std093-qemu so it resolves to the custom default_targets list.
+            if isinstance(option, PerProjectConfigOption) or (
+                isinstance(option, ConfigOptionHandle) and k not in cls.__dict__
+            ):
+                if v.extra_condition is not None and not v.extra_condition(cls):
+                    # If the option's extra condition is not met, replace the descriptor with
+                    # DefaultValueOnlyDescriptor to dynamically evaluate the default value without
+                    # registering it in the loader.
+                    setattr(cls, k, DefaultValueOnlyDescriptor(v._default))
+                else:
+                    setattr(cls, k, v.register_config_option(cls))
 
     def __init__(self, config: CheriConfig, *, crosscompile_target: CrossCompileTarget) -> None:
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
@@ -1631,18 +1828,28 @@ class ProjectSubclassDefinitionHook(ABCMeta):
     def __new__(cls, name: str, bases: "tuple[type, ...]", namespace: "dict[str, typing.Any]", **kwargs):
         # We have to set _local_config_options to a new dict here, as this is the first hook that runs before
         # the __set_name__ function on class members is called (__init_subclass__ is too late).
+        merged_opts = {}
         for base in bases:
             old = getattr(base, "_local_config_options", None)
             if old is not None:
-                # Create a copy of the dictionary so that modifying it does not change the value in the base class.
-                namespace = dict(namespace)
-                namespace["_local_config_options"] = dict(old)
+                merged_opts.update(old)
+        if merged_opts or "_local_config_options" in namespace:
+            namespace = dict(namespace)
+            namespace["_local_config_options"] = {**merged_opts, **namespace.get("_local_config_options", {})}
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
     # pytype: disable=invalid-annotation
     def __init__(
         cls: "type[SimpleProjectBase]", name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs
     ) -> None:
+        # Retrieve the modifiable dict of local config options.
+        local_opts: "dict[str, PerProjectConfigOption]" = getattr(cls, "_local_config_options", {})
+        if local_opts and isinstance(local_opts, dict):
+            # Prune overridden options that have been redefined as static/non-descriptor values in this subclass
+            for key in list(local_opts.keys()):
+                current_val = inspect.getattr_static(cls, key, None)
+                if not isinstance(current_val, PerProjectConfigOption):
+                    del local_opts[key]
         super().__init__(name, bases, clsdict, **kwargs)
         # pytype: enable=invalid-annotation
         assert issubclass(cls, SimpleProjectBase)

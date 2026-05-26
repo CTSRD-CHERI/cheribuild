@@ -42,6 +42,7 @@ from ..project import (
     MakeCommandKind,
     Project,
 )
+from ..simple_project import BoolConfigOption
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import CPUArchitecture
@@ -176,10 +177,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.secure_boot = cls.add_bool_option("secure-boot", default=False, help="Enable secure boot image")
+    secure_boot = BoolConfigOption("secure-boot", default=False, help="Enable secure boot image")
 
     @property
     def platform(self) -> str:

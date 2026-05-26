@@ -34,7 +34,7 @@ from typing import Optional
 
 from .cheribsd import BuildFreeBSD
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
-from ..simple_project import BoolConfigOption
+from ..simple_project import BoolConfigOption, EnumConfigOption
 
 
 class JsBackend(Enum):
@@ -65,18 +65,14 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
         help="Use offsets into the JS heap for object references instead of capabilities. "
         "This option only affects the purecap backends.",
     )
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.backend = cls.add_config_option(
-            "backend",
-            kind=JsBackend,
-            default=JsBackend.CLOOP,
-            enum_choice_strings=[t.value for t in JsBackend],
-            show_help=True,
-            help="The JavaScript backend to use for building WebKit",
-        )
+    backend = EnumConfigOption(
+        "backend",
+        kind=JsBackend,
+        default=JsBackend.CLOOP,
+        enum_choice_strings=[t.value for t in JsBackend],
+        show_help=True,
+        help="The JavaScript backend to use for building WebKit",
+    )
 
     @property
     def build_dir_suffix(self):
