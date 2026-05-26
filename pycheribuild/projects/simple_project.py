@@ -871,6 +871,11 @@ class SimpleProjectBase(AbstractProject, ABC):
     def host_CPP(self) -> Path:  # noqa: N802
         return TargetInfo.host_c_preprocessor(self.config)
 
+    # noinspection PyPep8Naming
+    @property
+    def host_LD(self) -> Path:  # noqa: N802
+        return TargetInfo.host_linker(self.config)
+
     @property
     def essential_compiler_and_linker_flags(self):
         # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.

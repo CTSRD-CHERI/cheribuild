@@ -631,6 +631,13 @@ class TargetInfo(ABC):
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clang_cpp_path
 
+    @staticmethod
+    def host_linker(config: CheriConfig) -> Path:
+        if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
+            # SDK clang doesn't work for native builds on macos
+            return config.cheri_sdk_bindir / "ld.lld"
+        return config.lld_path
+
     def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
         """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
         return [
