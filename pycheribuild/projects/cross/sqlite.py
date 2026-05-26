@@ -28,12 +28,15 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
+from ..simple_project import BoolConfigOption
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/sqlite.git", default_branch="3.22.0-cheri", force_branch=True
     )
+
+    build_speedtest = BoolConfigOption("build-speedtest", default=False, help="build the speedtest benchmark")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -69,8 +72,13 @@ class BuildSQLite(CrossCompileAutotoolsProject):
         self.run_cmd(self.source_dir / "create-fossil-manifest", cwd=self.source_dir)
         super().compile()
 
+        if self.build_speedtest:
+            self.run_make("speedtest1", cwd=self.build_dir)
+
     def install(self, **kwargs):
         super().install()
+        if self.build_speedtest:
+            self.install_file(self.build_dir / "speedtest1", self.install_dir / "speedtest1", print_verbose_only=False)
 
     def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
