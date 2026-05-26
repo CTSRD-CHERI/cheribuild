@@ -283,17 +283,16 @@ def _jenkins_main() -> None:
         fatal_error("More than one target is not supported yet.", pretend=False)
         sys.exit()
 
-    jenkins_override_install_dirs_hack(cheri_config, cheri_config.installation_prefix)
+    with jenkins_override_install_dirs_hack(cheri_config, cheri_config.installation_prefix):
+        if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
+            # Check system dependencies before building any targets to get an error message earlier.
+            for target in cheri_config.targets:
+                target_manager.get_target_raw(target).check_system_deps(cheri_config)
+            for tgt in cheri_config.targets:
+                build_target(cheri_config, target_manager.get_target_raw(tgt))
 
-    if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
-        # Check system dependencies before building any targets to get an error message earlier.
-        for target in cheri_config.targets:
-            target_manager.get_target_raw(target).check_system_deps(cheri_config)
-        for tgt in cheri_config.targets:
-            build_target(cheri_config, target_manager.get_target_raw(tgt))
-
-    if JenkinsAction.CREATE_TARBALL in cheri_config.action:
-        create_tarball(cheri_config)
+        if JenkinsAction.CREATE_TARBALL in cheri_config.action:
+            create_tarball(cheri_config)
 
 
 def build_target(cheri_config, target: Target) -> None:
