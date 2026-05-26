@@ -325,6 +325,7 @@ class JenkinsConfig(CheriConfig):
             self.clang_path = Path(os.getenv("HOST_CC", self.clang_path))
             self.clang_plusplus_path = Path(os.getenv("HOST_CXX", self.clang_plusplus_path))
             self.clang_cpp_path = Path(os.getenv("HOST_CPP", self.clang_cpp_path))
+            self.lld_path = Path(os.getenv("HOST_LD", self.lld_path))
             if not self.clang_path.exists():
                 fatal_error(
                     "C compiler",
@@ -346,6 +347,13 @@ class JenkinsConfig(CheriConfig):
                     "does not exit. Pass --clang-cpp-path or set $HOST_CPP",
                     pretend=self.pretend,
                 )
+            if not self.lld_path.exists():
+                fatal_error(
+                    "Linker",
+                    self.lld_path,
+                    "does not exit. Pass --lld-path or set $HOST_LD",
+                    pretend=self.pretend,
+                )
         else:
             # always use the CHERI clang built by jenkins (if available)
             # Prefix $WORKSPACE/native-sdk, but fall back to CHERI/Morello LLVM if that does not exist
@@ -360,6 +368,7 @@ class JenkinsConfig(CheriConfig):
                 self.clang_path = compiler_dir_override / "clang"
                 self.clang_plusplus_path = compiler_dir_override / "clang++"
                 self.clang_cpp_path = compiler_dir_override / "clang-cpp"
+                self.lld_path = compiler_dir_override / "ld.lld"
 
         if self._cheri_sdk_dir_override is not None:
             assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"

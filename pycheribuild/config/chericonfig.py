@@ -46,7 +46,7 @@ from typing import Optional
 
 from .computed_default_value import ComputedDefaultValue
 from .config_loader_base import ConfigLoaderBase
-from ..processutils import latest_system_clang_tool, run_command
+from ..processutils import get_compiler_info, latest_system_clang_tool, run_command
 from ..utils import (
     ConfigBase,
     DoNotUseInIfStmt,
@@ -172,6 +172,30 @@ def _latest_system_clang_tool_or_invalid(config: ConfigBase, basename: str, fall
     return result if result is not None else Path("/could/not/find/valid", basename)
 
 
+def _default_lld_path(config: "CheriConfig", _) -> Path:
+    # Try to find matching ld.lld for the host compiler:
+    is_clang = False
+    is_apple_clang = False
+    try:
+        compiler_info = get_compiler_info(config.clang_path, config=config)
+        is_clang = compiler_info.is_clang
+        is_apple_clang = compiler_info.is_apple_clang
+        if is_clang and not is_apple_clang:
+            lld = compiler_info.get_matching_binutil("ld.lld")
+            if lld is not None and lld.exists():
+                return lld
+    except Exception:
+        pass
+    # Fallback: for non-Apple Clang we still prefer ld.lld, otherwise we default to ld.
+    if is_clang and not is_apple_clang:
+        in_path = shutil.which("ld.lld") or shutil.which("ld")
+        fallback_name = "ld.lld"
+    else:
+        in_path = shutil.which("ld")
+        fallback_name = "ld"
+    return Path(in_path) if in_path else Path("/could/not/find/" + fallback_name)
+
+
 class CheriConfig(ConfigBase, metaclass=ABCMeta):
     # These properties need to be set in the derived class
     output_root: Path
@@ -275,6 +299,13 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             default=lambda c, _: _latest_system_clang_tool_or_invalid(c, "clang-cpp", "cpp"),
             group=loader.path_group,
             help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)",
+        )
+        self.lld_path = loader.add_path_option(
+            "lld-path",
+            shortname="-ld-path",
+            default=ComputedDefaultValue(_default_lld_path, as_string="matching lld or ld"),
+            group=loader.path_group,
+            help="The linker to use for host binaries (must be compatible with LLD >= 3.7)",
         )
 
         self.pass_dash_k_to_make = loader.add_commandline_only_bool_option(
@@ -704,6 +735,8 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             self.clang_plusplus_path = Path("/c++/compiler/is/missing")
         if not self.clang_cpp_path.exists():
             self.clang_cpp_path = Path("/cpp/is/missing")
+        if not self.lld_path.exists():
+            self.lld_path = Path("/lld/is/missing")
 
         # if we are creating a compilation db in the source that implies creating one in the first place:
         if self.copy_compilation_db_to_source_dir:
