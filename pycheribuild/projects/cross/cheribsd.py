@@ -1610,6 +1610,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             CC=self.host_CC,
             CXX=self.host_CXX,
             CPP=self.host_CPP,
+            LD=self.host_LD,
             STRIPBIN=shutil.which("strip") or shutil.which("llvm-strip") or "strip",
         )
         if self.use_bootstrapped_toolchain:
