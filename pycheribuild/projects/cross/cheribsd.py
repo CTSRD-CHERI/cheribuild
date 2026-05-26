@@ -1153,8 +1153,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if xccinfo.is_clang and xccinfo.version < (10, 0):
             # llvm-ranlib didn't support -D flag (see https://bugs.llvm.org/show_bug.cgi?id=41707)
             self.cross_toolchain_config.set(RANLIBFLAGS="")
-        # However, we do want to install the host tools
-        self.cross_toolchain_config.set_with_options(TOOLCHAIN=True)
+        # However, we do want to install the basic binutils (just not the full clang/lld/lldb)
+        self.cross_toolchain_config.set_with_options(TOOLCHAIN=True, CLANG=False, LLD=False, LLDB=False)
 
         if self.crosscompile_target.is_i386() and xccinfo.is_clang and xccinfo.version < (11, 0):
             # The i686 default was added in commit 02cfa7530d9e7cfd8ea940dab4173afb7938b831 (LLVM 11.0). When
