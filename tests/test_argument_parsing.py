@@ -1554,6 +1554,29 @@ def test_jenkins_hack_install_dirs(target: str, args: "list[str]", expected_inst
     assert release.install_dir == expected_install_dir
 
 
+def test_jenkins_hack_install_dir_for_dependencies():
+    # When building gdb, we should expect the gmp and mpfr projects to install to the same prefix,
+    # even if they are not explicitly built (not in config.targets).
+    args = [
+        "--output-root=/tmp/tarball",
+        "--sysroot-install-dir-targets=gmp-riscv64-hybrid mpfr-riscv64-hybrid",
+        "--enable-hybrid-targets",
+        "gdb-riscv64-hybrid",
+    ]
+    config = _parse_arguments(args)
+    jenkins_override_install_dirs_hack(config, Path("/prefix"))
+
+    gmp = _get_target_instance("gmp-riscv64-hybrid", config, Project)
+    assert gmp.install_dir == Path("/tmp/tarball/prefix")
+    assert gmp.destdir == Path("/tmp/tarball")
+    assert gmp.install_prefix == Path("/prefix")
+
+    mpfr = _get_target_instance("mpfr-riscv64-hybrid", config, Project)
+    assert mpfr.install_dir == Path("/tmp/tarball/prefix")
+    assert mpfr.destdir == Path("/tmp/tarball")
+    assert mpfr.install_prefix == Path("/prefix")
+
+
 def test_host_prefixes_and_install_dir():
     # Building the wayland target was failing because it was trying to find wayland-scanner
     # inside the morello-purecap rootfs.
