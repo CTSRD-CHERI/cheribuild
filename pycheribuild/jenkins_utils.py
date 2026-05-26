@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import contextlib
 import inspect
 from pathlib import Path
 from typing import Optional
@@ -45,6 +46,7 @@ def default_install_prefix(xtarget: CrossCompileTarget, cheri_config: CheriConfi
     return Path("/opt", dirname)
 
 
+@contextlib.contextmanager
 def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix_arg: Optional[Path]):
     # Ugly workaround to override all install dirs to go to the tarball
     all_targets = [
@@ -82,6 +84,13 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         root_dir = expected_install_root(p, tgt)
         install_prefix = expected_install_prefix(tgt)
         return Path(f"{root_dir}{install_prefix}")
+
+    # Save original class-level defaults to restore them later
+    original_fns = {}
+    for target in all_targets:
+        cls = target.project_class
+        if "_default_install_dir_fn" in cls.__dict__:
+            original_fns[cls] = cls.__dict__["_default_install_dir_fn"]
 
     for target in all_targets:
         cls = target.project_class
@@ -124,3 +133,15 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
                 project.destdir = expected_install_root(project, target)
             assert project.real_install_root_dir == expected_install_path(project, target)
         assert isinstance(inspect.getattr_static(project, "_install_dir"), Path)
+
+    try:
+        yield
+    finally:
+        # Restore original class-level defaults to avoid test pollution
+        for target in all_targets:
+            cls = target.project_class
+            if cls in original_fns:
+                cls._default_install_dir_fn = original_fns[cls]
+            else:
+                if "_default_install_dir_fn" in cls.__dict__:
+                    del cls._default_install_dir_fn
