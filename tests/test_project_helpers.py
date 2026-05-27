@@ -32,7 +32,7 @@ def test_add_cmake_option():
         assert test_project.configure_args == expected
         test_project.configure_args.clear()  # reset for next test
 
-    config: CheriConfig = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config: CheriConfig = setup_mock_chericonfig()
     target_manager.reset()
     TestCMakeProject.setup_config_options()
     test_project = TestCMakeProject(config, crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP)
@@ -110,7 +110,7 @@ def test_mixin_and_overridden_config_options():
     assert "mixin_option" not in TestOverrideMixinProject._local_config_options
     assert "base_option" not in TestConcreteProject._local_config_options
 
-    config: CheriConfig = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config: CheriConfig = setup_mock_chericonfig()
 
     instance = TestConcreteProject(config, crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP)
     assert instance.mixin_option is True
@@ -126,7 +126,7 @@ def test_conditional_config_options():
     during metaclass options registration on targets where the condition is not met.
     """
     target_manager.reset()
-    config: CheriConfig = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config: CheriConfig = setup_mock_chericonfig()
 
     class TestMultiArchProject(SimpleProject):
         target = "test-multiarch-project"

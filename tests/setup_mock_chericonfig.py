@@ -68,7 +68,7 @@ class MockConfig(CheriConfig):
         assert self._ensure_required_properties_set()
 
 
-def setup_mock_chericonfig(source_root: Path, pretend=True) -> MockConfig:
+def setup_mock_chericonfig(source_root: Path = Path("/this/path/does/not/exist"), pretend=True) -> MockConfig:
     config = MockConfig(source_root, pretend)
     # noinspection PyTypeChecker
     init_global_config(config, test_mode=True)

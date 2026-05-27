@@ -1,5 +1,4 @@
 import typing
-from pathlib import Path
 
 import pytest
 
@@ -11,7 +10,7 @@ from pycheribuild.targets import target_manager
 
 
 def test_qemu_launch_ports_no_conflict():
-    config: CheriConfig = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config: CheriConfig = setup_mock_chericonfig()
     config.enable_hybrid_targets = True
     target_manager.register_command_line_options()
 
