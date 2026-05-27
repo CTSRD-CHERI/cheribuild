@@ -3,8 +3,6 @@ import inspect
 import itertools
 
 # noinspection PyUnresolvedReferences
-from pathlib import Path
-
 import pytest
 
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
@@ -49,7 +47,7 @@ def _sort_targets(
 ) -> "list[str]":
     target_manager.reset()
     # print(real_targets)
-    global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    global_config = setup_mock_chericonfig()
     global_config.include_dependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skip_sdk = skip_sdk
@@ -492,7 +490,7 @@ def test_ksyntaxhighlighting_includes_native_dependency():
 
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
-    config = copy.copy(setup_mock_chericonfig(Path("/this/path/does/not/exist")))
+    config = copy.copy(setup_mock_chericonfig())
     config.skip_sdk = True
     config.include_toolchain_dependencies = False
     config.include_dependencies = True
@@ -732,7 +730,7 @@ def test_skip_toolchain_deps(
 )
 def test_hybrid_targets(enable_hybrid_targets: bool):
     # there should only be very few targets that are built hybrid
-    config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config = setup_mock_chericonfig()
     config.enable_hybrid_targets = enable_hybrid_targets
     all_hybrid_targets = [
         x
@@ -804,7 +802,7 @@ def test_hybrid_targets(enable_hybrid_targets: bool):
 
 
 def _get_native_targets():
-    config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config = setup_mock_chericonfig()
     for target in target_manager.targets(config):
         if target.xtarget.is_native():
             yield pytest.param(config, target, id=target.name)
@@ -861,7 +859,7 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
     ],
 )
 def test_toolchain_dependencies(xtarget: CrossCompileTarget, expected: "list[str]"):
-    config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    config = setup_mock_chericonfig()
     assert xtarget.target_info_cls.toolchain_targets(xtarget, config) == expected
     if expected:
         assert len(expected) == 1
