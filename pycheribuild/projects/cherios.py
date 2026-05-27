@@ -30,7 +30,7 @@
 
 from .cmake_project import CMakeProject
 from .project import BuildType, ComputedDefaultValue, GitRepository
-from .run_qemu import LaunchQEMUBase, get_default_ssh_forwarding_port
+from .run_qemu import LaunchQEMUBase
 from .simple_project import BoolConfigOption, IntConfigOption
 from ..config.compilation_targets import CompilationTargets
 from ..utils import OSInfo
@@ -73,10 +73,6 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     forward_ssh_port = False
     qemu_user_networking = False
     hide_options_from_help = True
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(40), **kwargs)
 
     @property
     def source_project(self):
