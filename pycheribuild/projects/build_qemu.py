@@ -541,7 +541,12 @@ class BuildCheriQEMUBase(BuildQEMUBase):
 
 class BuildQEMU(BuildCheriQEMUBase):
     target = "qemu"
-    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
+    repository = GitRepository(
+        "https://github.com/CHERI-Alliance/qemu.git",
+        default_branch="main",
+        old_urls=["https://github.com/CTSRD-CHERI/qemu.git"],
+        old_branches={"qemu-cheri": "main"},
+    )
     default_targets = (
         "arm-softmmu,aarch64-softmmu,morello-softmmu,"
         "mips64-softmmu,mips64cheri128-softmmu,"
