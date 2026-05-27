@@ -496,6 +496,20 @@ class GitRepository(SourceRepository):
             return base_project_source_dir
         return base_project_source_dir.with_name(target_override.directory_name)
 
+    def _find_unique_branch_name(self, current_project: "Project", src_dir: Path, base_name: str) -> str:
+        suffix_counter = 1
+        new_branch_name = f"{base_name}-cheribuild"
+        while True:
+            has_branch = current_project.try_run_cmd(
+                ["git", "show-ref", "--verify", f"refs/heads/{new_branch_name}"],
+                cwd=src_dir,
+                capture_error=True,
+            )
+            if not has_branch:
+                return new_branch_name
+            suffix_counter += 1
+            new_branch_name = f"{base_name}-cheribuild-{suffix_counter}"
+
     def _handle_old_urls(self, current_project: "Project", src_dir: Path) -> None:
         if not (src_dir.exists() and self.old_urls):
             return
@@ -518,47 +532,94 @@ class GitRepository(SourceRepository):
         # Strip any .git suffix to match more old URLs
         if remote_url.endswith(".git"):
             remote_url = remote_url[:-4]
-        # Update from the old url:
+
+        # Find if we match any old URL
+        matched_old_url = None
         for old_url in self.old_urls:
             if old_url.endswith(".git"):
                 old_url = old_url[:-4]
             if remote_url == old_url:
-                current_project.warning(
-                    current_project.target, "still points to old repository", remote_url, "instead of", self.url
-                )
-                if current_project.query_yes_no("Update to correct URL?"):
-                    has_origin = current_project.try_run_cmd(
-                        ["git", "remote", "get-url", "origin"],
-                        capture_output=True,
+                matched_old_url = old_url
+                break
+
+        if matched_old_url is None:
+            return
+
+        current_project.warning(
+            current_project.target, "still points to old repository", remote_url, "instead of", self.url
+        )
+        if not current_project.query_yes_no("Update to correct URL?"):
+            return
+
+        has_origin = current_project.try_run_cmd(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            cwd=src_dir,
+            print_verbose_only=True,
+        )
+
+        if has_origin:
+            new_name = "old-origin"
+            while not current_project.try_run_cmd(
+                ["git", "remote", "rename", "origin", new_name],
+                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                cwd=src_dir,
+                capture_error=True,
+            ):
+                new_name = "old-" + new_name
+
+        current_project.run_cmd(
+            ["git", "remote", "add", "origin", self.url],
+            run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+            cwd=src_dir,
+        )
+        branch_info = branch_info._replace(remote_name="origin")
+        default_branch = self.get_default_branch(current_project, include_per_target=True)
+        if not default_branch:
+            return
+
+        current_project.info(f"Switching to default branch {default_branch} for new URL")
+        current_project.run_cmd(["git", "fetch", branch_info.remote_name], cwd=src_dir)
+        expected_upstream = f"{branch_info.remote_name}/{default_branch}"
+        has_branch = current_project.try_run_cmd(
+            ["git", "show-ref", "--verify", f"refs/heads/{default_branch}"],
+            cwd=src_dir,
+            capture_error=True,
+        )
+        if has_branch:
+            try:
+                upstream = (
+                    current_project.run_cmd(
+                        ["git", "rev-parse", "--abbrev-ref", f"{default_branch}@{{u}}"],
                         cwd=src_dir,
+                        capture_output=True,
+                        capture_error=True,
                         print_verbose_only=True,
                     )
+                    .stdout.decode("utf-8")
+                    .strip()
+                )
+            except subprocess.CalledProcessError:
+                upstream = None
 
-                    if has_origin:
-                        new_name = "old-origin"
-                        while not current_project.try_run_cmd(
-                            ["git", "remote", "rename", "origin", new_name],
-                            run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
-                            cwd=src_dir,
-                            capture_error=True,
-                        ):
-                            new_name = "old-" + new_name
+            if upstream == expected_upstream:
+                current_project.info(f"Checking out existing branch {default_branch}")
+                checkout_args = [default_branch]
+            else:
+                new_branch_name = self._find_unique_branch_name(current_project, src_dir, default_branch)
+                if upstream:
+                    msg = f"Branch {default_branch} tracks wrong branch {upstream}."
+                else:
+                    msg = f"Branch {default_branch} has no upstream."
+                current_project.info(msg, f"Creating new branch {new_branch_name}")
+                checkout_args = ["-b", new_branch_name, expected_upstream]
+        else:
+            current_project.info(
+                f"Branch {default_branch} does not exist locally. Checking it out from {expected_upstream}"
+            )
+            checkout_args = ["--track", expected_upstream]
 
-                    current_project.run_cmd(
-                        ["git", "remote", "add", "origin", self.url],
-                        run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
-                        cwd=src_dir,
-                    )
-                    branch_info = branch_info._replace(remote_name="origin")
-                    default_branch = self.get_default_branch(current_project, include_per_target=True)
-                    if default_branch:
-                        current_project.info(f"Switching to default branch {default_branch} for new URL")
-                        current_project.run_cmd(["git", "fetch", branch_info.remote_name], cwd=src_dir)
-                        current_project.run_cmd(
-                            ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
-                            cwd=src_dir,
-                            capture_error=True,
-                        )
+        current_project.run_cmd(["git", "checkout", *checkout_args], cwd=src_dir)
 
     def _handle_branch_switch(self, current_project: "Project", src_dir: Path) -> None:
         if not (src_dir.exists() and (self.force_branch or self.old_branches)):
@@ -642,7 +703,7 @@ class GitRepository(SourceRepository):
                         current_project.info(f"Checking out existing branch {default_branch}")
                         checkout_args = [default_branch]
                     else:
-                        new_branch_name = f"{default_branch}-cheribuild"
+                        new_branch_name = self._find_unique_branch_name(current_project, src_dir, default_branch)
                         if upstream:
                             msg = f"Branch {default_branch} tracks wrong branch {upstream}."
                         else:
