@@ -719,3 +719,20 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         self.run_make_install()
+
+
+class IperfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
+    repository = GitRepository("https://github.com/CTSRD-CHERI/iperf.git", default_branch="cheri-3.21")
+    target = "iperf"
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    # Needs bsd make to build
+    make_kind = MakeCommandKind.GnuMake
+    _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+
+    static_binary = BoolConfigOption("build-static-binary", help="Build iperf as a static binary")
+
+    def configure(self, **kwargs):
+        if self.static_binary:
+            self.configure_args.append("--enable-static-bin")
+        super().configure(**kwargs)
