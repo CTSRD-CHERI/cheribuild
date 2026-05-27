@@ -1281,7 +1281,6 @@ def test_mfs_root_kernel_config_options():
     config_options.sort()
     assert config_options == [
         "_cross_toolchain_root",
-        "_initial_build_dir",
         "_install_dir",
         "_linkage",
         "auto_var_init",

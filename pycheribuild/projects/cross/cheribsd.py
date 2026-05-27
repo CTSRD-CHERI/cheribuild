@@ -79,11 +79,6 @@ def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path
     return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
 
 
-def cheribsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject") -> Path:
-    build_cheribsd = BuildCHERIBSD.get_instance(project, config)
-    return build_cheribsd.default_build_dir(config, build_cheribsd)
-
-
 def _clear_dangerous_make_env_vars() -> None:
     # remove any environment variables that could interfere with bmake running
     for k, v in os.environ.copy().items():
@@ -2079,13 +2074,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
     )
-    default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
-        function=cheribsd_reuse_build_dir, as_string=lambda cls: BuildCHERIBSD.project_build_dir_help()
-    )
     # This exists specifically for this target
     has_default_buildkernel_kernel_config: bool = False
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
     _config_inherits_from: "type[BuildCHERIBSD]" = BuildCHERIBSD
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildCHERIBSD)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
