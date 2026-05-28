@@ -45,6 +45,7 @@ from .crosscompileproject import (
 )
 from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ReuseOtherProjectRepository
+from ..simple_project import BoolConfigOption
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...targets import target_manager
@@ -687,22 +688,11 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other tagets:
-    _supported_architectures = (
-        CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID,
-        CompilationTargets.CHERIBSD_RISCV_PURECAP,
-    )
+    _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.hw_counters = cls.add_config_option(
-            "enable-hw-counters",
-            choices=("pmc", "statcounters"),
-            default="statcounters",
-            help="Use hardware performance counters",
-        )
+    hw_counters = BoolConfigOption(
+        "enable-hw-counters", choices=("pmc", "statcounters"), help="Use hardware performance counters"
+    )
 
     def configure(self, **kwargs):
         self.configure_args.append("--enable-unixdomain")
