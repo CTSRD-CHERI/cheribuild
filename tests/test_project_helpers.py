@@ -93,6 +93,7 @@ def test_mixin_and_overridden_config_options():
         def process(self):
             pass
 
+    config: CheriConfig = setup_mock_chericonfig()
     target_manager.reset()
     TestConcreteProject.setup_config_options()
     TestOverrideMixinProject.setup_config_options()
@@ -109,8 +110,6 @@ def test_mixin_and_overridden_config_options():
 
     assert "mixin_option" not in TestOverrideMixinProject._local_config_options
     assert "base_option" not in TestConcreteProject._local_config_options
-
-    config: CheriConfig = setup_mock_chericonfig()
 
     instance = TestConcreteProject(config, crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP)
     assert instance.mixin_option is True
