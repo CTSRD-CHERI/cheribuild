@@ -768,7 +768,7 @@ class SystemClangIfExistsElse:
         ),
         pytest.param(
             "freebsd-with-default-options-riscv64",
-            "$BUILD$/freebsd-with-default-options-default-options-riscv64-build/tmp/usr/bin/clang",
+            "$BUILD$/freebsd-with-default-options-riscv64-build/tmp/usr/bin/clang",
             CompilerType.BOOTSTRAPPED,
             [],
         ),
@@ -1616,7 +1616,7 @@ def test_freebsd_disk_image_toolchain():
     target = "disk-image-freebsd-with-default-options-riscv64"
     project = _get_target_instance(target, config, BuildDiskImageBase)
 
-    expected_cc = config.build_root / "freebsd-with-default-options-default-options-riscv64-build/tmp/usr/bin/clang"
+    expected_cc = config.build_root / "freebsd-with-default-options-riscv64-build/tmp/usr/bin/clang"
     assert project.CC == expected_cc
     # we should also be using freebsd-with-default-options as the base sysroot target
     assert project.target_info.base_sysroot_targets(project.crosscompile_target, config) == [
@@ -1633,3 +1633,16 @@ def test_run_freebsd_with_default_options():
     project = _get_target_instance(run_target, config, SimpleProject)
     assert project._disk_image_class.target == "disk-image-freebsd-with-default-options"
     assert project.target_info._get_run_project(project.crosscompile_target, project).target == run_target
+
+
+def test_freebsd_with_default_options_build_dir_no_overlap():
+    config = _parse_arguments([])
+    freebsd = _get_target_instance("freebsd-riscv64", config, BuildFreeBSD)
+    freebsd_default_options = _get_target_instance("freebsd-with-default-options-riscv64", config, BuildFreeBSD)
+    # Verify they use the same source directory (shared repository)
+    assert freebsd.source_dir == freebsd_default_options.source_dir
+    # Verify they use different build directories (no overlap)
+    assert freebsd.build_dir != freebsd_default_options.build_dir
+    # Assert the exact build directories
+    assert freebsd.build_dir.name == "freebsd-riscv64-build"
+    assert freebsd_default_options.build_dir.name == "freebsd-with-default-options-riscv64-build"

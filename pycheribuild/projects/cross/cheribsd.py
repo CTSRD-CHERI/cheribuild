@@ -1792,7 +1792,6 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     repository = ReuseOtherProjectRepository(
         BuildFreeBSD, do_update=True, dir_for_target=CompilationTargets.FREEBSD_RISCV64
     )
-    build_dir_suffix: str = "-default-options"
     add_custom_make_options: bool = False
     hide_options_from_help: bool = True  # hide this from --help for now
     _supported_architectures = CompilationTargets.ALL_SUPPORTED_FREEBSD_WITH_DEFAULT_OPTIONS_TARGETS
