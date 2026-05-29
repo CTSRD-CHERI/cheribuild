@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 import subprocess
@@ -18,6 +19,10 @@ from pycheribuild.projects.repository import GitRepository, TargetBranchInfo
 @pytest.fixture(scope="module", autouse=True)
 def git_env():
     with pytest.MonkeyPatch.context() as mp:
+        # Clear git hook environment variables to avoid affecting the host repo
+        for var in list(os.environ.keys()):
+            if var.startswith("GIT_"):
+                mp.delenv(var, raising=False)
         mp.setenv("GIT_AUTHOR_NAME", "Test Author")
         mp.setenv("GIT_AUTHOR_EMAIL", "author@example.com")
         mp.setenv("GIT_COMMITTER_NAME", "Test Committer")
@@ -28,7 +33,7 @@ def git_env():
 def create_remote_repo(path):
     path.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init"], cwd=path, check=True)
-    subprocess.run(["git", "checkout", "-b", "main"], cwd=path, check=True)
+    subprocess.run(["git", "checkout", "-B", "main"], cwd=path, check=True)
     (path / "file").write_text("content")
     subprocess.run(["git", "add", "file"], cwd=path, check=True)
     subprocess.run(["git", "commit", "-m", "initial commit"], cwd=path, check=True)
@@ -126,7 +131,7 @@ def local_repo(shared_remote: Path, tmp_path: Path):
     local_dir = tmp_path / "local"
     local_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init"], cwd=local_dir, check=True)
-    subprocess.run(["git", "checkout", "-b", "main"], cwd=local_dir, check=True)
+    subprocess.run(["git", "checkout", "-B", "main"], cwd=local_dir, check=True)
     (local_dir / "file").write_text("initial content")
     subprocess.run(["git", "add", "file"], cwd=local_dir, check=True)
     subprocess.run(["git", "commit", "-m", "conflicting initial commit"], cwd=local_dir, check=True)
