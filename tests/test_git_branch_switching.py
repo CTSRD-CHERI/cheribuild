@@ -3,7 +3,6 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 
@@ -63,9 +62,11 @@ class MockProject(Project):
 
     def __init__(self, config, **kwargs):
         super().__init__(config, **kwargs)
-        self.query_yes_no = Mock(return_value=True)  # ty: ignore
         self.skip_update = False
         self.events = []
+
+    def query_yes_no(self, *args, **kwargs) -> bool:
+        return True
 
     def info(self, *args, sep=" ", **kwargs):
         self.events.append(("info", sep.join(map(str, args))))
