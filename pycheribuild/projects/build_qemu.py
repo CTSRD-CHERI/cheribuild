@@ -551,7 +551,8 @@ class BuildQEMU(BuildCheriQEMUBase):
     default_targets = (
         "arm-softmmu,aarch64-softmmu,morello-softmmu,"
         "mips64-softmmu,mips64cheri128-softmmu,"
-        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+        "riscv64-softmmu,riscv64xcheri-softmmu,riscv64cheristd-softmmu,"
+        "riscv32-softmmu,riscv32xcheri-softmmu,riscv32cheristd-softmmu,"
         "x86_64-softmmu"
     )
     # Turn on unaligned loads/stores by default
