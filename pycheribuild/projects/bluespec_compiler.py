@@ -46,7 +46,7 @@ class BuildBluespecCompiler(Project):
         self.check_required_system_tool("ghc", apt="ghc", homebrew="ghc")
         self.check_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         self.check_required_system_tool("gperf", homebrew="gperf", apt="gperf")
-        self.check_required_pkg_config("tcl", apt="tcl", homebrew="tcl-tk")
+        self.check_required_pkg_config("tcl", apt="tcl-dev", homebrew="tcl-tk")
         for i in ("autoconf", "bison", "flex"):
             self.check_required_system_tool(i, homebrew=i)
 
@@ -64,7 +64,7 @@ class BuildBluespecCompiler(Project):
 
     def install(self, **kwargs):
         try:
-            self.run_cmd("cabal", "v1-update")
+            self.run_cmd("cabal", "update")
             self.run_cmd("cabal", "v1-install", "regex-compat", "syb", "old-time", "split", cwd=self.source_dir)
             self.run_make("install-src", cwd=self.source_dir)
         except Exception:
