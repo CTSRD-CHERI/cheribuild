@@ -65,7 +65,16 @@ class BuildBluespecCompiler(Project):
     def install(self, **kwargs):
         try:
             self.run_cmd("cabal", "update")
-            self.run_cmd("cabal", "v1-install", "regex-compat", "syb", "old-time", "split", cwd=self.source_dir)
+            self.run_cmd(
+                "cabal",
+                "v1-install",
+                "regex-compat",
+                "syb",
+                "old-time",
+                "split",
+                "strict-concurrency",
+                cwd=self.source_dir,
+            )
             self.run_make("install-src", cwd=self.source_dir)
         except Exception:
             self.info(
