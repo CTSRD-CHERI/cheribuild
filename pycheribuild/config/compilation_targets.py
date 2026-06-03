@@ -1650,18 +1650,22 @@ class CompilationTargets(BasicCompilationTargets):
         _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
-    CHERI_LINUX_AARCH64 = CrossCompileTarget("wip-aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
-    MORELLO_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
+    CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
+    MORELLO_LINUX_AARCH64 = CrossCompileTarget("legacy-aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
     CHERI_LINUX_MORELLO_PURECAP = CrossCompileTarget(
-        "wip-morello-purecap",
+        "morello-purecap",
         CPUArchitecture.AARCH64,
         CheriLinuxWithMorelloCompilerTargetInfo,
         is_cheri_purecap=True,
         check_conflict_with=CHERI_LINUX_AARCH64,
         non_cheri_target=CHERI_LINUX_AARCH64,
     )
+    # This target is kept for historical reasons as Morello Linux (from Arm) was the first Linux kernel
+    # and target that added CHERI support. CHERI-Linux (from CHERI Alliance) has built on top of Morello
+    # Linux to include more features, targets (RISC-V), and is the currently active project and should
+    # be used instead of the following target unless there is a good reason not to.
     MORELLO_LINUX_MORELLO_PURECAP = CrossCompileTarget(
-        "morello-purecap",
+        "legacy-morello-purecap",
         CPUArchitecture.AARCH64,
         MorelloLinuxTargetInfo,
         is_cheri_purecap=True,
