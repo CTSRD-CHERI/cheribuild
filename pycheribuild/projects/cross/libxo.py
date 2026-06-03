@@ -36,6 +36,7 @@ class BuildLibxo(CrossCompileAutotoolsProject):
     _can_use_autogen_sh = True
     _supported_architectures = (
         CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
         CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
     )
     _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
