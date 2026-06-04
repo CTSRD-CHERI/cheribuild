@@ -41,7 +41,7 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
     )
     _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
-    target = "cheri-portable-os-tests"
+    target = "cheri-os-tests"
     build_in_source_dir = False
     make_kind = MakeCommandKind.BsdMake
     repository = GitRepository("https://github.com/CTSRD-CHERI/portable-cheribsd-test-suite.git")
@@ -77,7 +77,7 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         # The binaries will be put into /opt/cheri-api-tests
         # This ensures Pyrefly that destdir won't be None
         assert self.destdir is not None
-        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-portable-os-tests"
+        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-tests"
         self.makedirs(self.destdir)
 
         self.make_args.set_env(
