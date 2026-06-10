@@ -144,6 +144,13 @@ class BuildLinux(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
 
+        # Enable 9P filesystem for sharing directories between host and target
+        self._set_config("CONFIG_NET_9P")
+        self._set_config("CONFIG_NET_9P_VIRTIO")
+        self._set_config("CONFIG_NET_9P_FD")
+        self._set_config("CONFIG_9P_FS")
+        self.run_make("olddefconfig")  # regen dependencies
+
     def install(self, **kwargs):
         self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
         self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
