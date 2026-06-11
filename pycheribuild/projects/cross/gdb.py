@@ -45,7 +45,7 @@ from .crosscompileproject import (
 from .gmp import BuildGmp
 from .mpfr import BuildMpfr
 from ..project import ComputedDefaultValue
-from ...config.target_info import AbstractProject
+from ...config.target_info import AbstractProject, OSInfo
 
 
 class BuildGDBBase(CrossCompileAutotoolsProject):
@@ -245,6 +245,19 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
                     dst = self.install_dir / file
                     src = dst.parent / (self.native_target_prefix + dst.name)
                     self.create_symlink(src, dst)
+
+    def run_tests(self) -> None:
+        runtest_cmd = shutil.which("runtest")
+        if not runtest_cmd:
+            self.dependency_error(
+                "DejaGNU is not installed.",
+                install_instructions=OSInfo.install_instructions(
+                    "runtest", False, default="dejagnu", apt="dejagnu", homebrew="deja-gnu"
+                ),
+                cheribuild_target="dejagnu",
+                cheribuild_xtarget=CompilationTargets.NATIVE,
+            )
+        super().run_tests()
 
 
 def _upstream_gdb_install_dir(config: CheriConfig, _: AbstractProject) -> Path:
