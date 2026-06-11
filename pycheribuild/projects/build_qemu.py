@@ -396,6 +396,9 @@ class BuildQEMUBase(AutotoolsProject):
             if (self.source_dir / "configs/targets/riscv32xcheri-softmmu.mak").exists():
                 chosen_targets = chosen_targets.replace("riscv32cheri-softmmu", "riscv32xcheri-softmmu")
                 chosen_targets = chosen_targets.replace("riscv64cheri-softmmu", "riscv64xcheri-softmmu")
+            if (self.source_dir / "configs/targets/riscv64y-softmmu.mak").exists():
+                if "riscv64y-softmmu" not in chosen_targets:
+                    chosen_targets += ",riscv64y-softmmu,riscv32y-softmmu"
         self.configure_args.append("--target-list=" + chosen_targets)
         super().configure(**kwargs)
 
