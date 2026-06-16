@@ -163,6 +163,10 @@ class BuildUBoot(Project):
     def install(self, **kwargs):
         self.install_file(self.build_dir / "u-boot", self.install_dir / "u-boot")
         self.install_file(self.build_dir / "u-boot.bin", self.install_dir / "u-boot.bin")
+        # Install the host-built mkimage tool, which is useful for creating
+        # U-Boot payload images and scripts (e.g. FIT images and .scr files).
+        self.install_file(self.build_dir / "tools/mkimage", self.install_dir / "../mkimage")
+
         # Only install BuildUBoot as the QEMU firmware and not any other derived version by checking build_dir_suffix
         if not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
