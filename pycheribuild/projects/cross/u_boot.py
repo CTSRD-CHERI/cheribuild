@@ -177,9 +177,17 @@ class BuildUBoot(Project):
         super().run_make(*args, **kwargs, cwd=self.source_dir)
 
 
+def cheri_093_uboot_install_dir(config: CheriConfig, project: "Project") -> Path:
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
+    return config.cheri_alliance_sdk_dir / ("u-boot" + project.build_dir_suffix) / dir_name
+
+
 class BuildCheriAllianceUBoot(BuildUBoot):
     target = "cheri-std093-u-boot"
     repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=cheri_093_uboot_install_dir, as_string="$CHERI093_SDK_ROOT/u-boot/riscv{32,64}{-purecap,}"
+    )
     dependencies = ("cheri-std093-compiler-rt-builtins",)
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
