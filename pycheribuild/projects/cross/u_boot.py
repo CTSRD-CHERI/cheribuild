@@ -197,10 +197,10 @@ class BuildCheriAllianceUBoot(BuildUBoot):
         if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
             if self.secure_boot:
                 return "codasip-a730-hobgoblin_secure-boot_cheri_purecap_smode_defconfig"
-            return "codasip-a730-hobgoblin_cheri_purecap_smode_defconfig"
+            return "qemu-riscv64_cheri_purecap_smode_defconfig"
         elif self.crosscompile_target.is_riscv():
             if self.secure_boot:
                 return "codasip-a730-hobgoblin_secure-boot_smode_defconfig"
-            return "codasip-a730-hobgoblin_smode_defconfig"
+            return "qemu-riscv64_smode_defconfig"
 
         assert False, "unhandled target"
