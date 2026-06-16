@@ -197,9 +197,7 @@ class BuildOpenSBI(Project):
         return cls.get_hybrid_instance(caller)._fw_jump_path()
 
     def run_tests(self):
-        options = QemuOptions(
-            self.crosscompile_target, riscv_cheri_isa=self.crosscompile_target.riscv_cheri_isa(self.config)
-        )
+        options = QemuOptions(self.crosscompile_target, config=self.config)
         abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
         self.run_cmd(
             options.get_commandline(

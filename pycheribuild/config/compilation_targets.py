@@ -546,7 +546,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         rootfs_xtarget = xtarget.get_rootfs_target()
         from ..qemu_utils import QemuOptions
 
-        qemu_options = QemuOptions(rootfs_xtarget, riscv_cheri_isa=self.config.riscv_cheri_isa)
+        qemu_options = QemuOptions(rootfs_xtarget, config=self.config)
         run_instance: LaunchFreeBSDInterface = self._get_run_project(rootfs_xtarget, self.project)
         if rootfs_xtarget.cpu_architecture not in (
             CPUArchitecture.MIPS64,
