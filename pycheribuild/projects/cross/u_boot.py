@@ -167,6 +167,11 @@ class BuildUBoot(Project):
         # U-Boot payload images and scripts (e.g. FIT images and .scr files).
         self.install_file(self.build_dir / "tools/mkimage", self.install_dir / "../mkimage")
 
+        # Install any DTBs if they exist
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            for dtb in (self.build_dir / "arch/riscv/dts").glob("*.dtb"):
+                self.install_file(dtb, self.install_dir / dtb.name)
+
         # Only install BuildUBoot as the QEMU firmware and not any other derived version by checking build_dir_suffix
         if not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
