@@ -29,7 +29,6 @@
 #
 import argparse
 import errno
-import functools
 import inspect
 import os
 import shlex
@@ -56,6 +55,7 @@ from ..config.target_info import (
     TargetInfo,
 )
 from ..processutils import (
+    cached_get_homebrew_prefix,
     check_call_handle_noexec,
     commandline_to_str,
     keep_terminal_sane,
@@ -91,7 +91,6 @@ __all__ = [
     "StringConfigOption",
     "TargetAlias",
     "TargetAliasWithDependencies",
-    "_cached_get_homebrew_prefix",
     "_clear_line_sequence",
     "_default_stdout_filter",
     "flush_stdio",
@@ -473,34 +472,6 @@ else:
                 ConfigOptionHandle,
                 owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
             )
-
-
-@functools.lru_cache(maxsize=20)
-def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig) -> Optional[Path]:
-    assert OSInfo.IS_MAC, "Should only be called on macos"
-    command = ["brew", "--prefix"]
-    if package:
-        command.append(package)
-    prefix = None
-    try:
-        prefix_str = (
-            run_command(
-                command,
-                capture_output=True,
-                run_in_pretend_mode=True,
-                print_verbose_only=False,
-                config=config,
-                env=dict(HOMEBREW_NO_AUTO_UPDATE="1"),
-            )
-            .stdout.decode("utf-8")
-            .strip()
-        )
-        prefix = Path(prefix_str)
-        if not prefix.exists():
-            prefix = None
-    except subprocess.CalledProcessError:
-        pass
-    return prefix
 
 
 # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
@@ -1754,7 +1725,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: "Optional[str]" = None, optional: bool = False) -> Path:
-        prefix = _cached_get_homebrew_prefix(package, self.config)
+        prefix = cached_get_homebrew_prefix(package, self.config)
         if not prefix and not optional:
             prefix = Path("/fake/homebrew/prefix/when/pretending")
             if package:
