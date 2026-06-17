@@ -87,9 +87,9 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         super().check_system_dependencies()
         self.check_required_system_tool("makeinfo", default="texinfo")
         if self.compiling_for_host():
-            self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev")
-            self.check_required_pkg_config("mpfr", freebsd="mpfr", apt="libmpfr-dev")
-            self.check_required_pkg_config("expat", freebsd="expat", apt="libexpat1-dev")
+            self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
+            self.check_required_pkg_config("mpfr", freebsd="mpfr", apt="libmpfr-dev", homebrew="mpfr")
+            self.check_required_pkg_config("expat", freebsd="expat", apt="libexpat1-dev", homebrew="expat")
 
     def __init__(self, *args, **kwargs):
         self._compile_status_message = None

@@ -240,6 +240,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         return ThreadJoiner(None)
 
     def update(self):
+        self.makedirs(self.source_dir)
         self.run_opam_cmd("update")
         if not self.use_git_version:
             return
@@ -287,7 +288,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
         if self.with_trace_support:
@@ -344,7 +345,7 @@ class BuildSailRISCV(OpamMixin, CMakeProject):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def setup(self) -> None:
         super().setup()
@@ -366,7 +367,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
@@ -397,7 +398,7 @@ class BuildSailMorello(ProjectUsingOpam):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
         cmd = [
