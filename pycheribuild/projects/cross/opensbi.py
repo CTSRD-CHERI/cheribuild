@@ -29,6 +29,7 @@
 #
 from pathlib import Path
 
+from .u_boot import BuildCheriAllianceUBoot
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
 from ..project import (
     BuildType,
@@ -299,3 +300,20 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
     def setup(self):
         super().setup()
         self.make_args.set(FW_TEXT_START="0xC0000000")
+
+
+class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
+    target = "cheri-std093-opensbi-u-boot"
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+    )
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "cheri-std093-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
