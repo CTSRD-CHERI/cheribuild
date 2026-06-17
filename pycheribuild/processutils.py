@@ -711,6 +711,13 @@ class CompilerInfo:
                 version_suffix = name[len(basename) :]
         # Try to find a binutil with the same version suffix first
         real_compiler_path = self.path.resolve() if self.path.exists() else self.path
+
+        # Special case for Homebrew LLVM installations where lld has been moved to a separate package.
+        if "/Cellar/llvm/" in str(real_compiler_path):
+            brew_binutil = Path(str(real_compiler_path.parent).replace("/Cellar/llvm/", "/Cellar/lld/"), binutil)
+            if brew_binutil.exists():
+                return brew_binutil
+
         result = real_compiler_path.parent / (binutil + version_suffix)
         if result.exists():
             return result
