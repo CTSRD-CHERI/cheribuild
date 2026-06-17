@@ -9,6 +9,7 @@ from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.config.config_loader_base import ComputedDefaultValue
 from pycheribuild.config.loader import ConfigOptionHandle
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
+from pycheribuild.processutils import CompilerInfo
 from pycheribuild.projects.cmake_project import CMakeProject
 from pycheribuild.projects.repository import ExternallyManagedSourceRepository
 from pycheribuild.projects.simple_project import (
@@ -60,6 +61,30 @@ def test_add_cmake_option():
         add_options_test([], BYTE_OPTION=b"abc")
     with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'tuple'>: ('abc',)")):
         add_options_test([], TUPLE_OPTION=("abc",))
+
+
+def test_get_matching_binutil_homebrew(monkeypatch):
+    # Check that get_matching_binutil() handles the new homebrew split installation.
+    config = setup_mock_chericonfig()
+
+    info = CompilerInfo(
+        path=Path("/opt/homebrew/Cellar/llvm/22.1.6/bin/clang-22"),
+        compiler="clang",
+        version=(22, 1, 6),
+        version_str="clang version 22.1.6",
+        default_target="arm64-apple-darwin",
+        config=config,
+    )
+
+    def mock_exists(self):
+        if str(self) == "/opt/homebrew/Cellar/lld/22.1.6/bin/ld.lld":
+            return True
+        return False
+
+    monkeypatch.setattr(Path, "exists", mock_exists)
+
+    res = info.get_matching_binutil("ld.lld")
+    assert res == Path("/opt/homebrew/Cellar/lld/22.1.6/bin/ld.lld")
 
 
 def test_mixin_and_overridden_config_options():
