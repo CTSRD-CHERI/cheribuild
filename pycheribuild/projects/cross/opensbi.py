@@ -83,6 +83,9 @@ class BuildOpenSBI(Project):
         cls.fw_jump_fdt_addr = cls.add_optional_config_option(
             "fw-jump-fdt-addr", kind=str, help="OpenSBI FW_JUMP_FDT_ADDR"
         )
+        cls.fw_payload_path = cls.add_optional_config_option(
+            "fw-payload-path", kind=Path, help="OpenSBI FW_PAYLOAD_PATH"
+        )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -117,6 +120,9 @@ class BuildOpenSBI(Project):
             self.make_args.set(FW_JUMP_ADDR=self.fw_jump_addr)
         if self.fw_jump_fdt_addr:
             self.make_args.set(FW_JUMP_FDT_ADDR=self.fw_jump_fdt_addr)
+        if self.fw_payload_path:
+            assert self.fw_payload_path.exists()
+            self.make_args.set(FW_PAYLOAD_PATH=self.fw_payload_path)
         if self.config.verbose:
             self.make_args.set(V=True)
 
