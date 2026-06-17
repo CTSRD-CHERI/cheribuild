@@ -48,9 +48,10 @@ from .project import (
     MakeCommandKind,
     Project,
 )
-from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
+from .simple_project import BoolConfigOption, SimpleProject
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
+from ..processutils import cached_get_homebrew_prefix
 from ..utils import OSInfo
 
 
@@ -336,7 +337,7 @@ class BuildQEMUBase(AutotoolsProject):
         if OSInfo.IS_FREEBSD:
             guess = Path("/usr/local/sbin/smbd")
         elif OSInfo.IS_MAC:
-            prefix = _cached_get_homebrew_prefix("samba", config)
+            prefix = cached_get_homebrew_prefix("samba", config)
             if prefix:
                 guess = prefix / "sbin/samba-dot-org-smbd"
             else:
