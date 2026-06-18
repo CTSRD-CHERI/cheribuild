@@ -1788,25 +1788,37 @@ class SimpleProjectBase(AbstractProject, ABC):
             self.fatal(what, "not found:", path, fixit_hint=fixit_hint)
         return path
 
-    def download_file(self, dest: Path, url: str, sha256: "Optional[str]" = None) -> bool:
+    def download_file(
+        self,
+        dest: Path,
+        url: str,
+        sha256: "Optional[str]" = None,
+        sha512: "Optional[str]" = None,
+    ) -> bool:
         """
         :return: True if a new file was downloaded, false otherwise.
         """
+        assert sha256 is None or sha512 is None
+
+        sha = sha256 if sha256 is not None else sha512
+        sha_name = "SHA256" if sha256 is not None else "SHA512"
+        sha_fn = self.sha256sum if sha256 is not None else self.sha512sum
+
         should_download = False
         if not dest.is_file():
             should_download = True
-        elif sha256 is not None:
-            existing_sha256 = self.sha256sum(dest)
-            self.verbose_print("Downloaded", url, "with SHA256", existing_sha256)
-            if sha256 and existing_sha256 != sha256:
-                self.warning("SHA256 for", dest, "(" + existing_sha256 + ") does not match expected SHA256", sha256)
+        elif sha is not None:
+            existing_sha = sha_fn(dest)
+            self.verbose_print("Downloaded", url, "with", sha_name, existing_sha)
+            if existing_sha != sha:
+                self.warning(sha_name, "for", dest, "(" + existing_sha + ")", "does not match expected", sha_name, sha)
                 if self.query_yes_no("Continue with unexpected file?", default_result=False, force_result=False):
-                    self.info("Using file with unexpected SHA256 hash", existing_sha256)
+                    self.info("Using file with unexpected", sha_name, "hash", existing_sha)
                 else:
                     self.info("Will try to download again.")
                     should_download = True
         elif self.with_clean:
-            # Always download when using --clean and the SHA256 is not specified.
+            # Always download when using --clean and no hash is specified.
             should_download = True
         if should_download:
             self.makedirs(dest.parent)
@@ -1821,10 +1833,13 @@ class SimpleProjectBase(AbstractProject, ABC):
                     "Cannot find a tool to download target URL.",
                     install_instructions=InstallInstructions("Please install wget or curl"),
                 )
-            downloaded_sha256 = self.sha256sum(dest)
-            self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
-            if sha256 is not None and downloaded_sha256 != sha256:
-                self.warning("Downloaded file SHA256 hash", downloaded_sha256, "does not match expected SHA256", sha256)
+
+            downloaded_sha = sha_fn(dest)
+            self.verbose_print("Downloaded", url, "with", sha_name, "hash", downloaded_sha)
+            if sha is not None and downloaded_sha != sha:
+                self.warning(
+                    "Downloaded file", sha_name, "hash", downloaded_sha, "does not match expected", sha_name, sha
+                )
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
         return should_download
 
