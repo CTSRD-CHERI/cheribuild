@@ -149,6 +149,12 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self._set_config("CONFIG_NET_9P_VIRTIO")
         self._set_config("CONFIG_NET_9P_FD")
         self._set_config("CONFIG_9P_FS")
+
+        # Default config only has VIRTIO_NET, not PCI_NET. This is to make
+        # it work out of the box with cheribuild's QEMU with networking that
+        # uses PCI.
+        self._set_config("CONFIG_VIRTIO_PCI")
+        self._set_config("CONFIG_VIRTIO_PCI_LEGACY")
         self.run_make("olddefconfig")  # regen dependencies
 
     def install(self, **kwargs):
@@ -211,15 +217,6 @@ class BuildMorelloLinux(BuildLinux):
             return "morello_transitional_pcuabi_defconfig"
         else:
             return "defconfig"
-
-    def configure(self, **kwargs) -> None:
-        super().configure()
-        # Default config only has VIRTIO_NET, not PCI_NET. This is to make
-        # it work out of the box with cheribuild's QEMU with networking that
-        # uses PCI.
-        self._set_config("CONFIG_VIRTIO_PCI")
-        self._set_config("CONFIG_VIRTIO_PCI_LEGACY")
-        self.run_make("oldconfig")  # regen dependencies
 
 
 class LaunchLinuxBase(LaunchQEMUBase, ABC):
