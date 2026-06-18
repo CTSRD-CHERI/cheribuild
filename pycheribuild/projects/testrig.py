@@ -94,6 +94,13 @@ class BuildQuickCheckVengine(Project):
         self.run_qcvengine("--help", expected_exit_code=1)
 
 
+class BuildQuickCheckVengine093(BuildQuickCheckVengine):
+    target = "cheri-std093-quickcheckvengine"
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/QuickCheckVEngine", force_branch=True, default_branch="zcheri-no-configptr"
+    )
+
+
 class TestRigTraces(Project):
     target = "testrig-traces-repository"
     default_directory_basename = "TestRIG-traces"
