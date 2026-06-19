@@ -66,6 +66,7 @@ class BuildVim(CrossCompileAutotoolsProject):
             )
             # Terminal library selection also uses AC_TRY_RUN
             self.configure_args.append("--with-tlib=tinfo")
+            self.LDFLAGS.append("-lrt")
 
     def needs_configure(self):
         # Makefile exists in the source (both at the top level and within
