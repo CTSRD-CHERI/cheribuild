@@ -827,7 +827,7 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/llvm-project.git",
-        default_branch="codasip-cheri-riscv-19.1.7",
+        default_branch="codasip-cheri-riscv-20",
         force_branch=True,
     )
     default_directory_basename = "cheri-std093-llvm-project"
