@@ -44,7 +44,7 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
     target = "cheri-os-tests"
     build_in_source_dir = False
     make_kind = MakeCommandKind.BsdMake
-    repository = GitRepository("https://github.com/CTSRD-CHERI/portable-cheribsd-test-suite.git")
+    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-os-tests.git")
 
     @classproperty
     def default_install_dir(self):
@@ -96,7 +96,7 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
             **self.env_make_args,
         )
 
-        self.run_make(cwd=self.source_dir / "cheribsdtest")
+        self.run_make(cwd=self.source_dir / "cheriostest")
 
     def set_env_make_args(self, machine_cpuarch: str, machine_abi: str, machine_arch: str):
         self.env_make_args = {
@@ -106,7 +106,7 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         }
 
     def install(self, **kwargs):
-        self.run_make_install(cwd=self.source_dir / "cheribsdtest")
+        self.run_make_install(cwd=self.source_dir / "cheriostest")
 
     def process(self):
         self.check_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
