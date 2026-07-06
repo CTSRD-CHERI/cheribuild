@@ -408,7 +408,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         xtarget = self.target.get_rootfs_target()
         # We don't want to call setup() yet on the FreeBSD instance (not needed to get the compiler)
         # noinspection PyProtectedMember
-        fbsd = self._get_rootfs_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
+        fbsd = self._get_sdk_root_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
         configured_path = fbsd.build_toolchain_root_dir  # pytype: disable=attribute-error
         if configured_path is None:
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
@@ -439,6 +439,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool):
+        assert not target.is_nocpu()
         common_suffix = "-unknown-freebsd"
         if include_version:
             common_suffix += str(cls.FREEBSD_VERSION)
@@ -513,6 +514,11 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("freebsd", xtarget)
+
+    def _get_sdk_root_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        if xtarget.is_nocpu():
+            return SimpleProject.get_class_for_target_name("freebsd-universe", xtarget)
+        return self._get_rootfs_class(xtarget)
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run-freebsd", xtarget, caller.config, caller)
@@ -757,6 +763,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("cheribsd", xtarget)
+
+    def _get_sdk_root_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        if xtarget.is_nocpu():
+            return SimpleProject.get_class_for_target_name("cheribsd-universe", xtarget)
+        return self._get_rootfs_class(xtarget)
 
     def cheribsd_version(self) -> "Optional[int]":
         return sys_param_h_cheribsd_version(self.sysroot_dir)
@@ -1768,6 +1779,10 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = (
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
     )
+
+    # Special targets for use in freebsd/cheribsd-universe
+    CHERIBSD_NOCPU = CrossCompileTarget("nocpu", CPUArchitecture.NOCPU, CheriBSDTargetInfo)
+    FREEBSD_NOCPU = CrossCompileTarget("nocpu", CPUArchitecture.NOCPU, FreeBSDTargetInfo)
 
     @staticmethod
     def _dump_cheribsd_target_relations() -> None:

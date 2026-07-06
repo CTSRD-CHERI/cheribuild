@@ -51,12 +51,11 @@ from ..project import (
     MakeCommandKind,
     MakeOptions,
     Project,
+    ReuseOtherProjectAnyTargetRepository,
     ReuseOtherProjectBuildDir,
     ReuseOtherProjectRepository,
 )
 from ..simple_project import (
-    BoolConfigOption,
-    IntConfigOption,
     SimpleProject,
     TargetAliasWithDependencies,
     _clear_line_sequence,
@@ -556,6 +555,7 @@ class BuildFreeBSDBase(Project):
     default_build_tests: bool = True
     default_build_type: BuildType = BuildType.RELWITHDEBINFO
     build_toolchain: "ClassVar[CompilerType]"  # Set in subclass
+    universe_target: bool = False
     # Define the command line arguments here to make type checkers happy.
     minimal: "ClassVar[bool]"
     build_tests: "ClassVar[bool]"
@@ -592,6 +592,10 @@ class BuildFreeBSDBase(Project):
             "for more info.",
             show_help=True,
         )
+        if cls.universe_target:
+            cls.minimal = False
+            return
+
         cls.debug_kernel = cls.add_bool_option(
             "debug-kernel", help="Build the kernel with -O0 and verbose boot output", show_help=False
         )
@@ -770,7 +774,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         **kwargs,
     ) -> None:
         super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
-        if cls._xtarget:
+        if cls._xtarget and not cls.universe_target:
             # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
             # the global --kernel-config option that is provided for convenience and backwards compat.
             cls.kernel_config: Optional[str] = cls.add_config_option(
@@ -835,6 +839,28 @@ class BuildFreeBSD(BuildFreeBSDBase):
             as_string="the value of the global --freebsd-subdir options",
         )
 
+        cls.with_manpages = cls.add_bool_option(
+            "with-manpages",
+            help="Also install manpages. This is off by default since they can just be read from the host.",
+        )
+        cls.build_drm_kmod = cls.add_bool_option(
+            "build-drm-kmod", help="Also build drm-kmod during buildkernel", show_help=False
+        )
+        if cls._xtarget is None or cls._xtarget.is_nocpu() or not cls._xtarget.cpu_architecture.is_32bit():
+            cls.build_lib32 = cls.add_bool_option(
+                "build-lib32",
+                default=True,
+                help="Build the 32-bit compatibility userspace libraries (if supported for the current architecture)",
+            )
+        else:
+            # XXX: this is not correct if we were to support a CHERI-64 userspace
+            assert not cls._xtarget.is_hybrid_or_purecap_cheri()
+            cls.build_lib32 = False
+
+        if cls.universe_target:
+            cls.explicit_subdirs_only = False
+            return
+
         cls.explicit_subdirs_only = cls.add_list_option(
             "subdir",
             metavar="SUBDIRS",
@@ -851,23 +877,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             help="Don't remove the whole old rootfs directory.  This can speed up installing but"
             " may cause strange errors so is off by default.",
         )
-        cls.with_manpages = cls.add_bool_option(
-            "with-manpages",
-            help="Also install manpages. This is off by default since they can just be read from the host.",
-        )
-        cls.build_drm_kmod = cls.add_bool_option(
-            "build-drm-kmod", help="Also build drm-kmod during buildkernel", show_help=False
-        )
-        if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
-            cls.build_lib32 = cls.add_bool_option(
-                "build-lib32",
-                default=True,
-                help="Build the 32-bit compatibility userspace libraries (if supported for the current architecture)",
-            )
-        else:
-            # XXX: this is not correct if we were to support a CHERI-64 userspace
-            assert not cls._xtarget.is_hybrid_or_purecap_cheri()
-            cls.build_lib32 = False
 
     def get_default_kernel_platform(self) -> ConfigPlatform:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
@@ -1038,8 +1047,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._setup_make_args_called = False
-        self.kernel_toolchain_exists: bool = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
+
+        if self.universe_target:
+            return
+
+        self.kernel_toolchain_exists: bool = False
         if self.has_default_buildkernel_kernel_config:
             assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
@@ -1108,7 +1121,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         cross_bindir = self.target_info.sdk_root_dir / "bin"
         cross_prefix = str(cross_bindir) + "/"  # needs to end with / for concatenation
-        target_flags = self._setup_arch_specific_options()
+        target_flags = self._setup_arch_specific_options() if not self.universe_target else ""
 
         # TODO: should I be setting this in the environment instead?
         xccinfo = self.get_compiler_info(self.CC)
@@ -1821,81 +1834,6 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
             self.make_args.set_with_options(CLANG=False, LLD=False, LLDB=False)
 
 
-def jflag_in_subjobs(config: CheriConfig, _) -> int:
-    return max(1, config.make_jobs // 2)
-
-
-def jflag_for_universe(config: CheriConfig, _) -> int:
-    return max(1, config.make_jobs // 4)
-
-
-# Build all targets (to test my changes)
-class BuildFreeBSDUniverse(BuildFreeBSDBase):
-    # Note: this is a seperate repository checkout, should probably just reuse the same source dir?
-    default_directory_basename: str = "freebsd-universe"
-    target: str = "freebsd-universe"
-    repository: GitRepository = GitRepository("https://github.com/freebsd/freebsd.git")
-    default_install_dir: DefaultInstallDir = DefaultInstallDir.DO_NOT_INSTALL
-    minimal: bool = False
-    hide_options_from_help: bool = True  # hide this from --help for now
-    build_toolchain = CompilerType.BOOTSTRAPPED
-
-    tinderbox = BoolConfigOption("tinderbox", help="Use `make tinderbox` instead of `make universe`")
-    worlds_only = BoolConfigOption("worlds-only", help="Only build worlds (skip building kernels)")
-    kernels_only = BoolConfigOption(
-        "kernels-only",
-        help="Only build kernels (skip building worlds)",
-        default=ComputedDefaultValue(
-            function=lambda conf, proj: conf.skip_world, as_string="true if --skip-world is set"
-        ),
-    )
-    jflag_in_subjobs = IntConfigOption(
-        "jflag-in-subjobs",
-        help="Number of jobs in each world/kernel build",
-        default=ComputedDefaultValue(jflag_in_subjobs, "default -j flag / 2"),
-    )
-    jflag_for_universe = IntConfigOption(
-        "jflag-for-universe",
-        help="Number of parallel world/kernel builds",
-        default=ComputedDefaultValue(jflag_for_universe, "default -j flag / 4"),
-    )
-
-    def compile(self, **kwargs) -> None:
-        # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
-        # so just omit the flag here if the user passes -j1 on the command line
-        build_args = self.make_args.copy()
-        if self.config.verbose:
-            self.run_make("showconfig", options=build_args)
-
-        if self.worlds_only and self.kernels_only:
-            self.fatal("Can't set both worlds-only and kernels-only!")
-
-        build_args.set(__MAKE_CONF="/dev/null")
-        # TODO: warn if both worlds-only and kernels-only is set?
-
-        if self.jflag_in_subjobs > 1:
-            build_args.set(JFLAG="-j" + str(self.jflag_in_subjobs))
-        if self.jflag_for_universe > 1:
-            build_args.add_flags("-j" + str(self.jflag_for_universe))
-
-        if self.kernels_only:
-            # We need to build kernel-toolchains first (see https://reviews.freebsd.org/D17779)
-            self.run_make("kernel-toolchains", options=build_args, parallel=False)
-
-        if self.worlds_only:
-            build_args.set(MAKE_JUST_WORLDS=True)
-        if self.kernels_only:
-            build_args.set(MAKE_JUST_KERNELS=True)
-        self.run_make("tinderbox" if self.tinderbox else "universe", options=build_args, parallel=False)
-
-    def install(self, **kwargs) -> None:
-        self.info("freebsd-universe is a compile-only target")
-
-    def process(self) -> None:
-        _clear_dangerous_make_env_vars()
-        super().process()
-
-
 class BuildCHERIBSD(BuildFreeBSD):
     default_directory_basename: str = "cheribsd"
     target: str = "cheribsd"
@@ -1926,6 +1864,8 @@ class BuildCHERIBSD(BuildFreeBSD):
             use_upstream_llvm=False,
             kernel_only_target=kernel_only_target,
         )
+        if cls.universe_target:
+            return
         fpga_targets = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
         cls.build_fpga_kernels = cls.add_bool_option(
             "build-fpga-kernels",
@@ -1999,6 +1939,8 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        if self.universe_target:
+            return
         self.extra_kernels_with_mfs: "list[str]" = []
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
@@ -2507,3 +2449,98 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             if not libgcc_eh.is_file():
                 self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
                 self.run_cmd("ar", "rc", libgcc_eh)
+
+
+if typing.TYPE_CHECKING:
+    UniverseMixinBase = BuildFreeBSD
+else:
+    UniverseMixinBase = object
+
+
+class BuildFreeBSDUniverseMixin(UniverseMixinBase):
+    @classmethod
+    def setup_config_options(cls, **kwargs) -> None:
+        super().setup_config_options(**kwargs)
+        cls.worlds = cls.add_bool_option("worlds", help="Include building worlds", default=True)
+        cls.kernels = cls.add_bool_option("kernels", help="Include building kernels", default=True)
+
+    @property
+    def universe_args(self) -> MakeOptions:
+        result = self.buildworld_args
+        return result
+
+    def compile(self, tinderbox=False, **kwargs) -> None:
+        build_args = self.universe_args
+        if self.config.verbose:
+            self.run_make("showconfig", options=build_args)
+
+        fast = self.fast_rebuild
+        if fast and self.with_clean:
+            self.info("Ignoring --", self.target, "/fast option since --clean was passed", sep="")
+            fast = False
+
+        if self.worlds:
+            if fast:
+                build_args.set(WORLDFAST=True)
+        elif self.kernels and not fast:
+            # Just as make buildkernel needs kernel-toolchain, building only
+            # kernels requires kernel-toolchains
+            self.run_make("kernel-toolchains", options=build_args)
+
+        # NB: Setting WITHOUT_KERNELS early is harmless but WITHOUT_WORLDS will
+        # make kernel-toolchains a no-op since it's treated as a type of world
+        # build. Also, these aren't proper bsd.mkopt.mk options, so there's no
+        # WITH form, only WITHOUT.
+        if not self.worlds:
+            build_args.set_with_options(WORLDS=False)
+        if not self.kernels:
+            build_args.set_with_options(KERNELS=False)
+
+        self.run_make("tinderbox" if tinderbox else "universe", options=build_args)
+
+    def install(self, **kwargs) -> None:
+        assert False, "default_install_dir should be DO_NOT_INSTALL"
+
+
+class BuildFreeBSDUniverse(BuildFreeBSDUniverseMixin, BuildFreeBSD):
+    target: str = "freebsd-universe"
+    repository: ReuseOtherProjectRepository = ReuseOtherProjectAnyTargetRepository(BuildFreeBSD, do_update=True)
+    _supported_architectures = (CompilationTargets.FREEBSD_NOCPU,)
+    default_install_dir: DefaultInstallDir = DefaultInstallDir.DO_NOT_INSTALL
+    universe_target = True
+
+    @classmethod
+    def setup_config_options(cls, **kwargs) -> None:
+        super().setup_config_options(bootstrap_toolchain=True, **kwargs)
+
+
+class BuildCheriBSDUniverse(BuildFreeBSDUniverseMixin, BuildCHERIBSD):
+    target: str = "cheribsd-universe"
+    repository: ReuseOtherProjectRepository = ReuseOtherProjectAnyTargetRepository(BuildCHERIBSD, do_update=True)
+    _supported_architectures = (CompilationTargets.CHERIBSD_NOCPU,)
+    default_install_dir: DefaultInstallDir = DefaultInstallDir.DO_NOT_INSTALL
+    universe_target = True
+
+    @property
+    def universe_args(self) -> MakeOptions:
+        result = super().universe_args
+        # Currently not supported (though in theory we could build a subset of
+        # CHERI architectures if using the corresponding toolchain)
+        result.set(NO_CHERI_TARGETS=True, NO_CHERI_KERNELS=True)
+        return result
+
+
+class BuildFreeBSDTinderbox(BuildFreeBSDUniverse):
+    target: str = "freebsd-tinderbox"
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildFreeBSDUniverse)
+
+    def compile(self, **kwargs) -> None:
+        super().compile(tinderbox=True, **kwargs)
+
+
+class BuildCheriBSDTinderbox(BuildCheriBSDUniverse):
+    target: str = "cheribsd-tinderbox"
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildCheriBSDUniverse)
+
+    def compile(self, **kwargs) -> None:
+        super().compile(tinderbox=True, **kwargs)

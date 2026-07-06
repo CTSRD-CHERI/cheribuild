@@ -67,6 +67,7 @@ class CPUArchitecture(Enum):
     RISCV32 = "riscv32"
     RISCV64 = "riscv64"
     X86_64 = "x86_64"
+    NOCPU = "nocpu"
 
     def word_bits(self) -> int:
         mapping = {
@@ -87,6 +88,7 @@ class CPUArchitecture(Enum):
         return self.word_bits() == 64
 
     def as_meson_cpu_family(self) -> str:
+        assert self is not CPUArchitecture.NOCPU
         # https://mesonbuild.com/Reference-tables.html#cpu-families
         if self is CPUArchitecture.I386:
             return "x86"
@@ -96,6 +98,7 @@ class CPUArchitecture(Enum):
         return str(self.value)
 
     def endianess(self) -> str:
+        assert self is not CPUArchitecture.NOCPU
         # Meson expects us to pass this manually... Why not query the compiler???
         if self is CPUArchitecture.MIPS64:
             return "big"
@@ -1050,6 +1053,9 @@ class CrossCompileTarget:
         return True
 
     # Querying the CPU architecture:
+    def is_nocpu(self, include_purecap: Optional[bool] = None) -> bool:
+        return self._check_arch(CPUArchitecture.NOCPU, include_purecap)
+
     def is_mips(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.MIPS64, include_purecap)
 
