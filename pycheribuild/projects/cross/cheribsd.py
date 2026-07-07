@@ -2483,8 +2483,8 @@ class BuildFreeBSDUniverseMixin(UniverseMixinBase):
         self.info("Universe logs will be written to", self.universe_logdir)
 
         build_args = self.universe_args
-        if self.config.verbose:
-            self.run_make("showconfig", options=build_args)
+        # NB: No make showconfig since that needs a valid TARGET/TARGET_ARCH,
+        # and would be specific to that architecture anyway.
 
         fast = self.fast_rebuild
         if fast and self.with_clean:
