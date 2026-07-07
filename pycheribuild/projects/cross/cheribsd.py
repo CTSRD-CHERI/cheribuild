@@ -858,7 +858,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.build_lib32 = False
 
         if cls.universe_target:
-            cls.explicit_subdirs_only = False
+            cls.explicit_subdirs_only = []
             return
 
         cls.explicit_subdirs_only = cls.add_list_option(
