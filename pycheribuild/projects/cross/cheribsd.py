@@ -2478,7 +2478,7 @@ class BuildFreeBSDUniverseMixin(UniverseMixinBase):
         result.set(UNIVERSE_LOGDIR=self.universe_logdir)
         return result
 
-    def compile(self, tinderbox=False, **kwargs) -> None:
+    def compile(self, *, tinderbox=False, **kwargs) -> None:
         self.makedirs(Path(self.universe_logdir))
         self.info("Universe logs will be written to", self.universe_logdir)
 
