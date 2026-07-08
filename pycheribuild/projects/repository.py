@@ -47,6 +47,7 @@ __all__ = [
     "ExternallyManagedSourceRepository",
     "GitRepository",
     "MercurialRepository",
+    "ReuseOtherProjectAnyTargetRepository",
     "ReuseOtherProjectDefaultTargetRepository",
     "ReuseOtherProjectRepository",
     "SourceRepository",
@@ -138,6 +139,18 @@ class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
         xtarget = source_project.default_architecture()
         if xtarget is None and len(source_project.supported_architectures()) == 1:
             xtarget = source_project.supported_architectures()[0]
+        assert xtarget is not None
+        super().__init__(
+            source_project,
+            subdirectory=subdirectory,
+            do_update=do_update,
+            dir_for_target=xtarget,
+        )
+
+
+class ReuseOtherProjectAnyTargetRepository(ReuseOtherProjectRepository):
+    def __init__(self, source_project: "type[Project]", *, subdirectory=".", do_update=False):
+        xtarget = source_project.supported_architectures()[0]
         assert xtarget is not None
         super().__init__(
             source_project,
