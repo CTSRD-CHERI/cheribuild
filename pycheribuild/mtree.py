@@ -128,8 +128,7 @@ class MtreeEntry:
     def __str__(self) -> str:
         components = [MtreePath.escape(str(self.path))]
         for k, v in self.attributes.items():
-            print("k=" + str(k) + " v=" + str(v))
-            components.append(k + "=" + shlex.quote(v))
+            components.append(k + "=" + MtreePath.escape(v))
         return " ".join(components)
 
     def __repr__(self) -> str:
