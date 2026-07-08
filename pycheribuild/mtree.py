@@ -50,6 +50,32 @@ class MtreePath(PurePosixPath):
             pathstr = "./" + pathstr
         return pathstr
 
+    @staticmethod
+    def escape(s):
+        # mtree uses strsvis(3) (in the default flavour, in VIS_OCTAL format)
+        # to encode path names containing non-printable characters.
+        # Escape a string according to the VIS_OCTAL rules, also escaping non-printable and glob characters.
+        # Note that multibyte support in strsvis depends on LC_CTYPE.  For now, assume everything is UTF-8.
+        s_dest = ""
+        for i in range(0, len(s)):
+            # split string into Unicode code points
+            c = ord(s[i])
+
+            # if a non-ASCII character, convert to 3 digit octal without the 0o prefix
+            if c < 33 or c > 126 or c == "[" or c == "]" or c == "?" or c == "*":
+                # turn the character into a UTF-8 string of bytes (len(>1) if Unicode)
+                c_utf8 = chr(c).encode("utf-8")
+                # format each byte as an octal string \123
+                for b in c_utf8:
+                    b_octal = format(b, "03o")
+                    s_dest += "\\" + b_octal
+            else:
+                # append an ASCII character
+                s_dest += s[i]
+
+        # return s.upper().replace(" ", "\\s")
+        return s_dest
+
 
 class MtreeEntry:
     def __init__(self, path: MtreePath, attributes: "dict[str, str]"):
@@ -100,14 +126,9 @@ class MtreeEntry:
             return result
 
     def __str__(self) -> str:
-        def escape(s):
-            # mtree uses strsvis(3) (in VIS_CSTYLE format) to encode path names containing non-printable characters.
-            # Note: we only handle spaces here since we haven't seen any other special characters being use. If they do
-            # exist in practise we can just update this code to handle them too.
-            return s.replace(" ", "\\s")
-
-        components = [escape(str(self.path))]
+        components = [MtreePath.escape(str(self.path))]
         for k, v in self.attributes.items():
+            print("k=" + str(k) + " v=" + str(v))
             components.append(k + "=" + shlex.quote(v))
         return " ".join(components)
 
@@ -337,7 +358,7 @@ class MtreeFile:
             else:
                 mtree_type = "file"
                 # now add the actual entry (with contents=/path/to/file)
-                contents_path = str(file.absolute())
+                contents_path = MtreePath.escape(str(file.absolute()))
                 last_attrib = ("contents", contents_path)
         self.add_dir(
             str(Path(path_in_image).parent),
