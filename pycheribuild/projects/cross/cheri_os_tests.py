@@ -78,11 +78,10 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         # The binaries will be put into /opt/cheri-api-tests
         # This ensures Pyrefly that destdir won't be None
         assert self.destdir is not None
-        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-tests"
-        self.makedirs(self.destdir)
+        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-test"
+        self.makedirs(self.destdir / "lib")
 
         self.make_args.set_env(
-            # Put the binary into root's home directory
             DESTDIR=str(self.destdir),
             BINOWN=os.getuid(),
             BINGRP=os.getgid(),
