@@ -319,6 +319,16 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
         self.make_args.set(FW_TEXT_START="0xC0000000")
 
 
+class BuildOpenSBIMocha(BuildAllianceOpenSBI):
+    target = "opensbi-mocha"
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,)
+    repository = GitRepository("https://github.com/lowRISC/opensbi.git", default_branch="mocha-mvp2")
+
+    def setup(self):
+        super().setup()
+        self.make_args.set(PLATFORM_DEFCONFIG="mocha_defconfig")
+
+
 class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
     target = "alliance-opensbi-u-boot"
     _supported_architectures = (
@@ -334,3 +344,17 @@ class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
         super().setup()
         uboot = BuildCheriAllianceUBoot.get_install_dir(self)
         self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
+
+
+class BuildMochaOpenSBIWithUBoot(BuildOpenSBIMocha):
+    target = "mocha-opensbi-u-boot"
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "mocha-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
+        self.make_args.set(PLATFORM_DEFCONFIG="mocha_defconfig")
