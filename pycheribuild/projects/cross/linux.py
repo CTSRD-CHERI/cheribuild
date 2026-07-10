@@ -402,3 +402,15 @@ class LaunchCheriAllianceLinuxMorelloDebian(LaunchCheriAllianceLinuxDebian):
     def setup(self):
         super().setup()
         self._project_specific_options = ["-append", "root=/dev/vda3"]
+
+
+class BuildMochaLinux(BuildCheriAllianceLinux):
+    target = "mocha-linux-kernel"
+    repository = GitRepository("https://github.com/lowRISC/linux.git", default_branch="mocha-mvp2")
+
+    def default_defconfig(self) -> str:
+        return "lowrisc_cheri_mocha_defconfig"
+
+    def configure(self, **kwargs):
+        assert self.defconfig is not None
+        self.run_make(str(self.defconfig), cwd=self.source_dir, parallel=False)
