@@ -221,3 +221,11 @@ class BuildCheriAllianceUBoot(BuildUBoot):
             return "qemu-riscv64_smode_defconfig"
 
         assert False, "unhandled target"
+
+
+class BuildMochaUBoot(BuildCheriAllianceUBoot):
+    target = "mocha-u-boot"
+    repository = GitRepository("https://github.com/lowRISC/u-boot.git", default_branch="mocha-mvp2")
+
+    def default_defconfig(self) -> str:
+        return "lowrisc_mocha_cheri_smode_defconfig"
