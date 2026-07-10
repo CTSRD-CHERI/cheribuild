@@ -29,7 +29,7 @@
 #
 from pathlib import Path
 
-from .u_boot import BuildCheriAllianceUBoot, BuildRVYUBoot
+from .u_boot import BuildCheriAllianceUBoot, BuildMochaUBoot, BuildRVYUBoot
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
 from ..project import (
     BuildType,
@@ -360,6 +360,19 @@ class BuildRVYOpenSBI(BuildAllianceOpenSBI):
         return BuildRVYQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
 
+class BuildMochaOpenSBI(BuildRVYOpenSBI):
+    target = "mocha-opensbi"
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,)
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/cheri-alliance-opensbi.git",
+        default_branch="cheri-rvy-0910-toooba-fixes-mocha",
+    )
+
+    def setup(self):
+        super().setup()
+        self.make_args.set(PLATFORM_DEFCONFIG="mocha_defconfig")
+
+
 class BuildRVYOpenSBIWithUBoot(BuildRVYOpenSBI):
     target = "rvy-opensbi-u-boot"
 
@@ -371,3 +384,17 @@ class BuildRVYOpenSBIWithUBoot(BuildRVYOpenSBI):
         super().setup()
         uboot = BuildRVYUBoot.get_install_dir(self)
         self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
+
+
+class BuildMochaOpenSBIWithUBoot(BuildMochaOpenSBI):
+    target = "mocha-opensbi-u-boot"
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "mocha-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
+        self.make_args.set(PLATFORM_DEFCONFIG="mocha_defconfig")

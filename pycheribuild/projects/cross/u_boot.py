@@ -241,3 +241,11 @@ class BuildRVYUBoot(BuildCheriAllianceUBoot):
             return "qemu-riscv64_smode_defconfig"
 
         assert False, "unhandled target"
+
+
+class BuildMochaUBoot(BuildRVYUBoot):
+    target = "mocha-u-boot"
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,)
+
+    def default_defconfig(self) -> str:
+        return "lowrisc_mocha_defconfig"
