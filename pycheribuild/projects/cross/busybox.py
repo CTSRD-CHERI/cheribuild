@@ -261,7 +261,7 @@ class PackageMochaCheriLinux(BuildMochaBusyBox):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        result = ("mocha-opensbi-u-boot-baremetal-riscv64-purecap",)
+        result = ("mocha-opensbi-u-boot-baremetal-riscv64-purecap", "cheri-os-tests-linux-riscv64-purecap")
         return result
 
     def gen_rootfs_uimage(self):
