@@ -137,12 +137,10 @@ echo "{welcome_message}"
 echo "Have a lot of fun!"
 echo
 
-# Install udhcpc DHCP helper script
-ifconfig eth0 up
-udhcpc -i eth0
-ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
-route add default gw 10.0.2.2
-echo "nameserver 8.8.8.8" > /etc/resolv.conf
+echo
+echo "Running CHERI OS tests"
+/opt/cheri-os-test/cheriostests-purecap -a
+echo
 
 # Loop shell forever
 while true; do
