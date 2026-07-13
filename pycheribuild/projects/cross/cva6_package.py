@@ -47,7 +47,7 @@ class PackageMochaCheriLinux(BuildMochaBusyBox):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        result = ("mocha-opensbi-u-boot-baremetal-riscv64-purecap",)
+        result = ("mocha-opensbi-u-boot-baremetal-riscv64-purecap", "cheri-os-tests-linux-riscv64-purecap")
         return result
 
     def gen_rootfs_uimage(self):
@@ -92,7 +92,7 @@ class PackageCVA6CheriLinux(BuildAllianceBusyBox):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        result = ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap",)
+        result = ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap", "cheri-os-tests-linux-riscv64-purecap")
         return result
 
     def next_power_of_two(self, size: int) -> int:

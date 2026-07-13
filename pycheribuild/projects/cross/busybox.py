@@ -136,6 +136,11 @@ echo "{welcome_message}"
 echo "Have a lot of fun!"
 echo
 
+echo
+echo "Running CHERI OS tests"
+/opt/cheri-os-test/cheriostests-purecap -a
+echo
+
 # Install udhcpc DHCP helper script
 ifconfig eth0 up
 udhcpc -n -t 3 -T 3 -i eth0 || echo "DHCP failed"
