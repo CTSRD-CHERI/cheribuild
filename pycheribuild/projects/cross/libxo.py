@@ -78,11 +78,3 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         self.run_shell_script("sh bin/setup.sh", shell="sh", cwd=self.source_dir)
 
         super().configure(**kwargs)
-
-    def compile(self, **kwargs):
-        self.run_make()
-        super().compile(**kwargs)
-
-    def install(self, **kwargs):
-        self.run_make_install()
-        super().install(**kwargs)
