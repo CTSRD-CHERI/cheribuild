@@ -57,22 +57,13 @@ class BuildLibbsd(CrossCompileAutotoolsProject):
         ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
         return ti.musl_target, "libmd"
 
+    def configure(self, **kwargs):
+        self.run_cmd(self.source_dir / "autogen", cwd=self.source_dir)
+        super().configure(**kwargs)
+
     def setup(self) -> None:
         super().setup()
         # Remove dependency on libgcc_eh
         self.COMMON_LDFLAGS.append("--unwindlib=none")
         # Remove dependcy on libgcc_s
         self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
-
-    def configure(self, **kwargs):
-        if not self.configure_command.exists():
-            self.run_cmd(self.source_dir / "autogen", cwd=self.source_dir)
-        super().configure(**kwargs)
-
-    def compile(self, **kwargs):
-        self.run_make()
-        super().compile()
-
-    def install(self, **kwargs):
-        self.run_make_install()
-        super().install(**kwargs)
