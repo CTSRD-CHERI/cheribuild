@@ -59,16 +59,3 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         self.COMMON_LDFLAGS.append("--unwindlib=none")
         # Remove dependcy on libgcc_s
         self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
-
-    def configure(self, **kwargs):
-        if not self.configure_command.exists():
-            self.run_cmd(self.source_dir / "autogen", cwd=self.source_dir)
-        super().configure(**kwargs)
-
-    def compile(self, **kwargs):
-        self.run_make()
-        super().compile(**kwargs)
-
-    def install(self, **kwargs):
-        self.run_make_install()
-        super().install(**kwargs)
