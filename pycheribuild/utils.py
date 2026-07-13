@@ -265,7 +265,57 @@ def query_yes_no(
         return force_result
     if not sys.__stdin__.isatty():  # pyrefly: ignore
         return default_result  # can't get any input -> return the default
-    result = input(message + yes_no_str)
+    # In some cases (e.g. after QEMU has run), the terminal can be left in a state
+    # where ICRNL is disabled, causing input() to wait forever because Enter produces \r.
+    # We bypass this by reading character-by-character in cbreak mode.
+    sys.stdout.write(message + yes_no_str)
+    sys.stdout.flush()
+    try:
+        import termios
+        import tty
+        fd = sys.__stdin__.fileno()
+        old_attrs = termios.tcgetattr(fd)
+        tty.setcbreak(fd)
+
+        result_chars = []
+        while True:
+            ch = sys.__stdin__.read(1)
+            if not ch:
+                break
+            if ch in ('\r', '\n'):
+                sys.stdout.write('\n')
+                sys.stdout.flush()
+                break
+            elif ch == '\x7f' or ch == '\b':  # Backspace
+                if result_chars:
+                    result_chars.pop()
+                    sys.stdout.write('\b \b')
+                    sys.stdout.flush()
+            # Handle Ctrl+C (SIGINT character)
+            elif ch == '\x03':
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_attrs)
+                raise KeyboardInterrupt()
+            # Handle Ctrl+D (EOF)
+            elif ch == '\x04':
+                break
+            else:
+                result_chars.append(ch)
+                sys.stdout.write(ch)
+                sys.stdout.flush()
+        result = "".join(result_chars)
+    except Exception:
+        try:
+            result = input()
+        except EOFError:
+            result = "n" if default_result is False else "y"
+    finally:
+        try:
+            import termios
+            fd = sys.__stdin__.fileno()
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_attrs)
+        except Exception:
+            pass
+
     if default_result:
         return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
     return str(result).lower().startswith("y")  # anything but y will be treated as false
