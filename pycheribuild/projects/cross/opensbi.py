@@ -29,7 +29,7 @@
 #
 from pathlib import Path
 
-from .u_boot import BuildCheriAllianceUBoot, BuildMochaUBoot, BuildRVYUBoot
+from .u_boot import BuildCheriAllianceUBoot, BuildCVA6CheriUBoot, BuildMochaUBoot, BuildRVYUBoot
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
 from ..project import (
     BuildType,
@@ -395,6 +395,20 @@ class BuildMochaOpenSBIWithUBoot(BuildMochaOpenSBI):
 
     def setup(self):
         super().setup()
-        uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        uboot = BuildMochaUBoot.get_install_dir(self)
         self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
         self.make_args.set(PLATFORM_DEFCONFIG="mocha_defconfig")
+
+
+class BuilCVA6CheriOpenSBIWithUBoot(BuildRVYOpenSBI):
+    target = "cva6cheri-opensbi-u-boot"
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,)
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "cva6cheri-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildCVA6CheriUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
