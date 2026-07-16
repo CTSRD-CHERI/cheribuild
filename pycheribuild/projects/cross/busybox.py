@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import subprocess
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject
@@ -36,8 +35,8 @@ from ..project import (
     GitRepository,
     MakeCommandKind,
 )
-from ...config.chericonfig import CheriConfig, RiscvCheriISA
-from ...config.compilation_targets import CheriLinuxTargetInfo, CompilationTargets
+from ...config.chericonfig import RiscvCheriISA
+from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty
 
@@ -249,48 +248,3 @@ class BuildMochaBusyBox(BuildAllianceBusyBox):
 
     def configure(self) -> None:
         self.run_make("mocha_defconfig", cwd=self.source_dir)
-
-
-class PackageMochaCheriLinux(BuildMochaBusyBox):
-    target = "genimage-mocha-cheri-linux"
-    include_os_in_target_suffix = False  # Avoid adding -linux- as we are running cheri-linux
-    _supported_architectures = (CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,)
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
-    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
-    CheriLinuxTargetInfo.kernel_target = "mocha-linux-kernel"
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        result = ("mocha-opensbi-u-boot-baremetal-riscv64-purecap",)
-        return result
-
-    def gen_rootfs_uimage(self):
-        root_dir = self.cross_sysroot_path
-        initramfs = f"{root_dir}/boot/initramfs.cpio.gz"
-        uboot_mkimage = f"{self.config.cheri_alliance_sdk_dir}/u-boot/mkimage"
-
-        if not self.config.pretend:
-            # run mkimage
-            subprocess.run(
-                [
-                    uboot_mkimage,
-                    "-A",
-                    "riscv",
-                    "-T",
-                    "ramdisk",
-                    "-O",
-                    "linux",
-                    "-C",
-                    "gzip",
-                    "-n",
-                    "CHERI-Linux rootfs for Mocha",
-                    "-d",
-                    str(initramfs),
-                    f"{root_dir}/boot/rootfs.uimage.gz",
-                ],
-                check=True,
-            )
-
-    def install(self, **kwargs):
-        super().install()
-        self.gen_rootfs_uimage()

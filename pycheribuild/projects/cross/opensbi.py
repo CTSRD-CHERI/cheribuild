@@ -360,3 +360,17 @@ class BuildMochaOpenSBIWithUBoot(BuildOpenSBIMocha):
         uboot = BuildCheriAllianceUBoot.get_install_dir(self)
         self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
         self.make_args.set(PLATFORM_DEFCONFIG="mocha_defconfig")
+
+
+class BuilCVA6CheriOpenSBIWithUBoot(BuildAllianceOpenSBI):
+    target = "cva6cheri-opensbi-u-boot"
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,)
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "cva6cheri-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
