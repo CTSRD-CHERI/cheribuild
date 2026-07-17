@@ -63,3 +63,10 @@ class BuildLibbsd(CrossCompileAutotoolsProject):
         self.COMMON_LDFLAGS.append("--unwindlib=none")
         # Remove dependcy on libgcc_s
         self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
+
+    def install(self, **kwargs) -> None:
+        self.run_make_install()
+
+        # Copy the libraries from the cross-compile sysroot into rootfs/lib
+        for sofile in self.install_dir.glob("lib/libbsd.so*"):
+            self.install_file(sofile, self.install_dir / f"rootfs/lib/" / sofile.name, create_dirs=True)
