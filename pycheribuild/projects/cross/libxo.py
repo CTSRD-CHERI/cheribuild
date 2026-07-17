@@ -78,3 +78,10 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         self.run_shell_script("sh bin/setup.sh", shell="sh", cwd=self.source_dir)
 
         super().configure(**kwargs)
+
+    def install(self, **kwargs) -> None:
+        self.run_make_install()
+
+        # Copy the libraries from the cross-compile sysroot into rootfs/lib
+        for sofile in self.install_dir.glob("lib/libxo.so*"):
+            self.install_file(sofile, self.install_dir / f"rootfs/lib/" / sofile.name, create_dirs=True)
