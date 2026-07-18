@@ -723,7 +723,9 @@ class CompilerInfo:
                 warning_message("Could not find", binutil, "in expected path", result)
                 result = None
         if not result:
-            result = shutil.which(binutil)  # fall back to the default and assume clang can find the right one
+            fallback = shutil.which(binutil)  # fall back to the default and assume clang can find the right one
+            if fallback:
+                result = Path(fallback)
         return result
 
     @property
