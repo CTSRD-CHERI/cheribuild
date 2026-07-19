@@ -138,7 +138,7 @@ echo
 
 # Install udhcpc DHCP helper script
 ifconfig eth0 up
-udhcpc -i eth0
+udhcpc -n -t 3 -T 3 -i eth0 || echo "DHCP failed"
 ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
 route add default gw 10.0.2.2
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
