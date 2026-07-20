@@ -54,7 +54,11 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.required_ocaml_version = "5.4.1"
+        # We use 5.3.0 to work around incompatibility of latest release of bisect_ppx with 5.4.1
+        # This is only needed for dev builds of sail, but building with a local git pin forces
+        # the dev setting of sail. Working around this would require newer opam, so for now just
+        # stick to 5.3.0 as the simplest workaround.
+        self.required_ocaml_version = "5.3.0"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
 
