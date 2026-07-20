@@ -48,7 +48,7 @@ from .project import (
     MakeCommandKind,
     Project,
 )
-from .simple_project import BoolConfigOption, SimpleProject
+from .simple_project import BoolConfigOption, OptionalBoolConfigOption, SimpleProject
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
 from ..processutils import cached_get_homebrew_prefix
@@ -71,12 +71,11 @@ class BuildQEMUBase(AutotoolsProject):
     lto_compiler_flags_need_linker_flags = True
     qemu_targets: "str"
 
-    use_smbd = BoolConfigOption(
+    use_smbd = OptionalBoolConfigOption(
         "use-smbd",
         show_help=False,
-        default=True,
-        help="Don't require SMB support when building QEMU (warning: most --test "
-        "targets will fail without smbd support)",
+        default=None,
+        help="Enable SMB support in QEMU. If unset, it is enabled automatically if a usable smbd is found.",
     )
     gui = BoolConfigOption(
         "gui",
@@ -332,7 +331,7 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 
     @staticmethod
-    def find_smbd_binary(config: CheriConfig) -> Path:
+    def guessed_smbd_path(config: CheriConfig) -> Path:
         guess = Path("/usr/sbin/smbd")
         if OSInfo.IS_FREEBSD:
             guess = Path("/usr/local/sbin/smbd")
@@ -347,6 +346,44 @@ class BuildQEMUBase(AutotoolsProject):
             guess = config.other_tools_dir / "sbin/smbd"
         return guess
 
+    def find_smbd(self) -> "Optional[Path]":
+        if self.use_smbd is False:
+            return None
+        smbd_path = self.guessed_smbd_path(self.config)
+        smbd_found = smbd_path.exists()
+        if self.use_smbd is None and not smbd_found:
+            # Auto-detect mode and no usable smbd was found -> silently don't enable SMB support.
+            self.info(
+                f"Could not find smbd -> not enabling QEMU SMB shares support. Set --{self.target}/use-smbd to force."
+            )
+            return None
+        self.info("Guessed samba path", smbd_path)
+        if not smbd_found:
+            if self.target_info.is_macos():
+                # QEMU user networking expects a smbd that accepts the same flags and config files as the
+                # samba.org sources but the macOS /usr/sbin/smbd is incompatible with that:
+                self.warning(
+                    "QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
+                    "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
+                    "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU",
+                )
+            self.dependency_error(
+                "Could not find smbd -> QEMU SMB shares networking will not work",
+                install_instructions=OSInfo.install_instructions(
+                    "smbd",
+                    is_lib=False,
+                    freebsd="samba416",
+                    apt="samba",
+                    homebrew="samba",
+                    cheribuild_target="samba",
+                    alternative="if you really don't need QEMU host shares you can disable the samba "
+                    "dependency by setting --" + self.target + "/no-use-smbd",
+                ),
+                cheribuild_target="samba",
+                cheribuild_xtarget=CompilationTargets.NATIVE,
+            )
+        return smbd_path
+
     def configure(self, **kwargs):
         # We call this here instead of inside setup to make sure the repository has been cloned
         if self.repository.contains_commit(self, "5890258aeeba303704ec1adca415e46067800777", src_dir=self.source_dir):
@@ -357,32 +394,9 @@ class BuildQEMUBase(AutotoolsProject):
         else:
             self.configure_args.append("--enable-slirp=git")
 
-        if self.use_smbd:
-            smbd_path = self.find_smbd_binary(self.config)
-            self.info("Guessed samba path", smbd_path)
+        smbd_path = self.find_smbd()
+        if smbd_path is not None:
             self.configure_args.append("--smbd=" + str(smbd_path))
-            if not smbd_path.exists():
-                if self.target_info.is_macos():
-                    # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
-                    # sources but the macOS /usr/sbin/smbd is incompatible with that:
-                    self.warning(
-                        "QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
-                        "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
-                        "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU",
-                    )
-                self.fatal(
-                    "Could not find smbd -> QEMU SMB shares networking will not work",
-                    fixit_hint="Either install samba using the system package manager or with cheribuild. "
-                    "If you really don't need QEMU host shares you can disable the samba dependency "
-                    "by setting --" + self.target + "/no-use-smbd",
-                )
-            self.check_required_system_tool(
-                str(smbd_path),
-                cheribuild_target="samba",
-                freebsd="samba416",
-                apt="samba",
-                homebrew="samba",
-            )
 
         chosen_targets = self.qemu_targets
         qemu_targets_option = typing.cast(ConfigOptionHandle, inspect.getattr_static(self, "qemu_targets"))
