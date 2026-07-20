@@ -1,0 +1,113 @@
+#
+# Copyright (c) 2025-2026 Paul Metzger
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+import os
+import typing
+
+from .crosscompileproject import CrossCompileMakefileProject, DefaultInstallDir, GitRepository, MakeCommandKind
+from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBase
+from ...utils import classproperty
+
+
+class BuildPortableOSTests(CrossCompileMakefileProject):
+    _always_add_suffixed_targets = True
+    _needs_sysroot = True
+    _supported_architectures = (
+        CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
+        CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
+    )
+    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
+    target = "cheri-os-tests"
+    build_in_source_dir = False
+    make_kind = MakeCommandKind.BsdMake
+    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-os-tests.git")
+    default_branch = "preview"
+
+    @classproperty
+    def default_install_dir(self):
+        return DefaultInstallDir.ROOTFS_LOCALBASE
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
+        return ti.musl_target, "libxo", "libbsd"
+
+    def setup(self) -> None:
+        # Don't depend on libgcc_s
+        self.COMMON_LDFLAGS.append("--unwindlib=none")
+
+        if self.get_crosscompile_target().is_aarch64(include_purecap=True):
+            self.set_env_make_args(machine_cpuarch="aarch64c", machine_abi="purecap", machine_arch="aarch64c")
+        elif self.get_crosscompile_target().is_experimental_cheri093_std(self.config):
+            self.set_env_make_args(
+                machine_cpuarch="rv64imafdc_zcherihybrid_zcherilevels",
+                machine_abi="purecap",
+                machine_arch="rv64imafdc_zcherihybrid_zcherilevels",
+            )
+        else:
+            target = self.target_info.target
+            raise NotImplementedError(f"Unsupported architecture: {target.cpu_architecture} {target._cheri_isa}")
+
+        return super().setup()
+
+    def compile(self, **kwargs):
+        # The binaries will be put into /opt/cheri-api-tests
+        # This ensures Pyrefly that destdir won't be None
+        assert self.destdir is not None
+        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-test"
+        self.makedirs(self.destdir / "lib")
+
+        self.make_args.set_env(
+            DESTDIR=str(self.destdir),
+            BINOWN=os.getuid(),
+            BINGRP=os.getgid(),
+            BINMODE=755,
+            # Suppress a warning related to absent exception handlers.
+            LD_FATAL_WARNINGS="no",
+            # This is not supported by Morello LLVM,
+            MAKESYSPATH=str(self.source_dir / "mk"),
+            MAKEOBJDIRPREFIX=str(self.build_dir),
+            # This property was added to _ClangBasedTargetInfo to support this specific use case.
+            OBJCOPY=self.target_info.objcopy,
+            **self.env_make_args,
+        )
+
+        self.run_make(cwd=self.source_dir / "cheriostest")
+
+    def set_env_make_args(self, machine_cpuarch: str, machine_abi: str, machine_arch: str):
+        self.env_make_args = {
+            "MACHINE_CPUARCH": machine_cpuarch,
+            "MACHINE_ABI": machine_abi,
+            "MACHINE_ARCH": machine_arch,
+        }
+
+    def install(self, **kwargs):
+        self.run_make_install(cwd=self.source_dir / "cheriostest")
+
+    def process(self):
+        self.check_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
+        super().process()

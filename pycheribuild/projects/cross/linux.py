@@ -166,6 +166,9 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self._set_config("CONFIG_NET_9P_FD")
         self._set_config("CONFIG_9P_FS")
 
+        # Enable SMB filesystem for sharing directories between host and target
+        self._set_config("CONFIG_CIFS")
+
         # Default config only has VIRTIO_NET, not PCI_NET. This is to make
         # it work out of the box with cheribuild's QEMU with networking that
         # uses PCI.
@@ -183,7 +186,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
 
 class BuildCheriAllianceLinux(BuildLinux):
     target = "linux-kernel"
-    repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv-6.18")
+    repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="cambridge-morello-7.0")
     _supported_architectures = (
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
         CompilationTargets.LINUX_KERNEL_RISCV64_GCC,
