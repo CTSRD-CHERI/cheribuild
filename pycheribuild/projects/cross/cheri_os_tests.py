@@ -44,7 +44,7 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
     target = "cheri-os-tests"
     build_in_source_dir = False
     make_kind = MakeCommandKind.BsdMake
-    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-os-tests.git", default_branch = "preview")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-tests.git", default_branch = "preview")
 
     @classproperty
     def default_install_dir(self):
