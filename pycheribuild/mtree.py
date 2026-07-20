@@ -61,7 +61,7 @@ class MtreePath(PurePosixPath):
             # split string into Unicode code points
             c = ord(s[i])
 
-            # if a non-ASCII character, convert to 3 digit octal without the 0o prefix
+            # if a non-ASCII or glob character, convert to 3 digit octal without the 0o prefix
             if c < 33 or c > 126 or c == "[" or c == "]" or c == "?" or c == "*":
                 # turn the character into a UTF-8 string of bytes (len(>1) if Unicode)
                 c_utf8 = chr(c).encode("utf-8")
