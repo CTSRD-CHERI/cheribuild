@@ -858,7 +858,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.build_lib32 = False
 
         if cls.universe_target:
-            cls.explicit_subdirs_only = False
+            cls.explicit_subdirs_only = []
             return
 
         cls.explicit_subdirs_only = cls.add_list_option(
@@ -2463,16 +2463,28 @@ class BuildFreeBSDUniverseMixin(UniverseMixinBase):
         super().setup_config_options(**kwargs)
         cls.worlds = cls.add_bool_option("worlds", help="Include building worlds", default=True)
         cls.kernels = cls.add_bool_option("kernels", help="Include building kernels", default=True)
+        cls.universe_logdir = cls.add_path_option(
+            "universe-logdir",
+            default=ComputedDefaultValue(
+                function=lambda _, p: p.build_dir / "logs",
+                as_string="$BUILD_DIR/logs",
+            ),
+            help="Directory to store the logs for the build",
+        )
 
     @property
     def universe_args(self) -> MakeOptions:
         result = self.buildworld_args
+        result.set(UNIVERSE_LOGDIR=self.universe_logdir)
         return result
 
-    def compile(self, tinderbox=False, **kwargs) -> None:
+    def compile(self, *, tinderbox=False, **kwargs) -> None:
+        self.makedirs(Path(self.universe_logdir))
+        self.info("Universe logs will be written to", self.universe_logdir)
+
         build_args = self.universe_args
-        if self.config.verbose:
-            self.run_make("showconfig", options=build_args)
+        # NB: No make showconfig since that needs a valid TARGET/TARGET_ARCH,
+        # and would be specific to that architecture anyway.
 
         fast = self.fast_rebuild
         if fast and self.with_clean:
