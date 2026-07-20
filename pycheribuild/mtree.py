@@ -73,7 +73,6 @@ class MtreePath(PurePosixPath):
                 # append an ASCII character
                 s_dest += s[i]
 
-        # return s.upper().replace(" ", "\\s")
         return s_dest
 
 
