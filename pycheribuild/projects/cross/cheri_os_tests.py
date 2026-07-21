@@ -41,10 +41,10 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
     )
     _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
-    target = "cheri-os-tests"
+    target = "cheri-os-test"
     build_in_source_dir = False
     make_kind = MakeCommandKind.BsdMake
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-tests.git", default_branch = "preview")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch = "preview")
 
     @classproperty
     def default_install_dir(self):
