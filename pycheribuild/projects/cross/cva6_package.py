@@ -32,7 +32,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .busybox import BuildAllianceBusyBox, BuildMochaBusyBox
+from .cheribsd import BuildCheriBsdMfsKernel
 from .opensbi import BuildAllianceOpenSBI
+from ..simple_project import SimpleProject, TargetAliasWithDependencies
 from ...config.chericonfig import CheriConfig, RiscvCheriISA
 from ...config.compilation_targets import CheriLinuxTargetInfo, CompilationTargets
 from ...config.target_info import CPUArchitecture
@@ -522,3 +524,117 @@ class PackageCVA6CheriLinux(BuildAllianceBusyBox, PackageCVA6FitImages, PackageC
         self.gen_fit()
         self.install_file(self.itb_path, self.install_dir / "boot/fitImage.itb")
         self.gen_sdcard_image("linux")
+
+
+class PackageCVA6CheriBSD(TargetAliasWithDependencies):
+    target = "cva6cheri-cheribsd-images"
+    _supported_architectures = (CompilationTargets.CHERIBSD_RISCV_PURECAP,)
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap", "cheribsd-mfs-root-kernel-riscv64-purecap")
+
+
+class BuildBootableCheriBSDforCVA6(SimpleProject, PackageCVA6FitImages, PackageCVA6SDCardImages):
+    target = "genimage-cva6-cheribsd"
+    dependencies = ("cva6cheri-cheribsd-images",)
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,)
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
+
+    def gen_fit(self):
+        self.root_dir = BuildCheriBsdMfsKernel.get_install_dir(
+            self,
+            cross_target=CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        )
+
+        kernel_install = BuildCheriBsdMfsKernel.get_install_dir(
+            self,
+            cross_target=CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        )
+
+        kernel = kernel_install / "../kernel-riscv64-purecap.RVY-PURECAP-PRIME"
+        kernel_bin = kernel_install / "../kernel-riscv64-purecap.RVY-PURECAP-PRIME.bin"
+        kernel_gz = kernel_install / "../kernel-riscv64-purecap.RVY-PURECAP-PRIME.bin.gz"
+
+        uboot_mkimage = self.config.cheri_alliance_sdk_dir / "u-boot" / "mkimage"
+
+        purecap_suffix = "-purecap" if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]) else ""
+
+        uboot_dtb = (
+            self.config.cheri_alliance_sdk_dir / "u-boot" / f"riscv64{purecap_suffix}" / "cv64a6_imafdc_zcheri_sv39.dtb"
+        )
+
+        opensbi_install = BuildAllianceOpenSBI.get_install_dir(
+            self,
+            cross_target=CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        )
+
+        self.opensbi = opensbi_install / "share" / "opensbi" / "l64pc128" / "generic" / "firmware" / "fw_payload.bin"
+
+        its_path = self.root_dir / "fitImage.its"
+        self.itb_path = self.root_dir / "fitImage.itb"
+
+        self.run_cmd(
+            [
+                self.sdk_bindir / "llvm-objcopy",
+                "-O",
+                "binary",
+                kernel,
+                kernel_bin,
+            ],
+            print_verbose_only=False,
+        )
+
+        self.run_cmd(
+            [
+                "gzip",
+                "-k",
+                "-9",
+                str(kernel_bin),
+            ],
+            print_verbose_only=False,
+        )
+
+        self.generate_fit(
+            mkimage=uboot_mkimage,
+            its_path=its_path,
+            itb_path=self.itb_path,
+            images=[
+                FitImage(
+                    name="kernel-1",
+                    path=kernel_gz,
+                    description="CheriBSD",
+                    type="kernel",
+                    arch="riscv",
+                    os="linux",
+                    compression="gzip",
+                    load=0x90000000,
+                    entry=0x90000000,
+                    hash_algo="sha256",
+                ),
+                FitImage(
+                    name="fdt-1",
+                    path=uboot_dtb,
+                    description="CVA6-CHERI DTB",
+                    type="flat_dt",
+                    arch="riscv",
+                    compression="none",
+                    hash_algo="sha256",
+                ),
+            ],
+            configurations=[
+                FitConfiguration(
+                    name="standard",
+                    description="Standard Boot",
+                    kernel="kernel-1",
+                    fdt="fdt-1",
+                ),
+            ],
+        )
+
+    def process(self):
+        self.gen_fit()
+        self.install_file(self.itb_path, self.root_dir / "boot/fitImage.itb")
+        self.gen_sdcard_image("cheribsd")
