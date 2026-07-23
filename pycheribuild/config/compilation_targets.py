@@ -1733,6 +1733,9 @@ class CompilationTargets(BasicCompilationTargets):
         CHERI_LINUX_MORELLO_PURECAP,
     )
     ALL_MORELLO_LINUX_TARGETS = (MORELLO_LINUX_MORELLO_PURECAP, MORELLO_LINUX_AARCH64)
+    ALL_CHERI_AND_MORELLO_LINUX_TARGETS = (*ALL_CHERI_LINUX_TARGETS, *ALL_MORELLO_LINUX_TARGETS)
+    ALL_LINUX_PURECAP_TARGETS = (CHERI_LINUX_RISCV64_PURECAP_093, CHERI_LINUX_MORELLO_PURECAP,
+                               MORELLO_LINUX_MORELLO_PURECAP)
 
     # GCC-based Linux targets (only to be used for the linux-kernel classes for now!)
     # In the future we may want to allow using it for other targets as well, but for now

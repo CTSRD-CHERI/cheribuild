@@ -34,11 +34,7 @@ from ...utils import classproperty
 class BuildLibbsd(CrossCompileAutotoolsProject):
     _always_add_suffixed_targets = True
     _can_use_autogen_sh = True
-    _supported_architectures = (
-        CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
-        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
-        CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
-    )
+    _supported_architectures = CompilationTargets.ALL_CHERI_AND_MORELLO_LINUX_TARGETS
     _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
     make_kind = MakeCommandKind.GnuMake
     repository = GitRepository(

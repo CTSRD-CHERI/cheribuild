@@ -35,11 +35,7 @@ from ...utils import classproperty
 class BuildPortableOSTests(CrossCompileMakefileProject):
     _always_add_suffixed_targets = True
     _needs_sysroot = True
-    _supported_architectures = (
-        CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,
-        CompilationTargets.CHERI_LINUX_MORELLO_PURECAP,
-        CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
-    )
+    _supported_architectures = CompilationTargets.ALL_LINUX_PURECAP_TARGETS
     _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
     target = "cheri-os-test"
     build_in_source_dir = False
