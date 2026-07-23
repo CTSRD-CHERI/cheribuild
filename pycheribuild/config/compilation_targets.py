@@ -191,6 +191,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return self._compiler_dir / "ld.lld"
 
     @property
+    def objcopy(self) -> Path:
+        return self._compiler_dir / "objcopy"
+
+    @property
     def ar(self) -> Path:
         return self._compiler_dir / "llvm-ar"
 
@@ -1701,7 +1705,7 @@ class CompilationTargets(BasicCompilationTargets):
     )
     UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
     CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
-    MORELLO_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
+    MORELLO_LINUX_AARCH64 = CrossCompileTarget("legacy-aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
     CHERI_LINUX_MORELLO_PURECAP = CrossCompileTarget(
         "morello-purecap",
         CPUArchitecture.AARCH64,
@@ -1710,8 +1714,12 @@ class CompilationTargets(BasicCompilationTargets):
         check_conflict_with=CHERI_LINUX_AARCH64,
         non_cheri_target=CHERI_LINUX_AARCH64,
     )
+    # This target is kept for historical reasons as Morello Linux (from Arm) was the first Linux kernel
+    # and target that added CHERI support. CHERI-Linux (from CHERI Alliance) has built on top of Morello
+    # Linux to include more features, targets (RISC-V), and is the currently active project and should
+    # be used instead of the following target unless there is a good reason not to.
     MORELLO_LINUX_MORELLO_PURECAP = CrossCompileTarget(
-        "morello-purecap",
+        "legacy-morello-purecap",
         CPUArchitecture.AARCH64,
         MorelloLinuxTargetInfo,
         is_cheri_purecap=True,
@@ -1725,6 +1733,9 @@ class CompilationTargets(BasicCompilationTargets):
         CHERI_LINUX_MORELLO_PURECAP,
     )
     ALL_MORELLO_LINUX_TARGETS = (MORELLO_LINUX_MORELLO_PURECAP, MORELLO_LINUX_AARCH64)
+    ALL_CHERI_AND_MORELLO_LINUX_TARGETS = (*ALL_CHERI_LINUX_TARGETS, *ALL_MORELLO_LINUX_TARGETS)
+    ALL_LINUX_PURECAP_TARGETS = (CHERI_LINUX_RISCV64_PURECAP_093, CHERI_LINUX_MORELLO_PURECAP,
+                               MORELLO_LINUX_MORELLO_PURECAP)
 
     # GCC-based Linux targets (only to be used for the linux-kernel classes for now!)
     # In the future we may want to allow using it for other targets as well, but for now
