@@ -29,6 +29,7 @@
 #
 from pathlib import Path
 
+from .u_boot import BuildCheriAllianceUBoot
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
 from ..project import (
     BuildType,
@@ -83,6 +84,9 @@ class BuildOpenSBI(Project):
         cls.fw_jump_fdt_addr = cls.add_optional_config_option(
             "fw-jump-fdt-addr", kind=str, help="OpenSBI FW_JUMP_FDT_ADDR"
         )
+        cls.fw_payload_path = cls.add_optional_config_option(
+            "fw-payload-path", kind=Path, help="OpenSBI FW_PAYLOAD_PATH"
+        )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -117,6 +121,9 @@ class BuildOpenSBI(Project):
             self.make_args.set(FW_JUMP_ADDR=self.fw_jump_addr)
         if self.fw_jump_fdt_addr:
             self.make_args.set(FW_JUMP_FDT_ADDR=self.fw_jump_fdt_addr)
+        if self.fw_payload_path:
+            assert self.fw_payload_path.exists()
+            self.make_args.set(FW_PAYLOAD_PATH=self.fw_payload_path)
         if self.config.verbose:
             self.make_args.set(V=True)
 
@@ -293,3 +300,20 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
     def setup(self):
         super().setup()
         self.make_args.set(FW_TEXT_START="0xC0000000")
+
+
+class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
+    target = "cheri-std093-opensbi-u-boot"
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+    )
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "cheri-std093-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
