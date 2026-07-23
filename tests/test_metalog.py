@@ -9,7 +9,7 @@ import pytest
 sys.path.append(str(Path(__file__).parent.parent))
 # The following line triggers a flake8 warning, but ruff is able to ignore the
 # sys.path modification, so silence the ruff warning while we still use flake8.
-from pycheribuild.mtree import MtreeFile  # noqa: E402, RUF100
+from pycheribuild.mtree import MtreeFile, MtreePath  # noqa: E402, RUF100
 
 HAVE_LCHMOD = True
 if "_TEST_SKIP_METALOG" in os.environ:
@@ -271,3 +271,26 @@ def test_symlink_infer_mode(temp_symlink):
 # END
 """
     assert expected == _get_as_str(mtree)
+
+
+# noinspection PyShadowingNames
+def test_path_escape_utf8():
+    input_path = "/foo/bar/ⴰⴻⵓⵍ"  # 'hello' in Tamazight
+    result = MtreePath.escape(input_path)
+    expected = "/foo/bar/" + "\\342\\264\\260\\342\\264\\273\\342\\265\\223\\342\\265\\215"
+    assert expected == result
+
+
+# noinspection PyShadowingNames
+def test_path_escape_brackets():
+    input_path = "/usr/local/riscv64-purecap/share/vim/vim92/lang/menu_chinese(gb)_gb.936.vim"
+    result = MtreePath.escape(input_path)
+    expected = "/usr/local/riscv64-purecap/share/vim/vim92/lang/menu_chinese(gb)_gb.936.vim"
+    assert expected == result
+
+
+def test_path_escape_spaces():
+    input_path = "/hello world.txt"
+    result = MtreePath.escape(input_path)
+    expected = "/hello\\040world.txt"
+    assert expected == result
