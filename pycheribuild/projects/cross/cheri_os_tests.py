@@ -55,18 +55,6 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         # Don't depend on libgcc_s
         self.COMMON_LDFLAGS.append("--unwindlib=none")
 
-        if self.get_crosscompile_target().is_aarch64(include_purecap=True):
-            self.set_env_make_args(machine_cpuarch="aarch64c", machine_abi="purecap", machine_arch="aarch64c")
-        elif self.get_crosscompile_target().is_experimental_cheri093_std(self.config):
-            self.set_env_make_args(
-                machine_cpuarch="rv64imafdc_zcherihybrid_zcherilevels",
-                machine_abi="purecap",
-                machine_arch="rv64imafdc_zcherihybrid_zcherilevels",
-            )
-        else:
-            target = self.target_info.target
-            raise NotImplementedError(f"Unsupported architecture: {target.cpu_architecture} {target._cheri_isa}")
-
         return super().setup()
 
     def compile(self, **kwargs):
@@ -75,6 +63,21 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
         assert self.destdir is not None
         self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-test"
         self.makedirs(self.destdir / "lib")
+
+        if self.get_crosscompile_target().is_aarch64(include_purecap=True):
+            self.make_args.set_env(MACHINE_ARCH="aarch64c")
+        elif self.get_crosscompile_target().is_experimental_cheri093_std(self.config):
+            self.make_args.set_env(
+                # The CheriBSD bmake makefiles are not RVY aware and so we need
+                # to manually set MACHINE_ABI and the RISC-V arch string.
+                MACHINE_ABI="purecap",
+                MACHINE_ARCH=self.target_info.get_riscv_arch_string(self.crosscompile_target,
+                                                                    self.config,
+                                                                    softfloat=False)
+            )
+        else:
+            target = self.target_info.target
+            raise NotImplementedError(f"Unsupported architecture: {target.cpu_architecture} {target._cheri_isa}")
 
         self.make_args.set_env(
             DESTDIR=str(self.destdir),
@@ -88,17 +91,9 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
             MAKEOBJDIRPREFIX=str(self.build_dir),
             # This property was added to _ClangBasedTargetInfo to support this specific use case.
             OBJCOPY=self.target_info.objcopy,
-            **self.env_make_args,
         )
 
         self.run_make(cwd=self.source_dir / "cheriostest")
-
-    def set_env_make_args(self, machine_cpuarch: str, machine_abi: str, machine_arch: str):
-        self.env_make_args = {
-            "MACHINE_CPUARCH": machine_cpuarch,
-            "MACHINE_ABI": machine_abi,
-            "MACHINE_ARCH": machine_arch,
-        }
 
     def install(self, **kwargs):
         self.run_make_install(cwd=self.source_dir / "cheriostest")
