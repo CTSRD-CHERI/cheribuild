@@ -869,7 +869,12 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("https://github.com/llvm/llvm-project.git")
+    repository = GitRepository(
+        "https://github.com/llvm/llvm-project.git",
+        # Unlike our forks, the upstream repository has hundreds of user/revert branches that we
+        # don't need and that make cloning/fetching much slower.
+        negative_fetch_refspecs=("^refs/heads/users/*", "^refs/heads/revert-*"),
+    )
     default_directory_basename = "upstream-llvm-project"
     target = "upstream-llvm"
     _default_install_dir_fn = ComputedDefaultValue(

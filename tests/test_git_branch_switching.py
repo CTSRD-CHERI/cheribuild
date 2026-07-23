@@ -95,7 +95,7 @@ def setup_test_project(
     *,
     crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP,
     force_branch=True,
-    old_urls=None,
+    **kwargs,
 ):
     local_dir.parent.mkdir(parents=True, exist_ok=True)
 
@@ -117,7 +117,7 @@ def setup_test_project(
                     branch="target-branch", directory_name="dummy-dir"
                 )
             },
-            old_urls=old_urls,
+            **kwargs,
         )
 
     TestProject.setup_config_options()
@@ -349,6 +349,49 @@ def test_switch_branch_origin_wrong_url(shared_remote: Path, local_repo: Path):
         ("verbose", "HEAD contains commit @{upstream}"),
         ("info", "Skipping update: Current HEAD is up-to-date or ahead of upstream."),
     ]
+
+
+def get_all_branches(repo_dir: Path) -> "list[str]":
+    return (
+        subprocess.check_output(
+            ["git", "branch", "-q", "-a", "--format=%(refname:short)"],
+            cwd=repo_dir,
+        )
+        .decode("utf-8")
+        .split()
+    )
+
+
+def test_negative_fetch_refspecs(tmp_path: Path):
+    """Branches matching negative_fetch_refspecs should never be fetched, on the initial clone or later."""
+    remote_dir = tmp_path / "remote"
+    create_remote_repo(remote_dir)
+    subprocess.run(["git", "branch", "users/someone/wip"], cwd=remote_dir, check=True)
+    subprocess.run(["git", "branch", "revert-123"], cwd=remote_dir, check=True)
+
+    local_dir = tmp_path / "local"
+    project = setup_test_project(
+        local_dir,
+        remote_dir,
+        negative_fetch_refspecs=("^refs/heads/users/*", "^refs/heads/revert-*"),
+    )
+    project.repository.ensure_cloned(project, src_dir=local_dir, base_project_source_dir=None)
+    assert get_all_branches(remote_dir) == ["main", "other-branch", "revert-123", "target-branch", "users/someone/wip"]
+    # In the new clone, we should not have fetched the revert-123 or users/someone/wip branches
+    assert get_all_branches(local_dir) == [
+        "main",
+        "origin",
+        "origin/main",
+        "origin/other-branch",
+        "origin/target-branch",
+    ]
+    fetch_config = (
+        subprocess.check_output(["git", "config", "get", "--all", "remote.origin.fetch"], cwd=local_dir)
+        .decode("utf-8")
+        .split()
+    )
+    # Check that the git config includes the negative refspecs
+    assert fetch_config == ["+refs/heads/*:refs/remotes/origin/*", "^refs/heads/users/*", "^refs/heads/revert-*"]
 
 
 def test_switch_branch_origin_and_new_origin_wrong_url(shared_remote: Path, local_repo: Path):

@@ -191,6 +191,7 @@ class GitRepository(SourceRepository):
         url_override_reason: "typing.Any" = None,
         per_target_branches: "Optional[dict[CrossCompileTarget, TargetBranchInfo]]" = None,
         old_branches: "Optional[dict[str, str]]" = None,
+        negative_fetch_refspecs: "Optional[typing.Sequence[str]]" = None,
     ):
         self.old_urls = old_urls
         if temporary_url_override is not None:
@@ -208,6 +209,9 @@ class GitRepository(SourceRepository):
             per_target_branches = dict()
         self.per_target_branches = per_target_branches
         self.old_branches = old_branches
+        # e.g. ("^refs/heads/users/*", "^refs/heads/revert-*") to avoid fetching the hundreds
+        # of user branches that only exist in the upstream repository (and not in our forks).
+        self.negative_fetch_refspecs = negative_fetch_refspecs
 
     def get_default_branch(self, current_project: "Project", *, include_per_target: bool) -> Optional[str]:
         if include_per_target:
@@ -383,8 +387,18 @@ class GitRepository(SourceRepository):
                 default_result=True,
             ):
                 current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
+            shallow = current_project.config.shallow_clone and not current_project.needs_full_history
             clone_cmd = ["git", "clone"]
-            if current_project.config.shallow_clone and not current_project.needs_full_history:
+            if self.negative_fetch_refspecs:
+                # We can't just pass a custom remote.origin.fetch refspec via `git clone -c ...` since git
+                # clone always appends its own default "+refs/heads/*:refs/remotes/origin/*" refspec after
+                # any values set with -c, and a negative refspec only excludes refs matched by a *preceding*
+                # positive refspec. Instead, do a single-branch clone first and then widen the fetch refspec
+                # (with the exclusions added afterwards) before fetching the remaining branches.
+                clone_cmd.append("--single-branch")
+                if shallow:
+                    clone_cmd.extend(["--depth", "1"])
+            elif shallow:
                 # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
                 # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
                 # is not very intuitive. This increases the amount of data fetched but increases usability
@@ -395,6 +409,24 @@ class GitRepository(SourceRepository):
             if clone_branch:
                 clone_cmd += ["--branch", clone_branch]
             current_project.run_cmd([*clone_cmd, self.url, base_project_source_dir], cwd="/")
+            # If we have a negative refspec, we initially only clone the default branch and
+            # then fetch the rest after adding the negative refspec (since you can't add the
+            # negtive refspec as part of clone).
+            if self.negative_fetch_refspecs:
+                # Reset the refspec to the default (non-single-branch) refspec
+                current_project.run_cmd(
+                    ["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"],
+                    cwd=base_project_source_dir,
+                )
+                for refspec in self.negative_fetch_refspecs:
+                    current_project.run_cmd(
+                        ["git", "config", "--add", "remote.origin.fetch", refspec],
+                        cwd=base_project_source_dir,
+                    )
+                fetch_cmd = ["git", "fetch", "origin"]
+                if shallow:
+                    fetch_cmd.extend(["--depth", "1"])
+                current_project.run_cmd(fetch_cmd, cwd=base_project_source_dir)
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
             #    current_project.run_cmd(["git", "config", "remote.origin.fetch",
