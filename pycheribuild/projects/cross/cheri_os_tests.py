@@ -32,13 +32,8 @@ from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBas
 from ...utils import classproperty
 
 
-class BuildPortableOSTests(CrossCompileMakefileProject):
-    _always_add_suffixed_targets = True
-    _needs_sysroot = True
+class BuildCheri_OS_Test(CrossCompileMakefileProject):
     _supported_architectures = CompilationTargets.ALL_LINUX_PURECAP_TARGETS
-    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
-    target = "cheri-os-test"
-    build_in_source_dir = False
     make_kind = MakeCommandKind.BsdMake
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch = "preview")
 
@@ -48,8 +43,8 @@ class BuildPortableOSTests(CrossCompileMakefileProject):
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
-        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
-        return ti.musl_target, "libxo", "libbsd"
+        #ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
+        return "libxo", "libbsd"
 
     def setup(self) -> None:
         # Don't depend on libgcc_s

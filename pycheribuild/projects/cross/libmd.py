@@ -32,10 +32,8 @@ from ...utils import classproperty
 
 
 class BuildLibmd(CrossCompileAutotoolsProject):
-    _always_add_suffixed_targets = True
     _can_use_autogen_sh = True
     _supported_architectures = CompilationTargets.ALL_CHERI_AND_MORELLO_LINUX_TARGETS
-    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = False
     repository = GitRepository("https://git.hadrons.org/git/libmd.git")
@@ -43,11 +41,6 @@ class BuildLibmd(CrossCompileAutotoolsProject):
     @classproperty
     def default_install_dir(self):
         return DefaultInstallDir.ROOTFS_LOCALBASE
-
-    @classmethod
-    def dependencies(cls, config) -> "tuple[str, ...]":
-        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
-        return (ti.musl_target,)
 
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen", cwd=self.source_dir)
@@ -61,7 +54,7 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
 
     def install(self, **kwargs) -> None:
-        self.run_make_install()
+        super().install(**kwargs)
 
         # Copy the libraries from the cross-compile sysroot into rootfs/lib
         for sofile in self.install_dir.glob("lib/libmd.so*"):
