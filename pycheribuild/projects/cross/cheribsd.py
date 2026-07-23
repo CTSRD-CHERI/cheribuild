@@ -878,6 +878,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             " may cause strange errors so is off by default.",
         )
 
+    @classmethod
+    def uses_custom_toolchain(cls) -> bool:
+        return cls.build_toolchain == CompilerType.CUSTOM
+
     def get_default_kernel_platform(self) -> ConfigPlatform:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             return ConfigPlatform.FVP
