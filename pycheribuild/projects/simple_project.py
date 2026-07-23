@@ -166,6 +166,15 @@ if typing.TYPE_CHECKING:
         return typing.cast(bool, default)
 
     # noinspection PyPep8Naming
+    def OptionalBoolConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[Optional[bool], ComputedDefaultValue[Optional[bool]]]" = None,
+        **kwargs,
+    ) -> "Optional[bool]":
+        return typing.cast(Optional[bool], default)
+
+    # noinspection PyPep8Naming
     def EnumConfigOption(  # noqa: N802
         name: str,
         help: str,
@@ -279,6 +288,24 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
+            )
+
+    class OptionalBoolConfigOption(PerProjectConfigOption[Optional[bool]]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[bool], ComputedDefaultValue[Optional[bool]]]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=bool, **self._kwargs, **kwargs
+                ),
             )
 
     class EnumConfigOption(PerProjectConfigOption[EnumTy], typing.Generic[EnumTy]):
