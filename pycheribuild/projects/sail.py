@@ -54,7 +54,11 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.required_ocaml_version = "5.4.1"
+        # We use 5.3.0 to work around incompatibility of latest release of bisect_ppx with 5.4.1
+        # This is only needed for dev builds of sail, but building with a local git pin forces
+        # the dev setting of sail. Working around this would require newer opam, so for now just
+        # stick to 5.3.0 as the simplest workaround.
+        self.required_ocaml_version = "5.3.0"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
 
@@ -240,6 +244,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         return ThreadJoiner(None)
 
     def update(self):
+        self.makedirs(self.source_dir)
         self.run_opam_cmd("update")
         if not self.use_git_version:
             return
@@ -287,7 +292,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
         if self.with_trace_support:
@@ -344,7 +349,7 @@ class BuildSailRISCV(OpamMixin, CMakeProject):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def setup(self) -> None:
         super().setup()
@@ -366,7 +371,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
@@ -397,7 +402,7 @@ class BuildSailMorello(ProjectUsingOpam):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
         cmd = [

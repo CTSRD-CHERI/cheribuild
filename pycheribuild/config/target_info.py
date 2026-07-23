@@ -39,7 +39,7 @@ from typing import ClassVar, Optional, final
 
 from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
-from ..processutils import CompilerInfo, get_compiler_info
+from ..processutils import CompilerInfo, cached_get_homebrew_prefix, get_compiler_info
 from ..utils import OSInfo, fatal_error, status_update, warning_message
 
 __all__ = [
@@ -802,7 +802,12 @@ class NativeTargetInfo(TargetInfo):
         # NB: We don't want to look in this directory when building forced hybrid targets such as GDB:
         if _is_native_purecap() and not self.target.is_cheri_purecap():
             return []
-        return self.pkgconfig_candidates(self.config.other_tools_dir)
+        result = self.pkgconfig_candidates(self.config.other_tools_dir)
+        if self.is_macos():
+            prefix = cached_get_homebrew_prefix(None, self.config)
+            if prefix is not None:
+                result.extend(self.pkgconfig_candidates(prefix))
+        return result
 
     def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
         return [config.other_tools_dir]

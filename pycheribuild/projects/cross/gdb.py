@@ -46,7 +46,6 @@ from .gmp import BuildGmp
 from .mpfr import BuildMpfr
 from ..project import ComputedDefaultValue
 from ...config.target_info import AbstractProject
-from ...utils import OSInfo
 
 
 class BuildGDBBase(CrossCompileAutotoolsProject):
@@ -87,9 +86,9 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         super().check_system_dependencies()
         self.check_required_system_tool("makeinfo", default="texinfo")
         if self.compiling_for_host():
-            self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev")
-            self.check_required_pkg_config("mpfr", freebsd="mpfr", apt="libmpfr-dev")
-            self.check_required_pkg_config("expat", freebsd="expat", apt="libexpat1-dev")
+            self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
+            self.check_required_pkg_config("mpfr", freebsd="mpfr", apt="libmpfr-dev", homebrew="mpfr")
+            self.check_required_pkg_config("expat", freebsd="expat", apt="libexpat1-dev", homebrew="expat")
 
     def __init__(self, *args, **kwargs):
         self._compile_status_message = None
@@ -209,13 +208,6 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         # Some of the configure scripts are invoked lazily (during the make invocation instead of from ./configure)
         # Therefore we need to set all the enviroment variables when compiling, too.
         self.make_args.set_env(**self.configure_environment)
-
-    def configure(self, **kwargs):
-        if self.compiling_for_host() and OSInfo.IS_MAC:
-            self.configure_environment.clear()
-            print(self.configure_args)
-            # self.configure_args.clear()
-        super().configure()
 
     def compile(self, **kwargs):
         self.run_make("all-gdb", cwd=self.build_dir)

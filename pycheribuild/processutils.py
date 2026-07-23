@@ -55,6 +55,7 @@ from .utils import ConfigBase, OSInfo, Type_T, fatal_error, status_update, warni
 __all__ = [
     "CompilerInfo",
     "DoNotQuoteStr",
+    "cached_get_homebrew_prefix",
     "check_call_handle_noexec",
     "commandline_to_str",
     "extract_version",
@@ -711,6 +712,13 @@ class CompilerInfo:
                 version_suffix = name[len(basename) :]
         # Try to find a binutil with the same version suffix first
         real_compiler_path = self.path.resolve() if self.path.exists() else self.path
+
+        # Special case for Homebrew LLVM installations where lld has been moved to a separate package.
+        if "/Cellar/llvm/" in str(real_compiler_path):
+            brew_binutil = Path(str(real_compiler_path.parent).replace("/Cellar/llvm/", "/Cellar/lld/"), binutil)
+            if brew_binutil.exists():
+                return brew_binutil
+
         result = real_compiler_path.parent / (binutil + version_suffix)
         if result.exists():
             return result
@@ -822,6 +830,34 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
             _cached_compiler_infos[compiler] = result
         return result
     return _cached_compiler_infos[compiler]
+
+
+@functools.lru_cache(maxsize=20)
+def cached_get_homebrew_prefix(package: "Optional[str]", config: ConfigBase) -> Optional[Path]:
+    assert OSInfo.IS_MAC, "Should only be called on macos"
+    command = ["brew", "--prefix"]
+    if package:
+        command.append(package)
+    prefix = None
+    try:
+        prefix_str = (
+            run_command(
+                command,
+                capture_output=True,
+                run_in_pretend_mode=True,
+                print_verbose_only=False,
+                config=config,
+                env=dict(HOMEBREW_NO_AUTO_UPDATE="1"),
+            )
+            .stdout.decode("utf-8")
+            .strip()
+        )
+        prefix = Path(prefix_str)
+        if not prefix.exists():
+            prefix = None
+    except subprocess.CalledProcessError:
+        pass
+    return prefix
 
 
 # Cache the versions

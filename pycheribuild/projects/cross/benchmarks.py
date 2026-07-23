@@ -45,6 +45,7 @@ from .crosscompileproject import (
 )
 from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ReuseOtherProjectRepository
+from ..simple_project import BoolConfigOption
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...targets import target_manager
@@ -687,22 +688,11 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other tagets:
-    _supported_architectures = (
-        CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID,
-        CompilationTargets.CHERIBSD_RISCV_PURECAP,
-    )
+    _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.hw_counters = cls.add_config_option(
-            "enable-hw-counters",
-            choices=("pmc", "statcounters"),
-            default="statcounters",
-            help="Use hardware performance counters",
-        )
+    hw_counters = BoolConfigOption(
+        "enable-hw-counters", choices=("pmc", "statcounters"), help="Use hardware performance counters"
+    )
 
     def configure(self, **kwargs):
         self.configure_args.append("--enable-unixdomain")
@@ -719,3 +709,20 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         self.run_make_install()
+
+
+class IperfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
+    repository = GitRepository("https://github.com/CTSRD-CHERI/iperf.git", default_branch="cheri-3.21")
+    target = "iperf"
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    # Needs bsd make to build
+    make_kind = MakeCommandKind.GnuMake
+    _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+
+    static_binary = BoolConfigOption("build-static-binary", help="Build iperf as a static binary")
+
+    def configure(self, **kwargs):
+        if self.static_binary:
+            self.configure_args.append("--enable-static-bin")
+        super().configure(**kwargs)
