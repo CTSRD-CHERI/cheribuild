@@ -85,6 +85,8 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
             # This is not supported by Morello LLVM,
             MAKESYSPATH=str(self.source_dir / "mk"),
             MAKEOBJDIRPREFIX=str(self.build_dir),
+            # This property was added to _ClangBasedTargetInfo to support this specific use case.
+            OBJCOPY=self.target_info.objcopy,
         )
 
         self.run_make(cwd=self.source_dir / "cheriostest")
