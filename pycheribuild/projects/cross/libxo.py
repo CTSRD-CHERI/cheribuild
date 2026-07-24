@@ -24,10 +24,8 @@
 # SUCH DAMAGE.
 #
 
-import typing
-
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
-from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBase
+from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
 
@@ -43,8 +41,7 @@ class BuildLibxo(CrossCompileAutotoolsProject):
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
-        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
-        return ti.musl_target, "libbsd", "libmd"
+        return "libbsd", "libmd"
 
     def _patch_to_use_libbsd(self, path):
         self.run_cmd("sed", "-i", "s|<sys/queue.h>|<bsd/sys/queue.h>|g", path, cwd=self.source_dir)
