@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from .busybox import BuildAllianceBusyBox, BuildMochaBusyBox
+from .cheri_sel4_exercises import BuildCheriseL4Excercises
 from .cheribsd import BuildCheriBsdMfsKernel
 from .opensbi import BuildAllianceOpenSBI
 from ..simple_project import SimpleProject, TargetAliasWithDependencies
@@ -175,8 +176,7 @@ class PackageCVA6FitImages:
         default_configuration: Optional[str] = None,
     ) -> None:
         its_file = self._generate_fit_its(
-            images=images,
-            configurations=configurations,
+            images=images, configurations=configurations, default_configuration=default_configuration
         )
 
         print(its_file)
@@ -640,3 +640,162 @@ class BuildBootableCheriBSDforCVA6(SimpleProject, PackageCVA6FitImages, PackageC
         self.gen_fit()
         self.install_file(self.itb_path, self.root_dir / "boot/fitImage.itb")
         self.gen_sdcard_image("cheribsd")
+
+
+class PackageCVA6CheriseL4(BuildCheriseL4Excercises, PackageCVA6FitImages, PackageCVA6SDCardImages):
+    target = "genimage-cva6-cheri-sel4"
+    include_os_in_target_suffix = False
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,)
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    _default_architecture = CompilationTargets.FREESTANDING_RISCV64_PURECAP_093
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        result = ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap", "cheri-microkit-baremetal-riscv64-purecap")
+        return result
+
+    def configure(self, **kwargs) -> None:
+        self.board = "ariane"
+        self.targets = ["riscv64", "riscv64-purecap"]
+
+    def gen_fit(self):
+        self.root_dir = self.cross_sysroot_path
+        uboot_mkimage = Path(self.config.cheri_alliance_sdk_dir) / "u-boot" / "mkimage"
+
+        purecap_suffix = "-purecap" if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]) else ""
+
+        uboot_dtb = (
+            Path(self.config.cheri_alliance_sdk_dir)
+            / "u-boot"
+            / f"riscv64{purecap_suffix}"
+            / "cv64a6_imafdc_zcheri_sv39.dtb"
+        )
+
+        opensbi_install = BuildAllianceOpenSBI.get_install_dir(
+            self,
+            cross_target=CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        )
+
+        self.opensbi = opensbi_install / "share" / "opensbi" / "l64pc128" / "generic" / "firmware" / "fw_payload.bin"
+
+        its_path = self.install_dir / "fitImage.its"
+        self.itb_path = self.install_dir / "fitImage.itb"
+
+        # ---------------------------- Exercises -----------------------------
+        sel4_images = []
+        fit_configs = []
+        for ex in self.supported_exercises:
+            for target in self.targets:
+                boot_img = self.install_dir / f"{ex}-cheri-sel4-microkit-{target}-{self.board}.img"
+
+                if ex == "compile-and-run":
+                    boot_img = self.install_dir / (f"print-pointer-cheri-sel4-microkit-{target}-{self.board}.img")
+                    sel4_images.append(
+                        FitImage(
+                            name=f"{ex}-print-pointer-cheri-sel4-{target}",
+                            path=boot_img,
+                            description="CHERI seL4 Exercise Image",
+                            type="kernel",
+                            os="linux",
+                            compression="none",
+                            load=0x90000000,
+                            entry=0x90000000,
+                        )
+                    )
+                    fit_configs.append(
+                        FitConfiguration(
+                            name=f"{ex}-print-pointer-cheri-sel4-{target}",
+                            description="Standard Boot",
+                            kernel=f"{ex}-print-pointer-cheri-sel4-{target}",
+                            fdt="fdt-1",
+                        ),
+                    )
+
+                    if target == "riscv64-purecap":
+                        boot_img = self.install_dir / f"print-capability-cheri-sel4-microkit-{target}-{self.board}.img"
+                        sel4_images.append(
+                            FitImage(
+                                name=f"{ex}-print-capability-cheri-sel4-{target}",
+                                path=boot_img,
+                                description="CHERI seL4 Exercise Image",
+                                type="kernel",
+                                os="linux",
+                                compression="none",
+                                load=0x90000000,
+                                entry=0x90000000,
+                            )
+                        )
+                        fit_configs.append(
+                            FitConfiguration(
+                                name=f"{ex}-print-capability-cheri-sel4-{target}",
+                                description="Standard Boot",
+                                kernel=f"{ex}-print-capability-cheri-sel4-{target}",
+                                fdt="fdt-1",
+                            ),
+                        )
+                else:
+                    sel4_images.append(
+                        FitImage(
+                            name=f"{ex}-cheri-sel4-{target}",
+                            path=boot_img,
+                            description="CHERI seL4 Exercise Image",
+                            type="kernel",
+                            os="linux",
+                            compression="none",
+                            load=0x90000000,
+                            entry=0x90000000,
+                        )
+                    )
+                    fit_configs.append(
+                        FitConfiguration(
+                            name=f"{ex}-cheri-sel4-{target}",
+                            description="Standard Boot",
+                            kernel=f"{ex}-cheri-sel4-{target}",
+                            fdt="fdt-1",
+                        ),
+                    )
+
+        # ---------------------------- Missions ------------------------------
+        for mission in self.supported_missions:
+            for target in self.targets:
+                boot_img = self.install_dir / f"{mission}-cheri-sel4-microkit-{target}-{self.board}.img"
+                sel4_images.append(
+                    FitImage(
+                        name=f"{mission}-cheri-sel4-{target}",
+                        path=boot_img,
+                        description="CHERI seL4 Exercise Image",
+                        type="kernel",
+                        os="linux",
+                        compression="none",
+                        load=0x90000000,
+                        entry=0x90000000,
+                    )
+                )
+                fit_configs.append(
+                    FitConfiguration(
+                        name=f"{mission}-cheri-sel4-{target}",
+                        description="Standard Boot",
+                        kernel=f"{mission}-cheri-sel4-{target}",
+                        fdt="fdt-1",
+                    ),
+                )
+
+        self.generate_fit(
+            mkimage=uboot_mkimage,
+            its_path=its_path,
+            itb_path=self.itb_path,
+            images=[
+                *sel4_images,
+                FitImage(
+                    name="fdt-1", path=uboot_dtb, description="CVA6-CHERI DTB", type="flat_dt", compression="none"
+                ),
+            ],
+            configurations=[*fit_configs],
+            default_configuration="buffer-overflow-stack-cheri-sel4-riscv64-purecap",
+        )
+
+    def install(self, **kwargs):
+        super().install()
+        self.gen_fit()
+        self.install_file(self.itb_path, self.install_dir / "boot/fitImage.itb")
+        self.gen_sdcard_image("sel4", fw_payload=self.opensbi)
