@@ -477,7 +477,7 @@ class LaunchQEMUBase(SimpleProject):
         have_9pfs_support = qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = (
-            self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.find_smbd_binary(self.config).exists()
+            self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.guessed_smbd_path(self.config).exists()
         )
 
         def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):

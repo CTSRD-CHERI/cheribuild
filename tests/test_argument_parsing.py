@@ -21,6 +21,7 @@ from pycheribuild.jenkins_utils import jenkins_override_install_dirs_hack
 
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403, RUF100
+from pycheribuild.projects.build_qemu import BuildQEMU
 from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,
@@ -115,6 +116,52 @@ def test_skip_update():
         # command line overrides config file:
         assert _parse_arguments(["--skip-update"], config_file=config).skip_update
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
+
+
+def test_qemu_use_smbd(monkeypatch):
+    fake_smbd_path = Path("/fake/path/to/smbd")
+
+    def find_smbd_and_capture(cmdline_args, *, smbd_exists):
+        qemu = _get_target_instance("qemu", _parse_arguments(cmdline_args), BuildQEMU)
+        monkeypatch.setattr(qemu, "guessed_smbd_path", lambda _config: fake_smbd_path)
+        # Only fake the existence check for our fake smbd path, everything else (e.g. config files
+        # loaded by _parse_arguments()) should still behave normally:
+        real_path_exists = Path.exists
+        monkeypatch.setattr(Path, "exists", lambda p: smbd_exists if p == fake_smbd_path else real_path_exists(p))
+
+        recorded_dependency_error_calls = []
+        monkeypatch.setattr(
+            qemu, "dependency_error", lambda *call_args, **kwargs: recorded_dependency_error_calls.append(kwargs)
+        )
+        smbd_path = qemu.find_smbd()
+        return smbd_path, recorded_dependency_error_calls
+
+    # Default (auto-detect) mode with no usable smbd found: silently skip, no error.
+    result, dependency_error_calls = find_smbd_and_capture([], smbd_exists=False)
+    assert result is None
+    assert dependency_error_calls == []
+
+    # Default (auto-detect) mode with a usable smbd found: use it, no error.
+    result, dependency_error_calls = find_smbd_and_capture([], smbd_exists=True)
+    assert result == fake_smbd_path
+    assert dependency_error_calls == []
+
+    # --no-use-smbd: smbd is disabled entirely, we don't even try to find it, no error.
+    result, dependency_error_calls = find_smbd_and_capture(["--qemu/no-use-smbd"], smbd_exists=True)
+    assert result is None
+    assert dependency_error_calls == []
+
+    # --use-smbd: force enable -> a path is always returned, but if no usable smbd could be found this is reported via
+    # dependency_error() and cheribuild's "samba" target is offered as an install option.
+    result, dependency_error_calls = find_smbd_and_capture(["--qemu/use-smbd"], smbd_exists=False)
+    assert result == fake_smbd_path
+    assert len(dependency_error_calls) == 1
+    assert dependency_error_calls[0]["cheribuild_target"] == "samba"
+
+    # --use-smbd with a usable smbd present: no error/warning.
+    result, dependency_error_calls = find_smbd_and_capture(["--qemu/use-smbd"], smbd_exists=True)
+    assert result == fake_smbd_path
+    assert dependency_error_calls == []
 
 
 @pytest.mark.parametrize(
