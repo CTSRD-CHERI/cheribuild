@@ -25,10 +25,9 @@
 #
 
 import os
-import typing
 
 from .crosscompileproject import CrossCompileMakefileProject, DefaultInstallDir, GitRepository, MakeCommandKind
-from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBase
+from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
 
@@ -44,8 +43,7 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
-        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
-        return ti.musl_target, "libxo", "libbsd"
+        return "libxo", "libbsd"
 
     def setup(self) -> None:
         # Don't depend on libgcc_s

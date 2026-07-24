@@ -24,10 +24,8 @@
 # SUCH DAMAGE.
 #
 
-import typing
-
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
-from ...config.compilation_targets import CompilationTargets, LinuxTargetInfoBase
+from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
 
@@ -40,11 +38,6 @@ class BuildLibmd(CrossCompileAutotoolsProject):
     @classproperty
     def default_install_dir(self):
         return DefaultInstallDir.ROOTFS_LOCALBASE
-
-    @classmethod
-    def dependencies(cls, config) -> "tuple[str, ...]":
-        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
-        return (ti.musl_target,)
 
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen", cwd=self.source_dir)
