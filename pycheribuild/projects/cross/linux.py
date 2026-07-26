@@ -44,7 +44,7 @@ from ...config.chericonfig import CheriConfig, RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets, LinuxGccTargetInfo
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_compiler_info
-from ...utils import classproperty
+from ...utils import OSInfo, classproperty
 
 
 class BuildLinux(CrossCompileAutotoolsProject):
@@ -91,7 +91,6 @@ class BuildLinux(CrossCompileAutotoolsProject):
     def setup(self) -> None:
         super().setup()
         self.make_args.add_flags("-f", self.source_dir / "Makefile")
-
         compiler_info = get_compiler_info(self.CC, config=self.config)
 
         if compiler_info.is_gcc():
@@ -126,6 +125,102 @@ class BuildLinux(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         self._apply_build_patches()
+        # See https://seiya.me/blog/building-linux-on-macos-natively
+        if OSInfo.IS_MAC:
+            # On macOS, the libc does not provide elf.h, so we wrap libelf/gelf.h instead
+            hostcflags = [
+                "-isystem",
+                str(self.build_dir / "macos-compat"),
+                "-isystem",
+                str(self.get_homebrew_prefix("libelf") / "include"),
+            ]
+            self.check_required_system_header(
+                "libelf/gelf.h", homebrew="libelf", compiler=self.host_CC, compiler_flags=hostcflags
+            )
+            self.write_file(
+                self.build_dir / "macos-compat/elf.h",
+                contents="""#pragma once
+#include <libelf/gelf.h>
+
+#define STT_SPARC_REGISTER 3
+#define R_386_32 1
+#define R_386_PC32 2
+#define R_MIPS_HI16 5
+#define R_MIPS_LO16 6
+#define R_MIPS_26 4
+#define R_MIPS_32 2
+#define R_ARM_ABS32 2
+#define R_ARM_REL32 3
+#define R_ARM_PC24 1
+#define R_ARM_CALL 28
+#define R_ARM_JUMP24 29
+#define R_ARM_THM_JUMP24 30
+#define R_ARM_THM_PC22 10
+#define R_ARM_MOVW_ABS_NC 43
+#define R_ARM_MOVT_ABS 44
+#define R_ARM_THM_MOVW_ABS_NC 47
+#define R_ARM_THM_MOVT_ABS 48
+#define R_ARM_THM_JUMP19 51
+#define R_AARCH64_ABS64 257
+#define R_AARCH64_PREL64 260
+""",
+                overwrite=True,
+            )
+            self.write_file(
+                self.build_dir / "macos-compat/byteswap.h",
+                contents="""#pragma once
+#define bswap_16 __builtin_bswap16
+#define bswap_32 __builtin_bswap32
+#define bswap_64 __builtin_bswap64
+""",
+                overwrite=True,
+            )
+            # We must use GNU sed (which is only available as gsed on macos, use the homebrew local tools dir.
+            self.check_required_system_tool("gsed", homebrew="gnu-sed")
+            gnu_sed_path = self.get_homebrew_prefix("gnu-sed") / "libexec/gnubin"
+            self.make_args.set_env(PATH=str(gnu_sed_path) + ":" + os.getenv("PATH", ""))
+            # self.download_file(
+            #     self.build_dir / "macos-compat/elf.h",
+            #     "https://gist.githubusercontent.com/mlafeldt/3885346/raw/b6166a889846dc0612f4227fa3d32554870bb922/elf.h",
+            #     sha256="a3cba059e9016ece68f1ca17af1b629527ccd62486f8370d7cffaece87e4f7ab",
+            # )
+            # Avoid `typedef __darwin_uuid_t uuid_t;` which breaks scripts/mod/file2alias.c
+            # /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uuid_t.h
+            hostcflags.append("-D_UUID_T")
+            self.write_file(
+                self.build_dir / "macos-compat/gethostuuid.h",
+                contents="""#pragma once
+#define uuid_t __darwin_uuid_t
+#include_next <gethostuuid.h>
+#undef uuid_t
+""",
+                overwrite=True,
+            )
+            # gen_init_cpio.c uses copy_file_range, provide an always failing stub to use the fallback path.
+            self.write_file(
+                self.build_dir / "macos-compat/unistd.h",
+                contents="""#pragma once
+#include_next <unistd.h>
+#include <errno.h>
+static inline ssize_t
+copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *_Nullable off_out,
+                size_t size, unsigned int flags) {
+    errno = EOPNOTSUPP;
+    return -1;
+}
+""",
+                overwrite=True,
+            )
+            # gen_init_cpio.c uses O_LARGEFILE, which we can ignore on macos.
+            self.write_file(
+                self.build_dir / "macos-compat/fcntl.h",
+                contents="""#pragma once
+#include_next <fcntl.h>
+#define O_LARGEFILE 0
+""",
+                overwrite=True,
+            )
+            self.make_args.set(HOSTCFLAGS=self.commandline_to_str(hostcflags))
         self.run_make()
 
     def _apply_patch_from_url(self, patch_output_path: Path, patch_url: str):

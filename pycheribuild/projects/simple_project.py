@@ -909,7 +909,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         return TargetInfo.host_linker(self.config)
 
     @property
-    def essential_compiler_and_linker_flags(self):
+    def essential_compiler_and_linker_flags(self) -> "list[str]":
         # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
         return self.target_info.get_essential_compiler_and_linker_flags()
 
@@ -1392,6 +1392,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     def check_required_system_header(
         self,
         header: str,
+        *,
         instructions: "Optional[InstallInstructions]" = None,
         default: "Optional[str]" = None,
         freebsd: "Optional[str]" = None,
@@ -1400,6 +1401,8 @@ class SimpleProjectBase(AbstractProject, ABC):
         homebrew: "Optional[str]" = None,
         cheribuild_target: "Optional[str]" = None,
         alternative_instructions: "Optional[str]" = None,
+        compiler: "Optional[Path]" = None,
+        compiler_flags: "Optional[list[str]]" = None,
     ) -> None:
         if instructions is None:
             instructions = OSInfo.install_instructions(
@@ -1418,7 +1421,9 @@ class SimpleProjectBase(AbstractProject, ABC):
             assert instructions.fixit_hint() == self.__checked_system_headers[header].fixit_hint(), header
             return  # already checked
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
-        include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
+        compiler = self.CC if compiler is None else compiler
+        compiler_flags = self.essential_compiler_and_linker_flags if compiler_flags is None else compiler_flags
+        include_dirs = self.get_compiler_info(compiler).get_include_dirs(compiler_flags)
         if not any(Path(d, header).exists() for d in include_dirs):
             self.dependency_error(
                 "Required C header",
