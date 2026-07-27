@@ -79,7 +79,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     release_version = "2.0.1-dev"
     dependencies = ("cheri-sel4",)
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
-    is_sdk_target = False
+    is_sdk_target = True
     _needs_sysroot = False
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
