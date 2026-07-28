@@ -453,6 +453,12 @@ class PackageCVA6CheriLinux(BuildAllianceBusyBox, PackageCVA6FitImages, PackageC
         result = ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap",)
         return result
 
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("mformat", apt="mtools")
+        self.check_required_system_tool("sgdisk", apt="gdisk")
+        self.check_required_system_tool("partprobe", apt="parted")
+
     def gen_fit(self):
         self.root_dir = self.cross_sysroot_path
 
@@ -536,6 +542,12 @@ class PackageCVA6CheriBSD(TargetAliasWithDependencies):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         return ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap", "cheribsd-mfs-root-kernel-riscv64-purecap")
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("mformat", apt="mtools")
+        self.check_required_system_tool("sgdisk", apt="gdisk")
+        self.check_required_system_tool("partprobe", apt="parted")
 
 
 class BuildBootableCheriBSDforCVA6(SimpleProject, PackageCVA6FitImages, PackageCVA6SDCardImages):
@@ -653,6 +665,12 @@ class PackageCVA6CheriseL4(BuildCheriseL4Excercises, PackageCVA6FitImages, Packa
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = ("cva6cheri-opensbi-u-boot-baremetal-riscv64-purecap", "cheri-microkit-baremetal-riscv64-purecap")
         return result
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("mformat", apt="mtools")
+        self.check_required_system_tool("sgdisk", apt="gdisk")
+        self.check_required_system_tool("partprobe", apt="parted")
 
     def configure(self, **kwargs) -> None:
         self.board = "ariane"
