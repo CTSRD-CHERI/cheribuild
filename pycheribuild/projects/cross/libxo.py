@@ -25,6 +25,7 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
+from .libbsd import BuildLibbsd
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
@@ -42,20 +43,12 @@ class BuildLibxo(CrossCompileAutotoolsProject):
     def dependencies(cls, config) -> "tuple[str, ...]":
         return "libbsd", "libmd"
 
-    def _patch_to_use_libbsd(self, path):
-        self.run_cmd("sed", "-i", "s|<sys/queue.h>|<bsd/sys/queue.h>|g", path, cwd=self.source_dir)
-
-    def _patch_includes(self) -> None:
-        self._patch_to_use_libbsd("libxo/xo_encoder.c")
-        self._patch_to_use_libbsd("xopo/xopo.c")
-
-    def _patch_configure_ac(self) -> None:
+    def setup(self):
+        super().setup()
         # These tests fail due to cross-compilation issues. Muslc's malloc
         # and realloc return a pointer when passed a size of zero.
         self.configure_args.append("ac_cv_func_realloc_0_nonnull=yes")
         self.configure_args.append("ac_cv_func_malloc_0_nonnull=yes")
-
-    def configure(self, **kwargs):
         # Don't depend on libgcc_s. If this isn't set then clang wants to link
         # with libgcc_s, which is not available on Morello Linux.
         self.LDFLAGS.append("--unwindlib=none")
@@ -64,11 +57,19 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         # "-Wc,--unwindlib=none" instead. "-Wc,--unwindlib=none" is turned
         # into "--unwindlib=none" by libtool when it invokes clang.
         self.CFLAGS.append("-Wc,--unwindlib=none")
+        self.CFLAGS.append("-isystem")
+        # Some files expect sys/queue.h to exist, but we can't add libbsd/include/bsd to the
+        # include path without breaking the build, so just create a symlink in a temp dir.
+        self.CFLAGS.append(str(self.build_dir / "libbsd-workaround"))
 
-        self._patch_configure_ac()
-        self._patch_includes()
+    def configure(self, **kwargs):
         self.run_shell_script("sh bin/setup.sh", shell="sh", cwd=self.source_dir)
-
+        self.makedirs(self.build_dir / "libbsd-workaround/sys")
+        self.create_symlink(
+            BuildLibbsd.get_install_dir(self) / "include/bsd/sys/queue.h",
+            self.build_dir / "libbsd-workaround/sys/queue.h",
+            relative=False,
+        )
         super().configure(**kwargs)
 
     def install(self, **kwargs) -> None:
