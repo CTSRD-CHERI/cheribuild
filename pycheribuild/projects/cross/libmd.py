@@ -30,7 +30,6 @@ from ...utils import classproperty
 
 
 class BuildLibmd(CrossCompileAutotoolsProject):
-    _can_use_autogen_sh = True
     _supported_architectures = CompilationTargets.ALL_CHERI_AND_MORELLO_LINUX_TARGETS
     make_kind = MakeCommandKind.GnuMake
     repository = GitRepository("https://git.hadrons.org/git/libmd.git")
