@@ -37,8 +37,8 @@ class BuildLua(CrossCompileMakefileProject):
 
         super().setup()
         compflags = [*self.essential_compiler_and_linker_flags]
-        compflags += ["-lm"]
-        compflags += ["-Wl,-E"]
+        compflags.append("-lm")
+        compflags.append("-Wl,-E")
 
         # Avoid dependency on libgcc_eh
         self.make_args.set(MYLDFLAGS=self.commandline_to_str(compflags))
