@@ -593,7 +593,7 @@ class CompilerInfo:
         return self._resource_dir
 
     def get_include_dirs(self, basic_flags: "list[str]") -> "list[Path]":
-        include_dirs = self._include_dirs.get(tuple(*basic_flags), None)
+        include_dirs = self._include_dirs.get(tuple(basic_flags), None)
         if include_dirs is None:
             if not self.path.exists():
                 return [Path("/unknown/include/dir")]  # avoid failing in jenkins
@@ -604,6 +604,7 @@ class CompilerInfo:
                 "-Wp,-v",
                 "-xc",
                 "/dev/null",
+                *basic_flags,
                 config=self.config,
                 stdout=subprocess.DEVNULL,
                 capture_error=True,
@@ -625,7 +626,7 @@ class CompilerInfo:
                 warning_message("Could not determine include dirs for", self.path, basic_flags)
             if self.config.verbose:
                 print("Include paths for", self.path, basic_flags, "are", include_dirs)
-            self._include_dirs[tuple(*basic_flags)] = include_dirs
+            self._include_dirs[tuple(basic_flags)] = include_dirs
         return list(include_dirs)
 
     def _supports_flag(self, flag: str, other_args: "list[str]") -> bool:
