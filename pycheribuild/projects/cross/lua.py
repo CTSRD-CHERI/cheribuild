@@ -30,7 +30,6 @@ from ..project import GitRepository
 class BuildLua(CrossCompileMakefileProject):
     repository = GitRepository("https://github.com/lua/lua.git")
     dependencies = ("libxml2",)
-    _needs_sysroot = True
 
     def setup(self):
         if (self.crosscompile_target.is_cheri_purecap()):
