@@ -65,8 +65,8 @@ class BuildLTP(CrossCompileAutotoolsProject):
 
     def install(self) -> None:
         compflags = [*self.essential_compiler_and_linker_flags]
-        compflags += ["--sysroot", self.install_dir]
-        compflags += ["-isystem", self.install_dir / "usr/include"]
+        compflags += ["--sysroot", str(self.install_dir)]
+        compflags += ["-isystem", str(self.install_dir / "usr/include")]
         # Avoid dependency on libgcc_eh
         compflags += ["--unwindlib=none"]
         self.COMMON_LDFLAGS.append("--unwindlib=none")
