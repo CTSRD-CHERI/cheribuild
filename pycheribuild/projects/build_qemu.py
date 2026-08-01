@@ -303,6 +303,16 @@ class BuildQEMUBase(AutotoolsProject):
                 if found:
                     python_bin = Path(found)
                     break
+        if not self.try_run_cmd(python_bin, "-c", "import distutils"):
+            self.warning(f"Python installation {python_bin}, does not have distutils which is needed by QEMU")
+            self.dependency_error(
+                install_instructions=OSInfo.install_instructions(
+                    "python3-distutils",
+                    is_lib=False,
+                    homebrew="python-setuptools",
+                    alternative=f"{python_bin} -m pip install setuptools",
+                )
+            )
         self.configure_args.append(f"--python={python_bin}")
 
         if self.config.create_compilation_db:
