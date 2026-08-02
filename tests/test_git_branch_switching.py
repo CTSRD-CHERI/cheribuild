@@ -12,8 +12,11 @@ if shutil.which("git") is None:
 from .setup_mock_chericonfig import setup_mock_chericonfig
 from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
+from pycheribuild.processutils import get_program_version
 from pycheribuild.projects.project import Project
 from pycheribuild.projects.repository import GitRepository, TargetBranchInfo
+
+GIT_VERSION = get_program_version(Path(shutil.which("git") or "git"), config=setup_mock_chericonfig())
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -362,6 +365,7 @@ def get_all_branches(repo_dir: Path) -> "list[str]":
     )
 
 
+@pytest.mark.skipif(GIT_VERSION < (2, 29), reason="negative refspecs require git >= 2.29")
 def test_negative_fetch_refspecs(tmp_path: Path):
     """Branches matching negative_fetch_refspecs should never be fetched, on the initial clone or later."""
     remote_dir = tmp_path / "remote"
