@@ -163,9 +163,8 @@ def run_remote_lit_tests(
     lit_extra_args: Optional[list] = None,
 ) -> bool:
     try:
-        # pyrefly: ignore[import-error,missing-import]
-        import psutil  # noqa: F401  # ty:ignore[unresolved-import]
-    except ImportError:
+        subprocess.check_call([sys.executable, "-c", "import psutil"])
+    except subprocess.CalledProcessError:
         boot_cheribsd.failure("Cannot run lit without `psutil` python module installed", exit=True)
     try:
         if mp_q:
