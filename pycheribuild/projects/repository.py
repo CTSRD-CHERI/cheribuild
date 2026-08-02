@@ -211,7 +211,9 @@ class GitRepository(SourceRepository):
         self.old_branches = old_branches
         # e.g. ("^refs/heads/users/*", "^refs/heads/revert-*") to avoid fetching the hundreds
         # of user branches that only exist in the upstream repository (and not in our forks).
-        self.negative_fetch_refspecs = negative_fetch_refspecs
+        self.negative_fetch_refspecs: "typing.Sequence[str]" = (
+            [] if negative_fetch_refspecs is None else negative_fetch_refspecs
+        )
 
     def get_default_branch(self, current_project: "Project", *, include_per_target: bool) -> Optional[str]:
         if include_per_target:
@@ -389,7 +391,19 @@ class GitRepository(SourceRepository):
                 current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             shallow = current_project.config.shallow_clone and not current_project.needs_full_history
             clone_cmd = ["git", "clone"]
-            if self.negative_fetch_refspecs:
+            # Negative refspecs were only added in git 2.29, so on older versions we have to fall back to
+            # fetching all branches instead.
+            use_negative_refspecs = bool(self.negative_fetch_refspecs)
+            if use_negative_refspecs:
+                git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
+                if git_version < (2, 29):
+                    current_project.warning(
+                        "Git version",
+                        ".".join(map(str, git_version)),
+                        "is too old to support negative refspecs (need >= 2.29), fetching all branches instead.",
+                    )
+                    use_negative_refspecs = False
+            if use_negative_refspecs:
                 # We can't just pass a custom remote.origin.fetch refspec via `git clone -c ...` since git
                 # clone always appends its own default "+refs/heads/*:refs/remotes/origin/*" refspec after
                 # any values set with -c, and a negative refspec only excludes refs matched by a *preceding*
@@ -412,7 +426,7 @@ class GitRepository(SourceRepository):
             # If we have a negative refspec, we initially only clone the default branch and
             # then fetch the rest after adding the negative refspec (since you can't add the
             # negtive refspec as part of clone).
-            if self.negative_fetch_refspecs:
+            if use_negative_refspecs:
                 # Reset the refspec to the default (non-single-branch) refspec
                 current_project.run_cmd(
                     ["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"],
