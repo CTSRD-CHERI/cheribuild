@@ -32,7 +32,7 @@ output-format = "full"
 show-fixes = true
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW"]
+select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW", "PT"]
 ignore = [
     "UP037",  # Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
     "PLW2901", # `for` loop variable `value` overwritten by assignment target
@@ -40,6 +40,10 @@ ignore = [
     "COM812",  # Incompatible with `ruff format`
     "PLC0415",  # `import` should be at the top-level of a file
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# PT (flake8-pytest-style) is only relevant under tests/.
+"!tests/**" = ["PT"]
 
 [tool.ruff.lint.isort]
 relative-imports-order = "closest-to-furthest"
@@ -116,21 +120,28 @@ invalid-argument-type = "ignore" # Weird false positive with pytest.skip/fail
 too-many-positional-arguments = "ignore" # Weird false positive with pytest.skip/fail
 
 [dependency-groups]
-dev = [
+# Runtime/test-only deps: this is what the Jenkins python-baseline (python:3.8.0)
+# and python-latest containers install via requirements.txt to run the test suite.
+# Keep this free of the heavier lint/type-check tools below, which aren't
+# guaranteed to support ancient Python versions.
+test = [
     "argcomplete>=3.6.3",
-    "flake8>=5.0.4",
     "libtmux>=0.38.1",
+    "pyserial>=3.5",  # Only needed for RISC-V FPGA boot -> not bundled
+    "pytest>=7.0,<9.0",
+    "pytest-pycharm>=0.7.0",
+    "pytest-xdist>=3.6.1",
+    "typing-extensions>=4.12.2",  # libtmux 0.40+ uses typing_extensions
+]
+# Full contributor/CI toolchain: test deps plus linting/type-checking.
+dev = [
+    { include-group = "test" },
+    "flake8==5.0.4; python_version < '3.9'",
+    "flake8==7.3.0; python_version >= '3.9'",
     "pre-commit>=3.5.0",
     "psutil>=7.2.2",
-    "pyrefly>=0.62.0",
-    "pyserial>=3.5",
-    "pytest>=7.0,<9.0",
-    "pytest-xdist>=3.6.1",
-    "ruff>=0.15.11",
+    "pyrefly==0.62.0",
+    "ruff==0.15.11",
     "setuptools<82",
-    "ty>=0.0.26",
+    "ty==0.0.32",
 ]
-
-[tool.uv.dependency-groups]
-# TODO: Use a slightly newer minimum version for dev dependencies to allow resolving them.
-# dev = {requires-python = ">=3.9"}

@@ -4,6 +4,7 @@ extend-exclude =
   3rdparty/
   venv/
   venv310/
+  .venv/
   .pytype/
 show-source = true
 statistics = true
