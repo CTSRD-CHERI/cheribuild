@@ -12,27 +12,47 @@ repos:
       - id: mixed-line-ending
         args: [ "--fix=lf" ]
       - id: check-case-conflict
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.15.11' # Ruff version.
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.1
     hooks:
-      - id: ruff
-        stages: [ pre-push, pre-commit, manual ]
-      # Run the formatter.
-      - id: ruff-format
-        stages: [ pre-push, pre-commit, manual ]
-  -   repo: https://github.com/pycqa/flake8
-      rev: '7.3.0'  # pick a git hash / tag to point to
-      hooks:
-        -   id: flake8
-  - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 0.0.1
-    hooks:
-      - id: pyrefly-typecheck-specific-version
-        name: Pyrefly (type checking)
-        pass_filenames: false
-        additional_dependencies: ["pyrefly==0.62.0", "argcomplete", "libtmux"]
+      # Ensure uv.lock stays in sync automatically.
+      - id: uv-lock
+      # requirements.txt only tracks the "test" group (no lint/type-check
+      # tools) so the Jenkins python-baseline (python:3.8.0) container can
+      # still install it to run the test suite.
+      - id: uv-export
+        args: [ "--format", "requirements-txt", "--no-hashes", "--only-group", "test", "-o", "requirements.txt" ]
   - repo: local
     hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --force-exclude
+        language: system
+        types_or: [ python, pyi ]
+        stages: [ pre-push, pre-commit, manual ]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format --force-exclude
+        language: system
+        types_or: [ python, pyi ]
+        stages: [ pre-push, pre-commit, manual ]
+      - id: flake8
+        name: flake8
+        entry: uv run --frozen flake8
+        language: system
+        types: [ python ]
+      - id: pyrefly
+        name: Pyrefly (type checking)
+        entry: uv run --frozen pyrefly check
+        language: system
+        pass_filenames: false
+        types: [ python ]
+      - id: ty
+        name: ty (type checking)
+        entry: uv run --frozen ty check
+        language: system
+        pass_filenames: false
+        types: [ python ]
       - id: cheribuild-commit-messages
         name: cheribuild commit message check
         entry: githooks/pre-push.sh
