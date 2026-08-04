@@ -140,8 +140,8 @@ dev = [
     "flake8==7.3.0; python_version >= '3.9'",
     "pre-commit>=3.5.0",
     "psutil>=7.2.2",
-    "pyrefly==0.62.0",
-    "ruff==0.15.11",
+    "pyrefly==1.2.0",
+    "ruff==0.16.1",
     "setuptools<82",
-    "ty==0.0.32",
+    "ty==0.0.66",
 ]

@@ -353,7 +353,7 @@ class InstallInstructions:
 
     def fixit_hint(self) -> str:
         if callable(self._message):
-            result = self._message()
+            result = typing.cast(str, self._message())
         else:
             result = self._message
         if self.cheribuild_target:

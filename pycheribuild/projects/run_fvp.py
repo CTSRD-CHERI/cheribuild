@@ -549,7 +549,7 @@ class LaunchFVPBase(SimpleProject):
             "remote-disk-image-path",
             help="When set rsync will be used to update the image from the remote server prior to running it.",
         )
-        cls.extra_tcp_forwarding = cls.add_list_option(
+        cls.extra_tcp_forwarding: "list[str]" = cls.add_list_option(
             "extra-tcp-forwarding",
             help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
         )
@@ -800,14 +800,14 @@ class LaunchFVPBase(SimpleProject):
             # countdown to roughly match real time since otherwise each second of countdown takes around 2 minutes:
             fvp_args += ["-C", "board.rtc_clk_frequency=300"]
 
-            tcp_ports = []
+            tcp_ports: "list[int]" = []
 
             # Expose to the real host all TCP ports exposed by the FVP
             if self.ssh_port is not None:
-                tcp_ports += [self.ssh_port]
+                tcp_ports.append(self.ssh_port)
                 print(coloured(AnsiColour.green, "Listening for SSH connections on localhost:", self.ssh_port, sep=""))
             if gdb_port is not None:
-                tcp_ports += [gdb_port]
+                tcp_ports.append(gdb_port)
             # XXX this matches on any host address; that may not be quite right
             for x in self.extra_tcp_forwarding:
                 if not x:
@@ -817,11 +817,11 @@ class LaunchFVPBase(SimpleProject):
                 if len(hg) != 2:
                     self.fatal(f"Bad extra-tcp-forwarding (not just one '=' in '{x}')")
                     continue
-                gaddrport = hg[1].split(":")
+                gaddrport: "list[str]" = hg[1].split(":")
                 if len(gaddrport) > 2:
                     self.fatal(f"Bad extra-tcp-forwarding (excess ':' in '{x}')")
                     continue
-                tcp_ports += gaddrport[-1]  # either just port or last in "host:port".split(":")
+                tcp_ports.append(int(gaddrport[-1]))  # either just port or last in "host:port".split(":")
 
             self.fvp_project.execute_fvp(
                 fvp_args,
