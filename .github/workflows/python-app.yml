@@ -18,7 +18,7 @@ jobs:
         container:
           image: ${{ matrix.image }}
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v7
             -   name: Install Python
                 if: startsWith(matrix.image, 'ubuntu:')
                 run: apt-get update && apt-get install -y python3 python3-pip
@@ -29,8 +29,12 @@ jobs:
                     su -c "python3 -m pip install --user --upgrade pip pytest pytest-xdist" notroot
             -   name: Run basic regression tests
                 run: su -c "tests/run_basic_tests.sh" notroot
-    build-macos:
-        runs-on: macos-latest
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ macos-latest, ubuntu-latest ]
+        runs-on: ${{ matrix.os }}
         steps:
             -   uses: actions/checkout@v7
             -   name: Install uv
@@ -38,10 +42,9 @@ jobs:
                 with:
                     enable-cache: true
             -   name: Install dependencies
-                run: |
-                    # Use the system-provided python3 instead of actions/setup-python@v4
-                    python3 --version
-                    uv sync --locked --group dev
+                # uv manages its own Python if the runner's system python doesn't
+                # satisfy pyproject.toml, so no actions/setup-python step is needed.
+                run: uv sync --locked --group dev
             -   name: Lint with flake8
                 run: uv run --frozen flake8
             -   name: Lint with ruff
@@ -50,31 +53,6 @@ jobs:
                 run: uv run --frozen pyrefly check
             -   name: Type check with ty
                 run: uv run --frozen ty check
-            -   name: Run pre-commit checks
-                run: uv run --frozen pre-commit run --all-files
-            -   name: Run basic regression tests
-                run: uv run --frozen tests/run_basic_tests.sh
-    build-latest:
-        runs-on: ubuntu-latest
-        steps:
-            -   uses: actions/checkout@v7
-            -   name: Set up Python
-                uses: actions/setup-python@v5
-                with:
-                    python-version: '3.13'
-                    cache: 'pip'
-                    check-latest: 'false'
-            -   name: Install uv
-                uses: astral-sh/setup-uv@v9
-                with:
-                    enable-cache: true
-            -   name: Install dependencies
-                run: |
-                    uv sync --locked --group dev
-            -   name: Lint with flake8
-                run: uv run --frozen flake8
-            -   name: Lint with ruff
-                run: uv run --frozen ruff check .
             -   name: Run pre-commit checks
                 run: uv run --frozen pre-commit run --all-files
             -   name: Run basic regression tests
@@ -95,7 +73,7 @@ jobs:
                     python-version: ${{ matrix.version }}
                     cache: 'pip'
             -   name: Install uv
-                uses: astral-sh/setup-uv@v9
+                uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
                 with:
                     enable-cache: true
             -   name: Install dependencies
