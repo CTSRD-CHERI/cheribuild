@@ -122,14 +122,11 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
                 help="CHERI-Microkit example to build.",
             ),
         )
-        cls.build_all: str = typing.cast(
-            str,
-            cls.add_bool_option(
-                "build_all",
-                show_help=True,
-                default=False,
-                help="Build all Microkit configs, targets, boards, etc.",
-            ),
+        cls.build_all: bool = cls.add_bool_option(
+            "build_all",
+            show_help=True,
+            default=False,
+            help="Build all Microkit configs, targets, boards, etc.",
         )
 
     def compile(self, **kwargs):
