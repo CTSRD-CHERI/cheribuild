@@ -62,7 +62,7 @@ class SourceRepository:
         current_project: "Project",
         *,
         src_dir: Path,
-        base_project_source_dir: Path,
+        base_project_source_dir: Optional[Path],
         skip_submodules=False,
     ) -> None:
         raise NotImplementedError

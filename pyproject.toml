@@ -61,7 +61,7 @@ required-version = '23'
 
 [tool.pyrefly]
 project-includes = [
-    "pycheribuild", "test", "test-scripts"
+    "pycheribuild", "tests", "test-scripts"
 ]
 search-path = [
     ".",
