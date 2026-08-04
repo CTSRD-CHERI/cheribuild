@@ -1443,8 +1443,8 @@ def test_relative_paths_in_config():
 
 
 def test_cmake_options():
-    def enable_projects_flag(args: "list[str]"):
-        return next((x for x in args if x.startswith("-DLLVM_ENABLE_PROJECTS")), None)
+    def enable_projects_flag(args: "list[str | Path]"):
+        return next((x for x in args if str(x).startswith("-DLLVM_ENABLE_PROJECTS")), None)
 
     config = _parse_arguments(["--skip-configure"])
     assert (
