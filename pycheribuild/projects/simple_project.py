@@ -601,7 +601,7 @@ class SimpleProjectBase(AbstractProject, ABC):
                 # noinspection PyCallingNonCallable  (false positive, we used if callable() above)
                 dependencies = dependencies(cls, config)
         assert isinstance(dependencies, tuple), "Expected a list and not " + str(type(dependencies))
-        dependencies = list(dependencies)  # mutable copy to append transitive dependencies
+        dependencies = typing.cast("list[str]", list(dependencies))  # mutable copy to append transitive dependencies
         # Also add the toolchain targets (e.g. llvm-native) and sysroot targets if needed:
         if not explicit_dependencies_only:
             if include_toolchain_dependencies:
@@ -1184,7 +1184,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         name: str,
         *,
         kind: "Union[type[T], Callable[[str], T]]" = str,
-        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]" = None,
+        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], Optional[T]], T, None]" = None,
         **kwargs,
     ) -> Optional[T]:
         return cls.add_config_option(name, kind=kind, default=default, **kwargs)  # pytype: disable=bad-return-type
@@ -1885,9 +1885,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
     # pytype: disable=invalid-annotation
-    def __init__(
-        cls: "type[SimpleProjectBase]", name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs
-    ) -> None:
+    def __init__(cls, name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs) -> None:
         # Retrieve the modifiable dict of local config options.
         local_opts: "dict[str, PerProjectConfigOption]" = getattr(cls, "_local_config_options", {})
         if local_opts and isinstance(local_opts, dict):
@@ -2019,7 +2017,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             # Only one target is supported:
             cls._xtarget = supported_archs[0]
             cls._should_not_be_instantiated = False  # can be instantiated
-            target_manager.add_target(Target(target_name, cls))
+            target_manager.add_target(Target(target_name, typing.cast("type[AbstractProject]", cls)))
         # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
@@ -2064,7 +2062,7 @@ class TargetAlias(SimpleProject):
     def process(self) -> None:
         dependencies = self.dependencies
         if callable(self.dependencies):
-            dependencies = self.dependencies(self.config)
+            dependencies = typing.cast("tuple[str, ...]", self.dependencies(self.config))
         assert any(True for _ in dependencies), "Expected non-empty dependencies for " + self.target
 
 

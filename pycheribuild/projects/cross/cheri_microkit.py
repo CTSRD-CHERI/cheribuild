@@ -31,7 +31,6 @@
 #
 import subprocess
 import threading
-import typing
 from pathlib import Path
 
 from .crosscompileproject import (
@@ -92,37 +91,29 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.configs: str = typing.cast(
-            str,
-            cls.add_config_option(
-                "configs",
-                metavar="CONFIGS",
-                show_help=True,
-                default="cheri",
-                help="CHERI-Microkit comma-separated configs (release, debug, benchmark, and cheri).",
-            ),
+        cls.configs = cls.add_config_option(
+            "configs",
+            metavar="CONFIGS",
+            show_help=True,
+            default="cheri",
+            help="CHERI-Microkit comma-separated configs (release, debug, benchmark, and cheri).",
         )
-        cls.boards: str = typing.cast(
-            str,
-            cls.add_config_option(
-                "boards",
-                metavar="BOARDS",
-                show_help=True,
-                default=None,
-                help="CHERI-Microkit comma-separated list of boards to build for.",
-            ),
+        cls.boards = cls.add_optional_config_option(
+            "boards",
+            metavar="BOARDS",
+            show_help=True,
+            kind=str,
+            default=None,
+            help="CHERI-Microkit comma-separated list of boards to build for.",
         )
-        cls.example: str = typing.cast(
-            str,
-            cls.add_config_option(
-                "example",
-                metavar="EXAMPLE",
-                show_help=True,
-                default="hello,hierarchy,passive_server,rust",
-                help="CHERI-Microkit example to build.",
-            ),
+        cls.example = cls.add_config_option(
+            "example",
+            metavar="EXAMPLE",
+            show_help=True,
+            default="hello,hierarchy,passive_server,rust",
+            help="CHERI-Microkit example to build.",
         )
-        cls.build_all: bool = cls.add_bool_option(
+        cls.build_all = cls.add_bool_option(
             "build_all",
             show_help=True,
             default=False,
