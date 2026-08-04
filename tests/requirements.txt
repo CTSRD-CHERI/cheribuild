@@ -27,7 +27,7 @@ pytest==8.3.5 ; python_full_version < '3.9'
     # via
     #   pytest-pycharm
     #   pytest-xdist
-pytest==8.4.2 ; python_full_version >= '3.9'
+pytest==9.0.3 ; python_full_version >= '3.9'
     # via
     #   pytest-pycharm
     #   pytest-xdist
