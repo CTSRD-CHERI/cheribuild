@@ -43,7 +43,7 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
     )
     target = "cheri-os-test"
     make_kind = MakeCommandKind.BsdMake
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="dev")
 
     @classproperty
     def default_install_dir(self):
@@ -78,10 +78,18 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
                 MACHINE_ARCH=self.target_info.get_riscv_arch_string(
                     self.crosscompile_target, self.config, softfloat=False
                 ),
+                MACHINE="riscv",
             )
         else:
             target = self.target_info.target
             raise NotImplementedError(f"Unsupported architecture: {target.cpu_architecture} {target._cheri_isa}")
+
+        if self.target_info.is_freebsd():
+            self.make_args.set(TARGET_OS="FreeBSD")
+        elif self.target_info.is_linux():
+            self.make_args.set(TARGET_OS="FreeBSD")
+        else:
+            raise NotImplementedError(f"Unsupported target OS: {self.target_info.shortname}")
 
         self.make_args.set_env(
             DESTDIR=str(self.destdir),
