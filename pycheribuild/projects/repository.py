@@ -373,6 +373,7 @@ class GitRepository(SourceRepository):
         src_dir: Path,
         base_project_source_dir: Optional[Path],
         skip_submodules=False,
+        revision=None,
     ) -> None:
         if current_project.config.skip_clone:
             if not (src_dir / ".git").exists():
@@ -420,6 +421,8 @@ class GitRepository(SourceRepository):
             if not skip_submodules:
                 clone_cmd.append("--recurse-submodules")
             clone_branch = self.get_default_branch(current_project, include_per_target=False)
+            if revision is not None:
+                clone_branch = revision
             if clone_branch:
                 clone_cmd += ["--branch", clone_branch]
             current_project.run_cmd([*clone_cmd, self.url, base_project_source_dir], cwd="/")
@@ -893,6 +896,7 @@ class GitRepository(SourceRepository):
             src_dir=src_dir,
             base_project_source_dir=base_project_source_dir,
             skip_submodules=skip_submodules,
+            revision=revision,
         )
         if current_project.skip_update:
             return

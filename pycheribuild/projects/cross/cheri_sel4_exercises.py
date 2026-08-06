@@ -16,6 +16,7 @@ import copy
 import os
 import subprocess
 import threading
+import typing
 from pathlib import Path
 from typing import Sequence, Union
 
@@ -74,13 +75,27 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     # ------------------------------------------------------------------
     # Project config
     # ------------------------------------------------------------------
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.board: str = typing.cast(
+            str,
+            cls.add_config_option(
+                "board",
+                metavar="BOARD",
+                show_help=True,
+                default=None,
+                help="CHERI-Microkit board to build against.",
+            ),
+        )
+
     def configure(self, **kwargs) -> None:
         if self.crosscompile_target.is_riscv(include_purecap=True):
-            self.board = "qemu_virt_riscv64"
+            self.board = "qemu_virt_riscv64" if self.board is None else self.board
             # Build and test both baseline and purecap variants
             self.targets = ["riscv64", "riscv64-purecap"]
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            self.board = "morello_qemu"
+            self.board = "morello_qemu" if self.board is None else self.board
             self.targets = ["morello-aarch64", "morello-purecap"]
 
     def needs_configure(self) -> bool:
@@ -133,7 +148,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         if self.crosscompile_target.is_riscv(include_purecap=True):
             flags.append("-G0")
 
-        cmd: "list[str | Path]" = [ccc, target]
+        cmd: "list[str | Path]" = [ccc, target, self.board]
         cmd.extend(flags)
         cmd.extend(sources)
         cmd.extend(["-o", output_elf])
@@ -203,12 +218,15 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         for target in self.targets:
             # print-pointer
             elf = self.real_install_root_dir / "print-pointer.elf"
-            self.run_cmd([ccc, target, src_dir / "print-pointer.c", "-o", elf])
+
+            self.run_cmd([ccc, target, self.board, src_dir / "print-pointer.c", "-o", elf])
             self.run_cmd(
                 [
                     self._gen_image(),
                     "-a",
                     target,
+                    "-b",
+                    self.board,
                     "-o",
                     self.real_install_root_dir / f"print-pointer-cheri-sel4-microkit-{target}-{self.board}.img",
                     elf,
@@ -219,12 +237,14 @@ class BuildCheriseL4Excercises(CrossCompileProject):
             # print-capability (purecap only)
             if "purecap" in target:
                 elf = self.real_install_root_dir / "print-capability.elf"
-                self.run_cmd([ccc, target, src_dir / "print-capability.c", "-o", elf])
+                self.run_cmd([ccc, target, self.board, src_dir / "print-capability.c", "-o", elf])
                 self.run_cmd(
                     [
                         self._gen_image(),
                         "-a",
                         target,
+                        "-b",
+                        self.board,
                         "-o",
                         self.real_install_root_dir / f"print-capability-cheri-sel4-microkit-{target}-{self.board}.img",
                         elf,
