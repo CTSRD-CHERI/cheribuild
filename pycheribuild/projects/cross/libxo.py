@@ -33,7 +33,13 @@ from ...utils import classproperty
 class BuildLibxo(CrossCompileAutotoolsProject):
     _supported_architectures = CompilationTargets.ALL_CHERI_AND_MORELLO_LINUX_TARGETS
     make_kind = MakeCommandKind.GnuMake
-    repository = GitRepository("https://github.com/Juniper/libxo.git")
+    repository = GitRepository(
+        "https://github.com/Juniper/libxo.git",
+        # Version 2.0 treats failing libint- and msgfmt-related
+        # tests performed by configure as errors. As a
+        # temporary workaround, stay with the preceding version.
+        default_branch="1.7.5",
+    )
 
     @classproperty
     def default_install_dir(self):
