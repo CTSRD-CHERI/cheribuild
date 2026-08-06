@@ -162,7 +162,7 @@ class BuildBBLTestPayload(BuildBBLBase):
         self.configure_args.append("--enable-print-device-tree")
 
     def run_tests(self) -> None:
-        options = QemuOptions(self.crosscompile_target, riscv_cheri_isa=self.config.riscv_cheri_isa)
+        options = QemuOptions(self.crosscompile_target, config=self.config)
         self.run_cmd(
             options.get_commandline(
                 qemu_command=BuildQEMU.qemu_binary(self),
