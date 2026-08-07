@@ -1,4 +1,4 @@
-FROM python:3.10.0
+FROM python:3.10
 
 LABEL maintainer="Alexander.Richardson@cl.cam.ac.uk"
 
