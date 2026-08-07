@@ -385,6 +385,7 @@ def test_negative_fetch_refspecs(tmp_path: Path):
     assert get_all_branches(local_dir) == [
         "main",
         "origin",
+        "origin/HEAD",
         "origin/main",
         "origin/other-branch",
         "origin/target-branch",
