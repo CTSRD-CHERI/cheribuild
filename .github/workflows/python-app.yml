@@ -26,7 +26,7 @@ jobs:
                 run: |
                     # Run as a non-root user to avoid cheribuild errors
                     adduser --disabled-password --gecos "Not Root" notroot
-                    su -c "python3 -m pip install --user --upgrade pip pytest pytest-xdist" notroot
+                    su -c "python3 -m pip install --user --upgrade --break-system-packages pip pytest pytest-xdist" notroot
             -   name: Run basic regression tests
                 run: su -c "tests/run_basic_tests.sh" notroot
     build:
