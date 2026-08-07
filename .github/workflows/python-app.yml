@@ -13,7 +13,7 @@ jobs:
     build-docker:
         strategy:
             matrix:
-                image: [ 'python:3.8.0', 'python:3.12', 'python:latest', 'ubuntu:20.04' ]
+                image: [ 'python:3.10', 'python:3.12', 'python:latest', 'ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'ubuntu:latest' ]
         runs-on: ubuntu-latest
         container:
           image: ${{ matrix.image }}
@@ -21,11 +21,12 @@ jobs:
             -   uses: actions/checkout@v7
             -   name: Install Python
                 if: startsWith(matrix.image, 'ubuntu:')
-                run: apt-get update && apt-get install -y python3 python3-pip
+                run: apt-get update && apt-get install -y python3 python3-pip adduser
             -   name: Install dependencies
                 run: |
                     # Run as a non-root user to avoid cheribuild errors
                     adduser --disabled-password --gecos "Not Root" notroot
+                    su -c "python3 -m pip config set global.break-system-packages true || true" notroot
                     su -c "python3 -m pip install --user --upgrade pip pytest pytest-xdist" notroot
             -   name: Run basic regression tests
                 run: su -c "tests/run_basic_tests.sh" notroot
