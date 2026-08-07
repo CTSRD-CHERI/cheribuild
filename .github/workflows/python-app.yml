@@ -13,7 +13,7 @@ jobs:
     build-docker:
         strategy:
             matrix:
-                image: [ 'python:3.10', 'python:3.12', 'python:latest', 'ubuntu:22.04', 'ubuntu:latest' ]
+                image: [ 'python:3.10', 'python:3.12', 'python:latest', 'ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'ubuntu:atest' ]
         runs-on: ubuntu-latest
         container:
           image: ${{ matrix.image }}
@@ -21,7 +21,7 @@ jobs:
             -   uses: actions/checkout@v7
             -   name: Install Python
                 if: startsWith(matrix.image, 'ubuntu:')
-                run: apt-get update && apt-get install -y python3 python3-pip
+                run: apt-get update && apt-get install -y python3 python3-pip adduser
             -   name: Install dependencies
                 run: |
                     # Run as a non-root user to avoid cheribuild errors
