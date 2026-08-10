@@ -42,6 +42,7 @@ from ..project import (
     MakeCommandKind,
     Project,
 )
+from ..simple_project import StringConfigOption
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import CPUArchitecture
@@ -68,6 +69,15 @@ class BuildUBoot(Project):
     _always_add_suffixed_targets = True
     _default_install_dir_fn: ComputedDefaultValue[Path] = ComputedDefaultValue(
         function=uboot_install_dir, as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}"
+    )
+
+    defconfig = StringConfigOption(
+        "defconfig",
+        default=ComputedDefaultValue(
+            function=lambda _, p: p.default_defconfig(),
+            as_string="platform-dependent, usually defconfig",
+        ),
+        help="The u-boot's defconfig to use",
     )
 
     def check_system_dependencies(self) -> None:
@@ -107,11 +117,10 @@ class BuildUBoot(Project):
         if self.config.verbose:
             self.make_args.set(V=True)
 
-    @property
-    def platform(self) -> str:
+    def default_defconfig(self) -> str:
         if self.crosscompile_target.is_riscv(include_purecap=True):
-            return "qemu-riscv64_smode"
-        assert False, "unhandled target"
+            return "qemu-riscv64_smode_defconfig"
+        assert False, "unhandled target/defconfig"
 
     @property
     def uboot_suffix(self) -> str:
@@ -132,7 +141,7 @@ class BuildUBoot(Project):
         return cls.get_instance(caller, config=config, cross_target=cross_target).firmware_path
 
     def configure(self, **kwargs):
-        self.run_make(self.platform + "_defconfig")
+        self.run_make(self.defconfig)
 
         def override_config(old):
             new = []
@@ -151,6 +160,15 @@ class BuildUBoot(Project):
     def install(self, **kwargs):
         self.install_file(self.build_dir / "u-boot", self.install_dir / "u-boot")
         self.install_file(self.build_dir / "u-boot.bin", self.install_dir / "u-boot.bin")
+        # Install the host-built mkimage tool, which is useful for creating
+        # U-Boot payload images and scripts (e.g. FIT images and .scr files).
+        self.install_file(self.build_dir / "tools/mkimage", self.install_dir / "../mkimage")
+
+        # Install any DTBs if they exist
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            for dtb in (self.build_dir / "arch/riscv/dts").glob("*.dtb"):
+                self.install_file(dtb, self.install_dir / dtb.name)
+
         # Only install BuildUBoot as the QEMU firmware and not any other derived version by checking build_dir_suffix
         if not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
@@ -165,9 +183,17 @@ class BuildUBoot(Project):
         super().run_make(*args, **kwargs, cwd=self.source_dir)
 
 
+def cheri_093_uboot_install_dir(config: CheriConfig, project: "Project") -> Path:
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
+    return config.cheri_alliance_sdk_dir / ("u-boot" + project.build_dir_suffix) / dir_name
+
+
 class BuildCheriAllianceUBoot(BuildUBoot):
     target = "cheri-std093-u-boot"
     repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=cheri_093_uboot_install_dir, as_string="$CHERI093_SDK_ROOT/u-boot/riscv{32,64}{-purecap,}"
+    )
     dependencies = ("cheri-std093-compiler-rt-builtins",)
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
@@ -181,15 +207,14 @@ class BuildCheriAllianceUBoot(BuildUBoot):
         super().setup_config_options(**kwargs)
         cls.secure_boot = cls.add_bool_option("secure-boot", default=False, help="Enable secure boot image")
 
-    @property
-    def platform(self) -> str:
+    def default_defconfig(self) -> str:
         if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
             if self.secure_boot:
-                return "codasip-a730-hobgoblin_secure-boot_cheri_purecap_smode"
-            return "codasip-a730-hobgoblin_cheri_purecap_smode"
+                return "codasip-a730-hobgoblin_secure-boot_cheri_purecap_smode_defconfig"
+            return "qemu-riscv64_cheri_purecap_smode_defconfig"
         elif self.crosscompile_target.is_riscv():
             if self.secure_boot:
-                return "codasip-a730-hobgoblin_secure-boot_smode"
-            return "codasip-a730-hobgoblin_smode"
+                return "codasip-a730-hobgoblin_secure-boot_smode_defconfig"
+            return "qemu-riscv64_smode_defconfig"
 
         assert False, "unhandled target"
