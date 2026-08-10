@@ -55,6 +55,7 @@ class ComputedDefaultValue(typing.Generic[T]):
                     val = inherit.function(config, project)
                 return val
 
+            # pyrefly: ignore [invalid-type-var]
             self.function = inheriting_function
         else:
             assert function is not None, "Must provide function or inherit"
@@ -78,6 +79,7 @@ class ComputedDefaultValue(typing.Generic[T]):
                     return val
                 return inherited_as_string(cls)
 
+            # pyrefly: ignore [invalid-type-var]
             self.as_string = inheriting_as_string
         else:
             assert function is not None, "Must provide as_string or inherit"
@@ -119,6 +121,7 @@ class ComputedDefaultValue(typing.Generic[T]):
                     return val
                 return inherited_as_string(cls)
 
+            # pyrefly: ignore [invalid-type-var]
             self.as_readme_string = inheriting_as_readme_string
         else:
             self.as_readme_string = as_readme_string

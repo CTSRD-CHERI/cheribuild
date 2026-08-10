@@ -32,6 +32,7 @@ import platform
 import sys
 import typing
 from contextlib import suppress
+from typing import Optional
 
 from .crosscompileproject import (
     CheriConfig,
@@ -42,9 +43,9 @@ from .crosscompileproject import (
 )
 from .llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM, extra_llvm_lit_opts
 from ..build_qemu import BuildQEMU
-from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD, LaunchFreeBSD
+from ..simple_project import SimpleProject
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible_uncached
@@ -121,7 +122,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                 )
 
 
-def _default_ssh_port(c, p: CMakeProject):
+def _default_ssh_port(c: CheriConfig, p: SimpleProject) -> Optional[int]:
     xtarget = p.crosscompile_target
     if not xtarget.target_info_cls.is_cheribsd():
         return None
@@ -164,9 +165,10 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             help="The QEMU SSH hostname to connect to for running tests",
             default="localhost",
         )
-        cls.qemu_port = cls.add_config_option(
+        cls.qemu_port = cls.add_optional_config_option(
             "ssh-port",
             help="The QEMU SSH port to connect to for running tests",
+            kind=int,
             _allow_unknown_targets=True,
             default=_default_ssh_port,
             only_add_for_targets=CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,

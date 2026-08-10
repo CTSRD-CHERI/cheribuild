@@ -29,7 +29,6 @@
 #
 import argparse
 import errno
-import functools
 import inspect
 import os
 import shlex
@@ -56,6 +55,7 @@ from ..config.target_info import (
     TargetInfo,
 )
 from ..processutils import (
+    cached_get_homebrew_prefix,
     check_call_handle_noexec,
     commandline_to_str,
     keep_terminal_sane,
@@ -91,7 +91,6 @@ __all__ = [
     "StringConfigOption",
     "TargetAlias",
     "TargetAliasWithDependencies",
-    "_cached_get_homebrew_prefix",
     "_clear_line_sequence",
     "_default_stdout_filter",
     "flush_stdio",
@@ -165,6 +164,15 @@ if typing.TYPE_CHECKING:
         **kwargs,
     ) -> bool:
         return typing.cast(bool, default)
+
+    # noinspection PyPep8Naming
+    def OptionalBoolConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[Optional[bool], ComputedDefaultValue[Optional[bool]]]" = None,
+        **kwargs,
+    ) -> "Optional[bool]":
+        return typing.cast(Optional[bool], default)
 
     # noinspection PyPep8Naming
     def EnumConfigOption(  # noqa: N802
@@ -280,6 +288,24 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs, **kwargs),
+            )
+
+    class OptionalBoolConfigOption(PerProjectConfigOption[Optional[bool]]):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[bool], ComputedDefaultValue[Optional[bool]]]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProjectBase]", **kwargs) -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(
+                    self._name, default=self._default, help=self._help, kind=bool, **self._kwargs, **kwargs
+                ),
             )
 
     class EnumConfigOption(PerProjectConfigOption[EnumTy], typing.Generic[EnumTy]):
@@ -475,34 +501,6 @@ else:
             )
 
 
-@functools.lru_cache(maxsize=20)
-def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig) -> Optional[Path]:
-    assert OSInfo.IS_MAC, "Should only be called on macos"
-    command = ["brew", "--prefix"]
-    if package:
-        command.append(package)
-    prefix = None
-    try:
-        prefix_str = (
-            run_command(
-                command,
-                capture_output=True,
-                run_in_pretend_mode=True,
-                print_verbose_only=False,
-                config=config,
-                env=dict(HOMEBREW_NO_AUTO_UPDATE="1"),
-            )
-            .stdout.decode("utf-8")
-            .strip()
-        )
-        prefix = Path(prefix_str)
-        if not prefix.exists():
-            prefix = None
-    except subprocess.CalledProcessError:
-        pass
-    return prefix
-
-
 # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
 # However, if the output is just a plain text file don't attempt to do any line clearing
 _clear_line_sequence: bytes = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
@@ -603,7 +601,7 @@ class SimpleProjectBase(AbstractProject, ABC):
                 # noinspection PyCallingNonCallable  (false positive, we used if callable() above)
                 dependencies = dependencies(cls, config)
         assert isinstance(dependencies, tuple), "Expected a list and not " + str(type(dependencies))
-        dependencies = list(dependencies)  # mutable copy to append transitive dependencies
+        dependencies = typing.cast("list[str]", list(dependencies))  # mutable copy to append transitive dependencies
         # Also add the toolchain targets (e.g. llvm-native) and sysroot targets if needed:
         if not explicit_dependencies_only:
             if include_toolchain_dependencies:
@@ -887,6 +885,11 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     # noinspection PyPep8Naming
     @property
+    def OBJCOPY(self) -> Path:  # noqa: N802
+        return self.target_info.objcopy
+
+    # noinspection PyPep8Naming
+    @property
     def host_CC(self) -> Path:  # noqa: N802
         return TargetInfo.host_c_compiler(self.config)
 
@@ -900,8 +903,13 @@ class SimpleProjectBase(AbstractProject, ABC):
     def host_CPP(self) -> Path:  # noqa: N802
         return TargetInfo.host_c_preprocessor(self.config)
 
+    # noinspection PyPep8Naming
     @property
-    def essential_compiler_and_linker_flags(self):
+    def host_LD(self) -> Path:  # noqa: N802
+        return TargetInfo.host_linker(self.config)
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> "list[str]":
         # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
         return self.target_info.get_essential_compiler_and_linker_flags()
 
@@ -944,8 +952,10 @@ class SimpleProjectBase(AbstractProject, ABC):
             result += "-asan"
         if self.auto_var_init != AutoVarInit.NONE:
             result += "-init-" + str(self.auto_var_init.value)
-        # targets that only support native might not need a suffix
-        if not target.is_native() or self.add_build_dir_suffix_for_native:
+        # targets that only support native might not need a suffix, and targets
+        # that support nocpu currently never use a suffix since that's all they
+        # support
+        if (not target.is_native() or self.add_build_dir_suffix_for_native) and not target.is_nocpu():
             result += target.build_suffix(config, include_os=self.include_os_in_target_suffix)
         if target.is_experimental_cheri093_std(config):
             result += "-std093"  # The current CHERI-Alliance repositories implement the 0.9.3 standard draft.
@@ -1174,7 +1184,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         name: str,
         *,
         kind: "Union[type[T], Callable[[str], T]]" = str,
-        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]" = None,
+        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], Optional[T]], T, None]" = None,
         **kwargs,
     ) -> Optional[T]:
         return cls.add_config_option(name, kind=kind, default=default, **kwargs)  # pytype: disable=bad-return-type
@@ -1382,6 +1392,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     def check_required_system_header(
         self,
         header: str,
+        *,
         instructions: "Optional[InstallInstructions]" = None,
         default: "Optional[str]" = None,
         freebsd: "Optional[str]" = None,
@@ -1390,6 +1401,8 @@ class SimpleProjectBase(AbstractProject, ABC):
         homebrew: "Optional[str]" = None,
         cheribuild_target: "Optional[str]" = None,
         alternative_instructions: "Optional[str]" = None,
+        compiler: "Optional[Path]" = None,
+        compiler_flags: "Optional[list[str]]" = None,
     ) -> None:
         if instructions is None:
             instructions = OSInfo.install_instructions(
@@ -1408,7 +1421,9 @@ class SimpleProjectBase(AbstractProject, ABC):
             assert instructions.fixit_hint() == self.__checked_system_headers[header].fixit_hint(), header
             return  # already checked
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
-        include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
+        compiler = self.CC if compiler is None else compiler
+        compiler_flags = self.essential_compiler_and_linker_flags if compiler_flags is None else compiler_flags
+        include_dirs = self.get_compiler_info(compiler).get_include_dirs(compiler_flags)
         if not any(Path(d, header).exists() for d in include_dirs):
             self.dependency_error(
                 "Required C header",
@@ -1752,7 +1767,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: "Optional[str]" = None, optional: bool = False) -> Path:
-        prefix = _cached_get_homebrew_prefix(package, self.config)
+        prefix = cached_get_homebrew_prefix(package, self.config)
         if not prefix and not optional:
             prefix = Path("/fake/homebrew/prefix/when/pretending")
             if package:
@@ -1788,25 +1803,37 @@ class SimpleProjectBase(AbstractProject, ABC):
             self.fatal(what, "not found:", path, fixit_hint=fixit_hint)
         return path
 
-    def download_file(self, dest: Path, url: str, sha256: "Optional[str]" = None) -> bool:
+    def download_file(
+        self,
+        dest: Path,
+        url: str,
+        sha256: "Optional[str]" = None,
+        sha512: "Optional[str]" = None,
+    ) -> bool:
         """
         :return: True if a new file was downloaded, false otherwise.
         """
+        assert sha256 is None or sha512 is None
+
+        sha = sha256 if sha256 is not None else sha512
+        sha_name = "SHA256" if sha256 is not None else "SHA512"
+        sha_fn = self.sha256sum if sha256 is not None else self.sha512sum
+
         should_download = False
         if not dest.is_file():
             should_download = True
-        elif sha256 is not None:
-            existing_sha256 = self.sha256sum(dest)
-            self.verbose_print("Downloaded", url, "with SHA256", existing_sha256)
-            if sha256 and existing_sha256 != sha256:
-                self.warning("SHA256 for", dest, "(" + existing_sha256 + ") does not match expected SHA256", sha256)
+        elif sha is not None:
+            existing_sha = sha_fn(dest)
+            self.verbose_print("Downloaded", url, "with", sha_name, existing_sha)
+            if existing_sha != sha:
+                self.warning(sha_name, "for", dest, "(" + existing_sha + ")", "does not match expected", sha_name, sha)
                 if self.query_yes_no("Continue with unexpected file?", default_result=False, force_result=False):
-                    self.info("Using file with unexpected SHA256 hash", existing_sha256)
+                    self.info("Using file with unexpected", sha_name, "hash", existing_sha)
                 else:
                     self.info("Will try to download again.")
                     should_download = True
         elif self.with_clean:
-            # Always download when using --clean and the SHA256 is not specified.
+            # Always download when using --clean and no hash is specified.
             should_download = True
         if should_download:
             self.makedirs(dest.parent)
@@ -1821,10 +1848,13 @@ class SimpleProjectBase(AbstractProject, ABC):
                     "Cannot find a tool to download target URL.",
                     install_instructions=InstallInstructions("Please install wget or curl"),
                 )
-            downloaded_sha256 = self.sha256sum(dest)
-            self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
-            if sha256 is not None and downloaded_sha256 != sha256:
-                self.warning("Downloaded file SHA256 hash", downloaded_sha256, "does not match expected SHA256", sha256)
+
+            downloaded_sha = sha_fn(dest)
+            self.verbose_print("Downloaded", url, "with", sha_name, "hash", downloaded_sha)
+            if sha is not None and downloaded_sha != sha:
+                self.warning(
+                    "Downloaded file", sha_name, "hash", downloaded_sha, "does not match expected", sha_name, sha
+                )
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
         return should_download
 
@@ -1855,9 +1885,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
     # pytype: disable=invalid-annotation
-    def __init__(
-        cls: "type[SimpleProjectBase]", name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs
-    ) -> None:
+    def __init__(cls, name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs) -> None:
         # Retrieve the modifiable dict of local config options.
         local_opts: "dict[str, PerProjectConfigOption]" = getattr(cls, "_local_config_options", {})
         if local_opts and isinstance(local_opts, dict):
@@ -1989,7 +2017,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             # Only one target is supported:
             cls._xtarget = supported_archs[0]
             cls._should_not_be_instantiated = False  # can be instantiated
-            target_manager.add_target(Target(target_name, cls))
+            target_manager.add_target(Target(target_name, typing.cast("type[AbstractProject]", cls)))
         # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
@@ -2034,7 +2062,7 @@ class TargetAlias(SimpleProject):
     def process(self) -> None:
         dependencies = self.dependencies
         if callable(self.dependencies):
-            dependencies = self.dependencies(self.config)
+            dependencies = typing.cast("tuple[str, ...]", self.dependencies(self.config))
         assert any(True for _ in dependencies), "Expected non-empty dependencies for " + self.target
 
 

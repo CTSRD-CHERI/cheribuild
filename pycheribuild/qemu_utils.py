@@ -33,25 +33,22 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-from .config.chericonfig import RiscvCheriISA
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
+from .projects.project import CheriConfig
 from .utils import ConfigBase, OSInfo, warning_message
 
 
 class QemuOptions:
     machine_flags: "list[str]"
 
-    def __init__(
-        self, xtarget: CrossCompileTarget, want_debugger=False, riscv_cheri_isa: Optional[RiscvCheriISA] = None
-    ) -> None:
+    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False, config: Optional[CheriConfig] = None) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
         self.force_virtio_blk_device = False
         self.can_boot_kernel_directly = False
         self.memory_size = "2048"
         self.has_default_nic = False
-        self.riscv_cheri_isa = riscv_cheri_isa
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             self._qemu_arch_suffix = "morello"
             self.can_boot_kernel_directly = False  # boot from disk
@@ -71,9 +68,9 @@ class QemuOptions:
             # Note: we always use the CHERI QEMU
             xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
             self.machine_flags = ["-M", "virt"]
-            if riscv_cheri_isa is RiscvCheriISA.EXPERIMENTAL_STD093:
+            if config is not None and xtarget.is_experimental_cheri093_std(config):
                 self._qemu_arch_suffix = self._qemu_arch_suffix = f"riscv{xlen}cheristd"
-                cpu_model = "codasip-l730" if xlen == 32 else "codasip-a730"
+                cpu_model = "rv32" if xlen == 32 else "rv64,cheri_pte=on,cheri_levels=2"
                 self.machine_flags.extend(["-cpu", f"{cpu_model}"])
             else:
                 self._qemu_arch_suffix = f"riscv{xlen}cheri"

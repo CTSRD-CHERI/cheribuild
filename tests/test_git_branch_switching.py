@@ -10,9 +10,13 @@ if shutil.which("git") is None:
     pytest.skip("git command not found", allow_module_level=True)
 
 from .setup_mock_chericonfig import setup_mock_chericonfig
+from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
+from pycheribuild.processutils import get_program_version
 from pycheribuild.projects.project import Project
 from pycheribuild.projects.repository import GitRepository, TargetBranchInfo
+
+GIT_VERSION = get_program_version(Path(shutil.which("git") or "git"), config=setup_mock_chericonfig())
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -88,7 +92,14 @@ class MockProject(Project):
         return super().run_cmd(*args, **kwargs)
 
 
-def setup_test_project(local_dir, remote_dir, target_branch="target-branch"):
+def setup_test_project(
+    local_dir,
+    remote_dir,
+    *,
+    crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP,
+    force_branch=True,
+    **kwargs,
+):
     local_dir.parent.mkdir(parents=True, exist_ok=True)
 
     config = setup_mock_chericonfig(local_dir.parent, pretend=False)
@@ -99,21 +110,22 @@ def setup_test_project(local_dir, remote_dir, target_branch="target-branch"):
         target = "test-git-project"
         do_not_add_to_targets = True
         _should_not_be_instantiated = False
-        _xtarget = BasicCompilationTargets.NATIVE_NON_PURECAP
+        _xtarget = crosscompile_target
         repository = GitRepository(
             str(remote_dir),
-            force_branch=True,
+            force_branch=force_branch,
             default_branch="main",
             per_target_branches={
                 BasicCompilationTargets.NATIVE_NON_PURECAP: TargetBranchInfo(
-                    branch=target_branch, directory_name="dummy-dir"
+                    branch="target-branch", directory_name="dummy-dir"
                 )
             },
+            **kwargs,
         )
 
     TestProject.setup_config_options()
 
-    project = TestProject(config, crosscompile_target=BasicCompilationTargets.NATIVE_NON_PURECAP)
+    project = TestProject(config, crosscompile_target=crosscompile_target)
     return project
 
 
@@ -206,6 +218,7 @@ def test_switch_branch_tracks_wrong_remote(shared_remote: Path, local_repo: Path
         ("command", ["git", "fetch", "origin"]),
         ("command", ["git", "show-ref", "--verify", "refs/heads/target-branch"]),
         ("command", ["git", "rev-parse", "--abbrev-ref", "target-branch@{u}"]),
+        ("command", ["git", "show-ref", "--verify", "refs/heads/target-branch-cheribuild"]),
         (
             "info",
             "Branch target-branch tracks wrong branch other/target-branch. "
@@ -238,6 +251,7 @@ def test_switch_branch_tracks_wrong_branch_same_remote(shared_remote: Path, loca
         ("command", ["git", "fetch", "origin"]),
         ("command", ["git", "show-ref", "--verify", "refs/heads/target-branch"]),
         ("command", ["git", "rev-parse", "--abbrev-ref", "target-branch@{u}"]),
+        ("command", ["git", "show-ref", "--verify", "refs/heads/target-branch-cheribuild"]),
         (
             "info",
             "Branch target-branch tracks wrong branch origin/other-branch. "
@@ -270,6 +284,7 @@ def test_switch_branch_no_upstream(shared_remote: Path, local_repo: Path):
         ("command", ["git", "fetch", "origin"]),
         ("command", ["git", "show-ref", "--verify", "refs/heads/target-branch"]),
         ("command", ["git", "rev-parse", "--abbrev-ref", "target-branch@{u}"]),
+        ("command", ["git", "show-ref", "--verify", "refs/heads/target-branch-cheribuild"]),
         ("info", "Branch target-branch has no upstream. Creating new branch target-branch-cheribuild"),
         ("command", ["git", "checkout", "-b", "target-branch-cheribuild", "origin/target-branch"]),
         ("command", ["git", "fetch"]),
@@ -339,6 +354,50 @@ def test_switch_branch_origin_wrong_url(shared_remote: Path, local_repo: Path):
     ]
 
 
+def get_all_branches(repo_dir: Path) -> "list[str]":
+    return (
+        subprocess.check_output(
+            ["git", "branch", "-q", "-a", "--format=%(refname:short)"],
+            cwd=repo_dir,
+        )
+        .decode("utf-8")
+        .split()
+    )
+
+
+@pytest.mark.skipif(GIT_VERSION < (2, 29), reason="negative refspecs require git >= 2.29")
+def test_negative_fetch_refspecs(tmp_path: Path):
+    """Branches matching negative_fetch_refspecs should never be fetched, on the initial clone or later."""
+    remote_dir = tmp_path / "remote"
+    create_remote_repo(remote_dir)
+    subprocess.run(["git", "branch", "users/someone/wip"], cwd=remote_dir, check=True)
+    subprocess.run(["git", "branch", "revert-123"], cwd=remote_dir, check=True)
+
+    local_dir = tmp_path / "local"
+    project = setup_test_project(
+        local_dir,
+        remote_dir,
+        negative_fetch_refspecs=("^refs/heads/users/*", "^refs/heads/revert-*"),
+    )
+    project.repository.ensure_cloned(project, src_dir=local_dir, base_project_source_dir=None)
+    assert get_all_branches(remote_dir) == ["main", "other-branch", "revert-123", "target-branch", "users/someone/wip"]
+    # In the new clone, we should not have fetched the revert-123 or users/someone/wip branches
+    assert get_all_branches(local_dir) == [
+        "main",
+        "origin",
+        "origin/main",
+        "origin/other-branch",
+        "origin/target-branch",
+    ]
+    fetch_config = (
+        subprocess.check_output(["git", "config", "get", "--all", "remote.origin.fetch"], cwd=local_dir)
+        .decode("utf-8")
+        .split()
+    )
+    # Check that the git config includes the negative refspecs
+    assert fetch_config == ["+refs/heads/*:refs/remotes/origin/*", "^refs/heads/users/*", "^refs/heads/revert-*"]
+
+
 def test_switch_branch_origin_and_new_origin_wrong_url(shared_remote: Path, local_repo: Path):
     """Test creating a new remote if 'origin' and 'new-origin' point to the wrong URL."""
     wrong_url = "https://example.com/wrong/repo.git"
@@ -369,3 +428,48 @@ def test_switch_branch_origin_and_new_origin_wrong_url(shared_remote: Path, loca
         ("verbose", "HEAD contains commit @{upstream}"),
         ("info", "Skipping update: Current HEAD is up-to-date or ahead of upstream."),
     ]
+
+
+def test_handle_old_urls_branch_exists(shared_remote: Path, local_repo: Path, tmp_path: Path):
+    # Set up an "old remote" directory and a "new remote" directory
+    old_remote_dir = tmp_path / "old_remote"
+    create_remote_repo(old_remote_dir)
+
+    # Local repo 'origin' points to the old remote URL
+    subprocess.run(["git", "remote", "set-url", "origin", str(old_remote_dir)], cwd=local_repo, check=True)
+    subprocess.run(["git", "fetch", "origin"], cwd=local_repo, check=True)
+    subprocess.run(["git", "branch", "--set-upstream-to=origin/main", "main"], cwd=local_repo, check=True)
+
+    # Create 'main-cheribuild' branch beforehand to trigger the collision loop!
+    subprocess.run(["git", "branch", "main-cheribuild", "origin/main"], cwd=local_repo, check=True)
+
+    # We are currently on local 'main' branch, which tracks 'origin/main' (which is the old URL)
+    assert get_git_revision(local_repo, "HEAD") == "main"
+    assert get_git_revision(local_repo, "main@{u}") == "origin/main"
+
+    # Now we configure the project with the new remote URL (shared_remote) and the old remote URL (old_remote_dir)
+    project = setup_test_project(
+        local_repo,
+        shared_remote,
+        crosscompile_target=CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        force_branch=False,
+        old_urls=[str(old_remote_dir)],
+    )
+
+    repo = project.repository
+    # This will trigger _handle_old_urls
+    repo.update(project, src_dir=local_repo)
+
+    # Since 'main' and 'main-cheribuild' already exist locally, it should have created a new branch 'main-cheribuild-2'
+    # tracking the new remote 'origin/main'
+    assert get_git_revision(local_repo, "HEAD") == "main-cheribuild-2"
+    assert get_git_revision(local_repo, "main-cheribuild-2@{u}") == "origin/main"
+
+    # The old remote should have been renamed to 'old-origin'
+    res = subprocess.run(["git", "remote", "-v"], cwd=local_repo, capture_output=True, check=True)
+    remotes = res.stdout.decode("utf-8")
+    assert "old-origin" in remotes
+    assert str(old_remote_dir) in remotes
+    # The new remote should be 'origin'
+    assert "origin" in remotes
+    assert str(shared_remote) in remotes

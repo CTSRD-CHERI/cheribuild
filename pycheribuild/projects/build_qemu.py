@@ -48,9 +48,10 @@ from .project import (
     MakeCommandKind,
     Project,
 )
-from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
+from .simple_project import BoolConfigOption, OptionalBoolConfigOption, SimpleProject
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
+from ..processutils import cached_get_homebrew_prefix
 from ..utils import OSInfo
 
 
@@ -70,12 +71,11 @@ class BuildQEMUBase(AutotoolsProject):
     lto_compiler_flags_need_linker_flags = True
     qemu_targets: "str"
 
-    use_smbd = BoolConfigOption(
+    use_smbd = OptionalBoolConfigOption(
         "use-smbd",
         show_help=False,
-        default=True,
-        help="Don't require SMB support when building QEMU (warning: most --test "
-        "targets will fail without smbd support)",
+        default=None,
+        help="Enable SMB support in QEMU. If unset, it is enabled automatically if a usable smbd is found.",
     )
     gui = BoolConfigOption(
         "gui",
@@ -303,6 +303,16 @@ class BuildQEMUBase(AutotoolsProject):
                 if found:
                     python_bin = Path(found)
                     break
+        if not self.try_run_cmd(python_bin, "-c", "import distutils"):
+            self.warning(f"Python installation {python_bin}, does not have distutils which is needed by QEMU")
+            self.dependency_error(
+                install_instructions=OSInfo.install_instructions(
+                    "python3-distutils",
+                    is_lib=False,
+                    homebrew="python-setuptools",
+                    alternative=f"{python_bin} -m pip install setuptools",
+                )
+            )
         self.configure_args.append(f"--python={python_bin}")
 
         if self.config.create_compilation_db:
@@ -331,12 +341,12 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 
     @staticmethod
-    def find_smbd_binary(config: CheriConfig) -> Path:
+    def guessed_smbd_path(config: CheriConfig) -> Path:
         guess = Path("/usr/sbin/smbd")
         if OSInfo.IS_FREEBSD:
             guess = Path("/usr/local/sbin/smbd")
         elif OSInfo.IS_MAC:
-            prefix = _cached_get_homebrew_prefix("samba", config)
+            prefix = cached_get_homebrew_prefix("samba", config)
             if prefix:
                 guess = prefix / "sbin/samba-dot-org-smbd"
             else:
@@ -345,6 +355,44 @@ class BuildQEMUBase(AutotoolsProject):
         if (config.other_tools_dir / "sbin/smbd").exists():
             guess = config.other_tools_dir / "sbin/smbd"
         return guess
+
+    def find_smbd(self) -> "Optional[Path]":
+        if self.use_smbd is False:
+            return None
+        smbd_path = self.guessed_smbd_path(self.config)
+        smbd_found = smbd_path.exists()
+        if self.use_smbd is None and not smbd_found:
+            # Auto-detect mode and no usable smbd was found -> silently don't enable SMB support.
+            self.info(
+                f"Could not find smbd -> not enabling QEMU SMB shares support. Set --{self.target}/use-smbd to force."
+            )
+            return None
+        self.info("Guessed samba path", smbd_path)
+        if not smbd_found:
+            if self.target_info.is_macos():
+                # QEMU user networking expects a smbd that accepts the same flags and config files as the
+                # samba.org sources but the macOS /usr/sbin/smbd is incompatible with that:
+                self.warning(
+                    "QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
+                    "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
+                    "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU",
+                )
+            self.dependency_error(
+                "Could not find smbd -> QEMU SMB shares networking will not work",
+                install_instructions=OSInfo.install_instructions(
+                    "smbd",
+                    is_lib=False,
+                    freebsd="samba416",
+                    apt="samba",
+                    homebrew="samba",
+                    cheribuild_target="samba",
+                    alternative="if you really don't need QEMU host shares you can disable the samba "
+                    "dependency by setting --" + self.target + "/no-use-smbd",
+                ),
+                cheribuild_target="samba",
+                cheribuild_xtarget=CompilationTargets.NATIVE,
+            )
+        return smbd_path
 
     def configure(self, **kwargs):
         # We call this here instead of inside setup to make sure the repository has been cloned
@@ -356,32 +404,9 @@ class BuildQEMUBase(AutotoolsProject):
         else:
             self.configure_args.append("--enable-slirp=git")
 
-        if self.use_smbd:
-            smbd_path = self.find_smbd_binary(self.config)
-            self.info("Guessed samba path", smbd_path)
+        smbd_path = self.find_smbd()
+        if smbd_path is not None:
             self.configure_args.append("--smbd=" + str(smbd_path))
-            if not smbd_path.exists():
-                if self.target_info.is_macos():
-                    # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
-                    # sources but the macOS /usr/sbin/smbd is incompatible with that:
-                    self.warning(
-                        "QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
-                        "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
-                        "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU",
-                    )
-                self.fatal(
-                    "Could not find smbd -> QEMU SMB shares networking will not work",
-                    fixit_hint="Either install samba using the system package manager or with cheribuild. "
-                    "If you really don't need QEMU host shares you can disable the samba dependency "
-                    "by setting --" + self.target + "/no-use-smbd",
-                )
-            self.check_required_system_tool(
-                str(smbd_path),
-                cheribuild_target="samba",
-                freebsd="samba416",
-                apt="samba",
-                homebrew="samba",
-            )
 
         chosen_targets = self.qemu_targets
         qemu_targets_option = typing.cast(ConfigOptionHandle, inspect.getattr_static(self, "qemu_targets"))
@@ -395,6 +420,9 @@ class BuildQEMUBase(AutotoolsProject):
             if (self.source_dir / "configs/targets/riscv32xcheri-softmmu.mak").exists():
                 chosen_targets = chosen_targets.replace("riscv32cheri-softmmu", "riscv32xcheri-softmmu")
                 chosen_targets = chosen_targets.replace("riscv64cheri-softmmu", "riscv64xcheri-softmmu")
+            if (self.source_dir / "configs/targets/riscv64y-softmmu.mak").exists():
+                if "riscv64y-softmmu" not in chosen_targets:
+                    chosen_targets += ",riscv64y-softmmu,riscv32y-softmmu"
         self.configure_args.append("--target-list=" + chosen_targets)
         super().configure(**kwargs)
 
@@ -541,11 +569,17 @@ class BuildCheriQEMUBase(BuildQEMUBase):
 
 class BuildQEMU(BuildCheriQEMUBase):
     target = "qemu"
-    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
+    repository = GitRepository(
+        "https://github.com/CHERI-Alliance/qemu.git",
+        default_branch="main",
+        old_urls=["https://github.com/CTSRD-CHERI/qemu.git"],
+        old_branches={"qemu-cheri": "main"},
+    )
     default_targets = (
         "arm-softmmu,aarch64-softmmu,morello-softmmu,"
         "mips64-softmmu,mips64cheri128-softmmu,"
-        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+        "riscv64-softmmu,riscv64xcheri-softmmu,riscv64cheristd-softmmu,"
+        "riscv32-softmmu,riscv32xcheri-softmmu,riscv32cheristd-softmmu,"
         "x86_64-softmmu"
     )
     # Turn on unaligned loads/stores by default

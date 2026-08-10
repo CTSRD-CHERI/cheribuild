@@ -401,11 +401,11 @@ class FileSystemUtils:
     def realpath(p: Path) -> Path:
         return p.resolve(strict=False)
 
-    def sha256sum(self, file: Path) -> str:
+    def _hashsum(self, file: Path, algorithm: str) -> str:
         # Based on https://stackoverflow.com/a/44873382/894271
         import hashlib  # rarely need, so imported on demand to reduce startup time
 
-        h = hashlib.sha256()
+        h = hashlib.new(algorithm)
         b = bytearray(128 * 1024)
         mv = memoryview(b)
         if not file.exists():
@@ -418,3 +418,9 @@ class FileSystemUtils:
             for n in iter(lambda: f.readinto(mv), 0):  # pytype: disable=wrong-arg-types
                 h.update(mv[:n])  # pytype: disable=wrong-arg-types
         return h.hexdigest()
+
+    def sha256sum(self, file: Path) -> str:
+        return self._hashsum(file, "sha256")
+
+    def sha512sum(self, file: Path) -> str:
+        return self._hashsum(file, "sha512")

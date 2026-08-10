@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Jessica Clarke
+# Copyright (c) 2025-2026 Paul Metzger
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,40 +24,34 @@
 # SUCH DAMAGE.
 #
 
-from .project import AutotoolsProject, ComputedDefaultValue, GitRepository
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
+from ...config.compilation_targets import CompilationTargets
+from ...utils import classproperty
 
 
-class BuildOpenOCDBase(AutotoolsProject):
-    do_not_add_to_targets: bool = True  # base class only
-    _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.output_root / project.target,
-        as_string=lambda cls: "$INSTALL_ROOT/" + cls.target,
-    )
+class BuildLibmd(CrossCompileAutotoolsProject):
+    _supported_architectures = CompilationTargets.ALL_CHERI_AND_MORELLO_LINUX_TARGETS
+    make_kind = MakeCommandKind.GnuMake
+    repository = GitRepository("https://git.hadrons.org/git/libmd.git")
 
-    def setup(self):
-        super().setup()
-        self.configure_args.extend(
-            [
-                "--enable-remote-bitbang",
-                "--enable-jtag_vpi",
-                "--enable-ftdi",
-            ]
-        )
+    @classproperty
+    def default_install_dir(self):
+        return DefaultInstallDir.ROOTFS_LOCALBASE
 
     def configure(self, **kwargs):
-        self.run_cmd("./bootstrap", cwd=self.source_dir)
+        self.run_cmd(self.source_dir / "autogen", cwd=self.source_dir)
         super().configure(**kwargs)
 
+    def setup(self) -> None:
+        super().setup()
+        # Remove dependency on libgcc_eh
+        self.COMMON_LDFLAGS.append("--unwindlib=none")
+        # Remove dependcy on libgcc_s
+        self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
 
-class BuildOpenOCD(BuildOpenOCDBase):
-    repository = GitRepository("https://github.com/openocd-org/openocd.git")
+    def install(self, **kwargs) -> None:
+        super().install(**kwargs)
 
-
-# noinspection PyPep8Naming
-class BuildRISCV_OpenOCD(BuildOpenOCDBase):  # noqa: N801
-    repository = GitRepository("https://github.com/riscv-collab/riscv-openocd.git")
-
-
-class BuildAllianceOpenOCD(BuildOpenOCDBase):
-    target = "cheri-std093-openocd"
-    repository = GitRepository("https://github.com/CHERI-Alliance/openocd.git", default_branch="codasip-cheri-riscv")
+        # Copy the libraries from the cross-compile sysroot into rootfs/lib
+        for sofile in self.install_dir.glob("lib/libmd.so*"):
+            self.install_file(sofile, self.install_dir / "rootfs/lib/" / sofile.name, create_dirs=True)

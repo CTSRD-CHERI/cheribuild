@@ -827,9 +827,14 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/llvm-project.git",
-        default_branch="codasip-cheri-riscv-20",
+        # TODO: Use the previous default once it can build CheriBSD:
+        # default_branch="codasip-cheri-riscv-20",
+        # https://github.com/CHERI-Alliance/llvm-project/pull/29
+        default_branch="fix-copy-relocs",
         force_branch=True,
+        temporary_url_override="https://github.com/jrtc27/cheri-alliance-llvm-project.git",
     )
+
     default_directory_basename = "cheri-std093-llvm-project"
     target = "cheri-std093-llvm"
     skip_cheri_symlinks = False  # add target-specific symlinks
@@ -869,7 +874,12 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("https://github.com/llvm/llvm-project.git")
+    repository = GitRepository(
+        "https://github.com/llvm/llvm-project.git",
+        # Unlike our forks, the upstream repository has hundreds of user/revert branches that we
+        # don't need and that make cloning/fetching much slower.
+        negative_fetch_refspecs=("^refs/heads/users/*", "^refs/heads/revert-*"),
+    )
     default_directory_basename = "upstream-llvm-project"
     target = "upstream-llvm"
     _default_install_dir_fn = ComputedDefaultValue(

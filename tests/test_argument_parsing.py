@@ -21,6 +21,7 @@ from pycheribuild.jenkins_utils import jenkins_override_install_dirs_hack
 
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403, RUF100
+from pycheribuild.projects.build_qemu import BuildQEMU
 from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,
@@ -115,6 +116,52 @@ def test_skip_update():
         # command line overrides config file:
         assert _parse_arguments(["--skip-update"], config_file=config).skip_update
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
+
+
+def test_qemu_use_smbd(monkeypatch):
+    fake_smbd_path = Path("/fake/path/to/smbd")
+
+    def find_smbd_and_capture(cmdline_args, *, smbd_exists):
+        qemu = _get_target_instance("qemu", _parse_arguments(cmdline_args), BuildQEMU)
+        monkeypatch.setattr(qemu, "guessed_smbd_path", lambda _config: fake_smbd_path)
+        # Only fake the existence check for our fake smbd path, everything else (e.g. config files
+        # loaded by _parse_arguments()) should still behave normally:
+        real_path_exists = Path.exists
+        monkeypatch.setattr(Path, "exists", lambda p: smbd_exists if p == fake_smbd_path else real_path_exists(p))
+
+        recorded_dependency_error_calls = []
+        monkeypatch.setattr(
+            qemu, "dependency_error", lambda *call_args, **kwargs: recorded_dependency_error_calls.append(kwargs)
+        )
+        smbd_path = qemu.find_smbd()
+        return smbd_path, recorded_dependency_error_calls
+
+    # Default (auto-detect) mode with no usable smbd found: silently skip, no error.
+    result, dependency_error_calls = find_smbd_and_capture([], smbd_exists=False)
+    assert result is None
+    assert dependency_error_calls == []
+
+    # Default (auto-detect) mode with a usable smbd found: use it, no error.
+    result, dependency_error_calls = find_smbd_and_capture([], smbd_exists=True)
+    assert result == fake_smbd_path
+    assert dependency_error_calls == []
+
+    # --no-use-smbd: smbd is disabled entirely, we don't even try to find it, no error.
+    result, dependency_error_calls = find_smbd_and_capture(["--qemu/no-use-smbd"], smbd_exists=True)
+    assert result is None
+    assert dependency_error_calls == []
+
+    # --use-smbd: force enable -> a path is always returned, but if no usable smbd could be found this is reported via
+    # dependency_error() and cheribuild's "samba" target is offered as an install option.
+    result, dependency_error_calls = find_smbd_and_capture(["--qemu/use-smbd"], smbd_exists=False)
+    assert result == fake_smbd_path
+    assert len(dependency_error_calls) == 1
+    assert dependency_error_calls[0]["cheribuild_target"] == "samba"
+
+    # --use-smbd with a usable smbd present: no error/warning.
+    result, dependency_error_calls = find_smbd_and_capture(["--qemu/use-smbd"], smbd_exists=True)
+    assert result == fake_smbd_path
+    assert dependency_error_calls == []
 
 
 @pytest.mark.parametrize(
@@ -1281,7 +1328,6 @@ def test_mfs_root_kernel_config_options():
     config_options.sort()
     assert config_options == [
         "_cross_toolchain_root",
-        "_initial_build_dir",
         "_install_dir",
         "_linkage",
         "auto_var_init",
@@ -1397,8 +1443,8 @@ def test_relative_paths_in_config():
 
 
 def test_cmake_options():
-    def enable_projects_flag(args: "list[str]"):
-        return next((x for x in args if x.startswith("-DLLVM_ENABLE_PROJECTS")), None)
+    def enable_projects_flag(args: "list[str | Path]"):
+        return next((x for x in args if str(x).startswith("-DLLVM_ENABLE_PROJECTS")), None)
 
     config = _parse_arguments(["--skip-configure"])
     assert (
@@ -1498,42 +1544,42 @@ def test_jenkins_hack_disk_image():
         "--cheribsd/build-bench-kernels",
     ]
     config = _parse_arguments(args)
-    jenkins_override_install_dirs_hack(config, Path("/rootfs"))
-    disk_image = _get_target_instance(
-        "disk-image-aarch64",
-        config,
-        BuildCheriBSDDiskImage,
-    )
-    assert disk_image.disk_image_path == Path("/tmp/tarball/cheribsd-aarch64.img")
-    assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")
+    with jenkins_override_install_dirs_hack(config, Path("/rootfs")):
+        disk_image = _get_target_instance(
+            "disk-image-aarch64",
+            config,
+            BuildCheriBSDDiskImage,
+        )
+        assert disk_image.disk_image_path == Path("/tmp/tarball/cheribsd-aarch64.img")
+        assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")
 
 
 def test_jenkins_hack_hybrid_for_purecap_rootfs_prefix_none(monkeypatch):
     # Regression test for the jenkins install dir hack breaking hybrid-for-purecap-rootfs KDE targets
     config = _parse_arguments(["--output-root=/tmp/tarball", "--enable-hybrid-for-purecap-rootfs-targets"])
-    jenkins_override_install_dirs_hack(config, None)
-    cheribsd_morello_purecap = _get_target_instance("cheribsd-morello-purecap", config, BuildCHERIBSD)
-    # FIXME: we implicitly add /opt/morello-purecap for the rootfs dir here which does not make any sense
-    assert cheribsd_morello_purecap.target_info.install_prefix_dirname == "morello-purecap"
-    assert cheribsd_morello_purecap.install_dir == Path("/tmp/tarball")
-    assert cheribsd_morello_purecap.rootfs_dir == Path("/tmp/tarball")
-    # When building against the rootfs we do want the prefix though:
-    gmp_morello_purecap = _get_target_instance("gmp-morello-purecap", config, Project)
-    assert gmp_morello_purecap.crosscompile_target.is_cheri_purecap()
-    assert gmp_morello_purecap.target_info.install_prefix_dirname == "morello-purecap"
-    assert gmp_morello_purecap.install_dir == Path("/tmp/tarball/opt/morello-purecap")
-    assert gmp_morello_purecap.rootfs_dir == Path("/tmp/tarball")
-    assert gmp_morello_purecap.rootfs_dir == cheribsd_morello_purecap.install_dir
+    with jenkins_override_install_dirs_hack(config, None):
+        cheribsd_morello_purecap = _get_target_instance("cheribsd-morello-purecap", config, BuildCHERIBSD)
+        # FIXME: we implicitly add /opt/morello-purecap for the rootfs dir here which does not make any sense
+        assert cheribsd_morello_purecap.target_info.install_prefix_dirname == "morello-purecap"
+        assert cheribsd_morello_purecap.install_dir == Path("/tmp/tarball")
+        assert cheribsd_morello_purecap.rootfs_dir == Path("/tmp/tarball")
+        # When building against the rootfs we do want the prefix though:
+        gmp_morello_purecap = _get_target_instance("gmp-morello-purecap", config, Project)
+        assert gmp_morello_purecap.crosscompile_target.is_cheri_purecap()
+        assert gmp_morello_purecap.target_info.install_prefix_dirname == "morello-purecap"
+        assert gmp_morello_purecap.install_dir == Path("/tmp/tarball/opt/morello-purecap")
+        assert gmp_morello_purecap.rootfs_dir == Path("/tmp/tarball")
+        assert gmp_morello_purecap.rootfs_dir == cheribsd_morello_purecap.install_dir
 
-    # The -hybrid-for-purecap-rootfs should install to the same rootfs but a different prefix:
-    gmp_morello_hybrid_for_purecap = _get_target_instance("gmp-morello-hybrid-for-purecap-rootfs", config, Project)
-    assert gmp_morello_hybrid_for_purecap.crosscompile_target.is_cheri_hybrid()
-    assert gmp_morello_hybrid_for_purecap.target_info.install_prefix_dirname == "morello-hybrid"
-    assert gmp_morello_hybrid_for_purecap.install_dir == Path("/tmp/tarball/opt/morello-hybrid")
-    # The rootfs should be the same as the gmp-purecap one:
-    assert gmp_morello_hybrid_for_purecap.rootfs_dir == gmp_morello_purecap.rootfs_dir
-    assert gmp_morello_hybrid_for_purecap.rootfs_dir == cheribsd_morello_purecap.install_dir
-    assert gmp_morello_hybrid_for_purecap.rootfs_dir == Path("/tmp/tarball")
+        # The -hybrid-for-purecap-rootfs should install to the same rootfs but a different prefix:
+        gmp_morello_hybrid_for_purecap = _get_target_instance("gmp-morello-hybrid-for-purecap-rootfs", config, Project)
+        assert gmp_morello_hybrid_for_purecap.crosscompile_target.is_cheri_hybrid()
+        assert gmp_morello_hybrid_for_purecap.target_info.install_prefix_dirname == "morello-hybrid"
+        assert gmp_morello_hybrid_for_purecap.install_dir == Path("/tmp/tarball/opt/morello-hybrid")
+        # The rootfs should be the same as the gmp-purecap one:
+        assert gmp_morello_hybrid_for_purecap.rootfs_dir == gmp_morello_purecap.rootfs_dir
+        assert gmp_morello_hybrid_for_purecap.rootfs_dir == cheribsd_morello_purecap.install_dir
+        assert gmp_morello_hybrid_for_purecap.rootfs_dir == Path("/tmp/tarball")
 
 
 # Another regression test, explicitly overriding the installation directory triggered an assertion
@@ -1549,9 +1595,31 @@ def test_jenkins_hack_hybrid_for_purecap_rootfs_prefix_none(monkeypatch):
 )
 def test_jenkins_hack_install_dirs(target: str, args: "list[str]", expected_install_dir: Path):
     config = _parse_arguments(["--output-root=/tmp/tarball", *args])
-    jenkins_override_install_dirs_hack(config, Path("/prefix"))
-    release = _get_target_instance(target, config, Project)
-    assert release.install_dir == expected_install_dir
+    with jenkins_override_install_dirs_hack(config, Path("/prefix")):
+        release = _get_target_instance(target, config, Project)
+        assert release.install_dir == expected_install_dir
+
+
+def test_jenkins_hack_install_dir_for_dependencies():
+    # When building gdb, we should expect the gmp and mpfr projects to install to the same prefix,
+    # even if they are not explicitly built (not in config.targets).
+    args = [
+        "--output-root=/tmp/tarball",
+        "--sysroot-install-dir-targets=gmp-riscv64-hybrid mpfr-riscv64-hybrid",
+        "--enable-hybrid-targets",
+        "gdb-riscv64-hybrid",
+    ]
+    config = _parse_arguments(args)
+    with jenkins_override_install_dirs_hack(config, Path("/prefix")):
+        gmp = _get_target_instance("gmp-riscv64-hybrid", config, Project)
+        assert gmp.install_dir == Path("/tmp/tarball/prefix")
+        assert gmp.destdir == Path("/tmp/tarball")
+        assert gmp.install_prefix == Path("/prefix")
+
+        mpfr = _get_target_instance("mpfr-riscv64-hybrid", config, Project)
+        assert mpfr.install_dir == Path("/tmp/tarball/prefix")
+        assert mpfr.destdir == Path("/tmp/tarball")
+        assert mpfr.install_prefix == Path("/prefix")
 
 
 def test_host_prefixes_and_install_dir():

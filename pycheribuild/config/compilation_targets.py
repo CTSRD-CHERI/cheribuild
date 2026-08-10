@@ -191,6 +191,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return self._compiler_dir / "ld.lld"
 
     @property
+    def objcopy(self) -> Path:
+        return self._compiler_dir / "objcopy"
+
+    @property
     def ar(self) -> Path:
         return self._compiler_dir / "llvm-ar"
 
@@ -408,7 +412,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         xtarget = self.target.get_rootfs_target()
         # We don't want to call setup() yet on the FreeBSD instance (not needed to get the compiler)
         # noinspection PyProtectedMember
-        fbsd = self._get_rootfs_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
+        fbsd = self._get_sdk_root_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
         configured_path = fbsd.build_toolchain_root_dir  # pytype: disable=attribute-error
         if configured_path is None:
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
@@ -439,6 +443,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool):
+        assert not target.is_nocpu()
         common_suffix = "-unknown-freebsd"
         if include_version:
             common_suffix += str(cls.FREEBSD_VERSION)
@@ -514,6 +519,11 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("freebsd", xtarget)
 
+    def _get_sdk_root_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        if xtarget.is_nocpu():
+            return SimpleProject.get_class_for_target_name("freebsd-universe", xtarget)
+        return self._get_rootfs_class(xtarget)
+
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run-freebsd", xtarget, caller.config, caller)
         return typing.cast(LaunchFreeBSDInterface, result)
@@ -546,7 +556,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         rootfs_xtarget = xtarget.get_rootfs_target()
         from ..qemu_utils import QemuOptions
 
-        qemu_options = QemuOptions(rootfs_xtarget, riscv_cheri_isa=self.config.riscv_cheri_isa)
+        qemu_options = QemuOptions(rootfs_xtarget, config=self.config)
         run_instance: LaunchFreeBSDInterface = self._get_run_project(rootfs_xtarget, self.project)
         if rootfs_xtarget.cpu_architecture not in (
             CPUArchitecture.MIPS64,
@@ -757,6 +767,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("cheribsd", xtarget)
+
+    def _get_sdk_root_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        if xtarget.is_nocpu():
+            return SimpleProject.get_class_for_target_name("cheribsd-universe", xtarget)
+        return self._get_rootfs_class(xtarget)
 
     def cheribsd_version(self) -> "Optional[int]":
         return sys_param_h_cheribsd_version(self.sysroot_dir)
@@ -1690,7 +1705,7 @@ class CompilationTargets(BasicCompilationTargets):
     )
     UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
     CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
-    MORELLO_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
+    MORELLO_LINUX_AARCH64 = CrossCompileTarget("legacy-aarch64", CPUArchitecture.AARCH64, MorelloLinuxTargetInfo)
     CHERI_LINUX_MORELLO_PURECAP = CrossCompileTarget(
         "morello-purecap",
         CPUArchitecture.AARCH64,
@@ -1699,8 +1714,12 @@ class CompilationTargets(BasicCompilationTargets):
         check_conflict_with=CHERI_LINUX_AARCH64,
         non_cheri_target=CHERI_LINUX_AARCH64,
     )
+    # This target is kept for historical reasons as Morello Linux (from Arm) was the first Linux kernel
+    # and target that added CHERI support. CHERI-Linux (from CHERI Alliance) has built on top of Morello
+    # Linux to include more features, targets (RISC-V), and is the currently active project and should
+    # be used instead of the following target unless there is a good reason not to.
     MORELLO_LINUX_MORELLO_PURECAP = CrossCompileTarget(
-        "morello-purecap",
+        "legacy-morello-purecap",
         CPUArchitecture.AARCH64,
         MorelloLinuxTargetInfo,
         is_cheri_purecap=True,
@@ -1714,6 +1733,12 @@ class CompilationTargets(BasicCompilationTargets):
         CHERI_LINUX_MORELLO_PURECAP,
     )
     ALL_MORELLO_LINUX_TARGETS = (MORELLO_LINUX_MORELLO_PURECAP, MORELLO_LINUX_AARCH64)
+    ALL_CHERI_AND_MORELLO_LINUX_TARGETS = (*ALL_CHERI_LINUX_TARGETS, *ALL_MORELLO_LINUX_TARGETS)
+    ALL_LINUX_PURECAP_TARGETS = (
+        CHERI_LINUX_RISCV64_PURECAP_093,
+        CHERI_LINUX_MORELLO_PURECAP,
+        MORELLO_LINUX_MORELLO_PURECAP,
+    )
 
     # GCC-based Linux targets (only to be used for the linux-kernel classes for now!)
     # In the future we may want to allow using it for other targets as well, but for now
@@ -1768,6 +1793,10 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = (
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
     )
+
+    # Special targets for use in freebsd/cheribsd-universe
+    CHERIBSD_NOCPU = CrossCompileTarget("nocpu", CPUArchitecture.NOCPU, CheriBSDTargetInfo)
+    FREEBSD_NOCPU = CrossCompileTarget("nocpu", CPUArchitecture.NOCPU, FreeBSDTargetInfo)
 
     @staticmethod
     def _dump_cheribsd_target_relations() -> None:

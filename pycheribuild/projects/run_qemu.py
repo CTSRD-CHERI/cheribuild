@@ -234,9 +234,7 @@ class LaunchQEMUBase(SimpleProject):
         self._project_specific_options = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(
-            self.crosscompile_target,
-            want_debugger=self.config.wait_for_debugger,
-            riscv_cheri_isa=self.config.riscv_cheri_isa,
+            self.crosscompile_target, want_debugger=self.config.wait_for_debugger, config=self.config
         )
         self.qemu_user_networking = True
         self.rootfs_path: Optional[Path] = None
@@ -485,7 +483,7 @@ class LaunchQEMUBase(SimpleProject):
         have_9pfs_support = qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = (
-            self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.find_smbd_binary(self.config).exists()
+            self.chosen_qemu.can_provide_src_via_smb and BuildQEMU.guessed_smbd_path(self.config).exists()
         )
 
         def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):
@@ -505,10 +503,20 @@ class LaunchQEMUBase(SimpleProject):
                 else:
                     share_name = f"qemu{smb_dir_count}"
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
-                guest_cmd = coloured(
-                    AnsiColour.yellow,
-                    f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name} {target}",
-                )
+                guest_cmd = ""
+                if self.target_info.is_linux():
+                    # SMB requires a kernel module enabled (CONFIG_CIFS), and on Debian a userspace package
+                    # installed (e.g. apt install cifs-utils). CONFIG_CIFS is enabled by the linux-kernel
+                    # cheribuild target.
+                    guest_cmd = coloured(
+                        AnsiColour.yellow,
+                        f"mkdir -p {target} && mount -t cifs //10.0.2.4/{share_name} {target} -o guest,vers=3.0",
+                    )
+                else:
+                    guest_cmd = coloured(
+                        AnsiColour.yellow,
+                        f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name} {target}",
+                    )
                 self.info(
                     "Providing ",
                     coloured(AnsiColour.green, str(directory)),
@@ -520,16 +528,25 @@ class LaunchQEMUBase(SimpleProject):
             if have_9pfs_support:
                 # Also provide it via virtfs:
                 ro = ",readonly=on" if readonly else ""
+                guest_cmd = ""
                 virtfs_args.append("-virtfs")
                 virtfs_args.append(
                     f"local,id=virtfs{smb_dir_count},mount_tag={share_name},path={directory},"
                     f"security_model=mapped-xattr{ro}"
                 )
-                guest_cmd = coloured(
-                    AnsiColour.yellow,
-                    f"mkdir -p {target} && kldload -n p9fs virtio_p9fs && "
-                    f"mount -t p9fs -o trans=virtio{',ro' if readonly else ''} {share_name} {target}",
-                )
+                if self.target_info.is_linux():
+                    # 9P requires a kernel modules/configs enabled (CONFIG_9P_FS, and CONFIG_NET_9P_*) which are
+                    # enabled by default for the linux-kernel cheribuild target.
+                    guest_cmd = coloured(
+                        AnsiColour.yellow,
+                        f"mkdir -p {target} && mount -t 9p -o trans=virtio,version=9p2000.L {share_name} {target}",
+                    )
+                else:
+                    guest_cmd = coloured(
+                        AnsiColour.yellow,
+                        f"mkdir -p {target} && kldload -n p9fs virtio_p9fs && "
+                        f"mount -t p9fs -o trans=virtio{',ro' if readonly else ''} {share_name} {target}",
+                    )
                 self.info(
                     "Providing ",
                     coloured(AnsiColour.green, str(directory)),
@@ -994,10 +1011,8 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     # XXX: Existing code isn't ready to run these but we want to support building them
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
-        return tuple(
-            set(super().supported_architectures())
-            - {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
-        )
+        exclude = {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
+        return tuple(x for x in super().supported_architectures() if x not in exclude)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

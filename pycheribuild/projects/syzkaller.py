@@ -221,7 +221,7 @@ class RunSyzkaller(SimpleProject):
                 # Run in debug mode
                 vm_type = "none"
 
-            qemu_opts = QemuOptions(self.crosscompile_target, riscv_cheri_isa=self.config.riscv_cheri_isa)
+            qemu_opts = QemuOptions(self.crosscompile_target, config=self.config)
             qemu_args = [*qemu_opts.machine_flags, "-device", "virtio-rng-pci", "-D", "syz-trace.log"]
             template = {
                 "name": "cheribsd-n64",

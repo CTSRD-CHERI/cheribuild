@@ -39,7 +39,7 @@ from typing import ClassVar, Optional, final
 
 from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
-from ..processutils import CompilerInfo, get_compiler_info
+from ..processutils import CompilerInfo, cached_get_homebrew_prefix, get_compiler_info
 from ..utils import OSInfo, fatal_error, status_update, warning_message
 
 __all__ = [
@@ -67,6 +67,7 @@ class CPUArchitecture(Enum):
     RISCV32 = "riscv32"
     RISCV64 = "riscv64"
     X86_64 = "x86_64"
+    NOCPU = "nocpu"
 
     def word_bits(self) -> int:
         mapping = {
@@ -87,6 +88,7 @@ class CPUArchitecture(Enum):
         return self.word_bits() == 64
 
     def as_meson_cpu_family(self) -> str:
+        assert self is not CPUArchitecture.NOCPU
         # https://mesonbuild.com/Reference-tables.html#cpu-families
         if self is CPUArchitecture.I386:
             return "x86"
@@ -96,6 +98,7 @@ class CPUArchitecture(Enum):
         return str(self.value)
 
     def endianess(self) -> str:
+        assert self is not CPUArchitecture.NOCPU
         # Meson expects us to pass this manually... Why not query the compiler???
         if self is CPUArchitecture.MIPS64:
             return "big"
@@ -628,6 +631,13 @@ class TargetInfo(ABC):
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clang_cpp_path
 
+    @staticmethod
+    def host_linker(config: CheriConfig) -> Path:
+        if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
+            # SDK clang doesn't work for native builds on macos
+            return config.cheri_sdk_bindir / "ld.lld"
+        return config.lld_path
+
     def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
         """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
         return [
@@ -799,7 +809,12 @@ class NativeTargetInfo(TargetInfo):
         # NB: We don't want to look in this directory when building forced hybrid targets such as GDB:
         if _is_native_purecap() and not self.target.is_cheri_purecap():
             return []
-        return self.pkgconfig_candidates(self.config.other_tools_dir)
+        result = self.pkgconfig_candidates(self.config.other_tools_dir)
+        if self.is_macos():
+            prefix = cached_get_homebrew_prefix(None, self.config)
+            if prefix is not None:
+                result.extend(self.pkgconfig_candidates(prefix))
+        return result
 
     def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
         return [config.other_tools_dir]
@@ -1050,6 +1065,9 @@ class CrossCompileTarget:
         return True
 
     # Querying the CPU architecture:
+    def is_nocpu(self, include_purecap: Optional[bool] = None) -> bool:
+        return self._check_arch(CPUArchitecture.NOCPU, include_purecap)
+
     def is_mips(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.MIPS64, include_purecap)
 
