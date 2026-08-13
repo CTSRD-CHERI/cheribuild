@@ -13,7 +13,7 @@ jobs:
     build-docker:
         strategy:
             matrix:
-                image: [ 'python:3.10', 'python:3.12', 'python:latest', 'ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'ubuntu:latest' ]
+                image: [ 'python:3.9.6', 'python:3.12', 'python:latest', 'ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'ubuntu:latest' ]
         runs-on: ubuntu-latest
         container:
           image: ${{ matrix.image }}
