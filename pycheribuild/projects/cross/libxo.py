@@ -69,6 +69,11 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         self.CFLAGS.append(str(self.build_dir / "libbsd-workaround"))
 
     def configure(self, **kwargs):
+        # setup.sh does not re-run autoreconf if the 'configure' file exists,
+        # which creates problems when switching between branches and tags.
+        if self.configure_command is not None and self.configure_command.exists():
+            self.delete_file(self.configure_command)
+
         self.run_shell_script("sh bin/setup.sh", shell="sh", cwd=self.source_dir)
         self.makedirs(self.build_dir / "libbsd-workaround/sys")
         self.create_symlink(
