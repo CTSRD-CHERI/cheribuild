@@ -38,7 +38,7 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         # Version 2.0 treats failing libint- and msgfmt-related
         # tests performed by configure as errors. As a
         # temporary workaround, stay with the preceding version.
-        default_branch="1.7.5",
+        force_tag="1.7.5",
     )
 
     @classproperty
