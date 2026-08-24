@@ -1309,7 +1309,7 @@ def cheribsd_version_dependent_flags(cheribsd_version: "Optional[int]", xtarget:
         return _cheribsd_morello_version_dependent_flags(cheribsd_version, xtarget.is_cheri_purecap())
     elif xtarget.is_riscv(include_purecap=True):
         result = []
-        if xtarget.is_cheri_purecap() and cheribsd_version >= 20260417:
+        if xtarget.is_cheri_purecap() and cheribsd_version >= 20260206:
             result.append("-cheri-tgot-tls")  # New TLS ABI
         return result
     raise ValueError("Unsupported architecture")
