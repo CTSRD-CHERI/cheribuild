@@ -187,6 +187,7 @@ class GitRepository(SourceRepository):
         old_urls: "Optional[list[str]]" = None,
         default_branch: "Optional[str]" = None,
         force_branch: bool = False,
+        force_tag: Optional[str] = None,
         temporary_url_override: "Optional[str]" = None,
         url_override_reason: "typing.Any" = None,
         per_target_branches: "Optional[dict[CrossCompileTarget, TargetBranchInfo]]" = None,
@@ -205,6 +206,7 @@ class GitRepository(SourceRepository):
             self.url = url
         self._default_branch = default_branch
         self.force_branch = force_branch
+        self.force_tag = force_tag
         if per_target_branches is None:
             per_target_branches = dict()
         self.per_target_branches = per_target_branches
@@ -419,7 +421,11 @@ class GitRepository(SourceRepository):
                 clone_cmd.extend(["--depth", "1", "--no-single-branch"])
             if not skip_submodules:
                 clone_cmd.append("--recurse-submodules")
-            clone_branch = self.get_default_branch(current_project, include_per_target=False)
+            if self.force_tag:
+                # --branch supports tags since at least git 2.0.5
+                clone_branch = self.force_tag
+            else:
+                clone_branch = self.get_default_branch(current_project, include_per_target=False)
             if clone_branch:
                 clone_cmd += ["--branch", clone_branch]
             current_project.run_cmd([*clone_cmd, self.url, base_project_source_dir], cwd="/")
@@ -879,6 +885,34 @@ class GitRepository(SourceRepository):
         rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
         current_project.run_cmd([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
 
+    @staticmethod
+    def is_target_tag(current_project: "Project", src_dir: Path, tag: str):
+        desc = current_project.run_cmd(
+            ["git", "describe", "--exact-match", "--tags", "HEAD"],
+            allow_unexpected_returncode=True,
+            capture_output=True,
+            capture_error=True,
+            cwd=src_dir,
+            run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+        )
+        if desc.returncode == 0 and desc.stdout.decode("utf-8").strip() == tag:
+            return True
+        return False
+
+    def _handle_tag_switch(self, current_project: "Project", src_dir: Path):
+        # It is possible to switch from a tag to a branch by setting 'default_branch'
+        # and 'force_branch'. The logic for this is implemented by _handle_branch_switch().
+
+        if self.force_tag and self.is_target_tag(current_project, src_dir, self.force_tag):
+            return
+
+        if not current_project.query_yes_no("Update to correct tag?"):
+            return
+
+        if self.force_tag:
+            current_project.run_cmd(["git", "fetch", "--tags"], cwd=src_dir)
+            current_project.run_cmd(["git", "checkout", self.force_tag], cwd=src_dir)
+
     def update(
         self,
         current_project: "Project",
@@ -905,6 +939,8 @@ class GitRepository(SourceRepository):
         # Handle forced branches before fetching, so we don't try to fetch from a broken
         # remote if we are about to switch branches anyway.
         self._handle_branch_switch(current_project, src_dir)
+
+        self._handle_tag_switch(current_project, src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.

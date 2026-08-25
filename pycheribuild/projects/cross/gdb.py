@@ -317,8 +317,12 @@ class BuildGDB(BuildGDBBase):
     def install(self, **kwargs):
         super().install(**kwargs)
         # Always install gdb as /usr/local/bin/gdb, so it's in $PATH
-        if not self.compiling_for_host() and self.crosscompile_target == get_gdb_xtarget(
-            self.crosscompile_target, self.config
+        # NB: Only CheriBSD uses /usr/local/<arch>, FreeBSD uses /usr/local,
+        # so don't want to replace /usr/local/bin/gdb with a symlink to itself.
+        if (
+            not self.compiling_for_host()
+            and self.crosscompile_target == get_gdb_xtarget(self.crosscompile_target, self.config)
+            and self.real_install_root_dir != self.rootfs_dir / "usr/local"
         ):
             self.makedirs(self.rootfs_dir / "usr/local/bin")
             self.create_symlink(self.install_prefix / "bin/gdb", self.rootfs_dir / "usr/local/bin/gdb", relative=False)

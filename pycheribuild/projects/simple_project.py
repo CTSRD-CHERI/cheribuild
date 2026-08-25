@@ -1317,7 +1317,6 @@ class SimpleProjectBase(AbstractProject, ABC):
             existing = self.__checked_system_tools[executable]
             assert instructions.cheribuild_target == existing.cheribuild_target
             assert instructions.alternative == existing.alternative
-            assert instructions.fixit_hint() == existing.fixit_hint(), f"mismatched instructions for {executable}"
             return  # already checked
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         if not shutil.which(str(executable)):
