@@ -1086,6 +1086,15 @@ class CrossCompileTarget:
             and self.riscv_cheri_isa(config) == RiscvCheriISA.EXPERIMENTAL_STD093
         )
 
+    def is_riscv_y(self, config: "CheriConfig") -> bool:
+        return (
+            self.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV32, CPUArchitecture.RISCV64])
+            and self.riscv_cheri_isa(config) == RiscvCheriISA.RVY
+        )
+
+    def is_riscv_y_or_cheri093(self, config: "CheriConfig") -> bool:
+        return self.is_riscv_y(config) or self.is_experimental_cheri093_std(config)
+
     def riscv_cheri_isa(self, config: "CheriConfig") -> RiscvCheriISA:
         assert self.is_riscv(include_purecap=True)
         return self._cheri_isa if self._cheri_isa else config.riscv_cheri_isa
