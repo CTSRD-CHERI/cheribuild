@@ -364,12 +364,18 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
     def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: Optional[bool]) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + "ima"
+        if xtarget.is_riscv_y(config):
+            base = "y"
+        else:
+            base = "i"
+        arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + base + "ma"
         if not softfloat:
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y(config):
+                arch_string += "zyhybrid_zylevels1b"
+            elif xtarget.is_experimental_cheri093_std(config):
                 arch_string += "zcherihybrid_zcherilevels"
             else:
                 arch_string += "xcheri"
