@@ -595,7 +595,9 @@ class BuildQEMU(BuildCheriQEMUBase):
         if xtarget.is_riscv(include_purecap=True):
             xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
             # Prefer the xcheri-suffixed binary (if it exists) to ensure backwards compatibility.
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y(config):
+                binary_name = f"qemu-system-riscv{xlen}y"
+            elif xtarget.is_experimental_cheri093_std(config):
                 binary_name = f"qemu-system-riscv{xlen}cheristd"
             elif (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
                 binary_name = f"qemu-system-riscv{xlen}xcheri"
