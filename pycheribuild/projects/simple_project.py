@@ -1209,7 +1209,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         name: str,
         *,
         element_type: "Union[type[T], Callable[[str], T]]" = str,
-        default: "Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
+        default: "Union[Optional[list[T]], ComputedDefaultValue[Optional[list[T]]]]" = None,
         **kwargs,
     ) -> "list[T]":
         return typing.cast(

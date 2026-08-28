@@ -191,6 +191,7 @@ class ConfigLoaderBase(typing.Generic[_ConfigType], ABC):
                         option_cls=option_cls,
                         replaceable=replaceable if fallback_replaceable is None else fallback_replaceable,
                         is_fallback=True,
+                        **kwargs,
                     )
         option = option_cls(
             name, shortname, default, type, _owning_class, _loader=self, _fallback_names=_fallback_names, **kwargs
