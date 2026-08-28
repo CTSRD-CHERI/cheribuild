@@ -510,6 +510,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
         default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
         group=None,
         help_hidden=False,
+        # is_list: "Optional[bool]" = False,
         **kwargs,
     ) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
