@@ -102,7 +102,7 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
     target = "muslc"
     repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     def setup(self) -> None:
         if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):

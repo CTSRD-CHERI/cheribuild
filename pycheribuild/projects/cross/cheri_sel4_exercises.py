@@ -55,7 +55,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     supported_exercises = [
         "buffer-overflow-stack",

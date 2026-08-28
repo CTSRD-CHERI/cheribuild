@@ -456,7 +456,7 @@ class Project(SimpleProject):
         help="Override default source directory",
     )
     configure_command: Optional[Path] = None
-    supported_riscv_cheri_standard: Optional[RiscvCheriISA] = None
+    supported_riscv_cheri_standard: Optional[list[RiscvCheriISA]] = None
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -1664,12 +1664,14 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if (
             self.supported_riscv_cheri_standard is not None
             and self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64, CPUArchitecture.RISCV32])
-            and self.crosscompile_target.riscv_cheri_isa(self.config) != self.supported_riscv_cheri_standard
+            and self.crosscompile_target.riscv_cheri_isa(self.config) not in self.supported_riscv_cheri_standard
         ):
+            supported = [s.name.lower() for s in self.supported_riscv_cheri_standard]
             self.fatal(
                 f"Project {self.target} is not compatible with the "
                 f"{self.crosscompile_target.riscv_cheri_isa(self.config)} RISC-V-CHERI variant. "
-                f"Try building with --riscv-cheri-isa={self.supported_riscv_cheri_standard.name.lower()}"
+                f"Supported CHERI standards: {supported}. "
+                f"Try building with --riscv-cheri-isa={supported[0]}"
             )
 
         install_dir_kind = self.get_default_install_dir_kind()

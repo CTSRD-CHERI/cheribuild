@@ -59,7 +59,7 @@ class BuildCheriseL4(CrossCompileProject):
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     def compile(self, **kwargs):
         pass
@@ -86,7 +86,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -328,7 +328,7 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
     forward_ssh_port = False
     qemu_user_networking = False
     _uses_disk_image = False

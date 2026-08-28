@@ -64,7 +64,7 @@ class BuildUBoot(Project):
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
+    supported_riscv_cheri_standard = [RiscvCheriISA.V9]  # Assembly code does not support standard draft
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     _default_install_dir_fn: ComputedDefaultValue[Path] = ComputedDefaultValue(
@@ -200,7 +200,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     @classmethod
     def setup_config_options(cls, **kwargs):

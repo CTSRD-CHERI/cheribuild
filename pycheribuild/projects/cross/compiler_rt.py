@@ -125,7 +125,7 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     llvm_project = BuildCheriLLVM
-    supported_riscv_cheri_standard = RiscvCheriISA.V9
+    supported_riscv_cheri_standard = [RiscvCheriISA.V9]
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt-builtins"
     _check_install_dir_conflict = False
@@ -258,7 +258,7 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "cheri-std093-compiler-rt-builtins"
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
     # Only use this target for the 0.9.3 RISC-V targets.
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
