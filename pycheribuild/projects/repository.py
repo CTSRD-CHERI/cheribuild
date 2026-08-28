@@ -940,7 +940,8 @@ class GitRepository(SourceRepository):
         # remote if we are about to switch branches anyway.
         self._handle_branch_switch(current_project, src_dir)
 
-        self._handle_tag_switch(current_project, src_dir)
+        if self.force_tag:
+            self._handle_tag_switch(current_project, src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
