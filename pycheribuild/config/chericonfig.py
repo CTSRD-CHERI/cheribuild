@@ -126,6 +126,7 @@ class AArch64FloatSimdOptions(Enum):
 class RiscvCheriISA(Enum):
     V9 = "v9"
     EXPERIMENTAL_STD093 = "experimental-std093"
+    RVY = "rvy"
 
 
 class RiscvFloatAbi(Enum):
