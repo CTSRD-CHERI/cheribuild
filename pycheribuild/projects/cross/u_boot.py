@@ -218,3 +218,22 @@ class BuildCheriAllianceUBoot(BuildUBoot):
             return "qemu-riscv64_smode_defconfig"
 
         assert False, "unhandled target"
+
+
+class BuildMochaUBoot(BuildCheriAllianceUBoot):
+    target = "mocha-u-boot"
+    repository = GitRepository("https://github.com/lowRISC/u-boot.git", default_branch="mocha-mvp2")
+
+    def default_defconfig(self) -> str:
+        return "lowrisc_mocha_cheri_smode_defconfig"
+
+
+class BuildCVA6CheriUBoot(BuildCheriAllianceUBoot):
+    target = "cva6cheri-u-boot"
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/u-boot.git", default_branch="capltd-cheri-riscv-2026.04"
+    )
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,)
+
+    def default_defconfig(self) -> str:
+        return "capltd_cva6_cheri_genesys2_defconfig"
