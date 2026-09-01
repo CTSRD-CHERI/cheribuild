@@ -923,8 +923,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # FIXME: still needed?
                 result["WITH_CHERI"] = "1"
             else:
-                if self.crosscompile_target.is_experimental_cheri093_std(self.config):
+                if self.crosscompile_target.is_riscv_y(self.config):
                     result["TARGET_CPUTYPE"] = "rvy"
+                elif self.crosscompile_target.is_experimental_cheri093_std(self.config):
+                    result["TARGET_CPUTYPE"] = "rvy"
+                    result["CHERI_RISCV_STD_093"] = "1"
                 else:
                     result["TARGET_CPUTYPE"] = "cheri"
                 if self.compiling_for_mips(include_purecap=True):
