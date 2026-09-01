@@ -2055,6 +2055,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         elif self.auto_var_init is AutoVarInit.PATTERN:
             self.make_args.set_with_options(INIT_ALL_PATTERN=True)
 
+        if self.crosscompile_target.is_riscv_y(self.config):
+            # Hybrid compat not supported yet
+            self.make_args.set_with_options(LIB64=False)
+
     def compile(self, **kwargs) -> None:
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
