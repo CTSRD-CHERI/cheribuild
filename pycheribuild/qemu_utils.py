@@ -70,6 +70,7 @@ class QemuOptions:
             self.machine_flags = ["-M", "virt"]
             if config is not None and xtarget.is_riscv_y(config):
                 self._qemu_arch_suffix = self._qemu_arch_suffix = f"riscv{xlen}y"
+                self.machine_flags.extend(["-cpu", "rv64,Svyrg=true,Zylevels1=true"])
             elif config is not None and xtarget.is_experimental_cheri093_std(config):
                 self._qemu_arch_suffix = self._qemu_arch_suffix = f"riscv{xlen}cheristd"
                 cpu_model = "rv32" if xlen == 32 else "rv64,cheri_pte=on,cheri_levels=2"
