@@ -340,7 +340,7 @@ class RISCVYKernelConfigFactory(KernelConfigFactory):
         return configs
 
 
-class RISCVStdKernelConfigFactory(KernelConfigFactory):
+class RISCVStdKernelConfigFactory(RISCVYKernelConfigFactory):
     def get_kabi_name(self, kernel_abi) -> Optional[str]:
         if kernel_abi == KernelABI.HYBRID:
             return "RVY-093"
@@ -480,16 +480,20 @@ class CheriBSDConfigTable:
         """
         Return an unique default configuration for the given platform/kernelABI
         with optional extra filters.
-        It is a fatal failure if 0 or more than one configurations exist.
+        If no default exists, the build will fail, but the error is delayed until the
+        target is actually used.
+        It is a fatal failure if more than one configurations exist.
         """
         configs = cls.get_configs(
             config, xtarget, platform=platform, kernel_abi=kernel_abi, default=True, **filter_kwargs
         )
-        assert len(configs) != 0, (
-            f"No matching default kernel configuration for xtarget={xtarget}, "
-            f"platform={platform.name}, kernel_abi={kernel_abi.name}, "
-            f"filter_kwargs={filter_kwargs}"
-        )
+        if len(configs) == 0:
+            raise ValueError(
+                f"No matching default kernel configuration for xtarget={xtarget}, "
+                f"platform={platform.name}, kernel_abi={kernel_abi.name}, "
+                f"filter_kwargs={filter_kwargs}"
+            )
+
         assert len(configs) == 1, (
             f"Too many default kernel configurations {configs} for xtarget={xtarget}, "
             f"platform={platform.name}, kernel_abi={kernel_abi.name}, "
@@ -763,10 +767,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
     build_toolchain: "ClassVar[CompilerType]" = CompilerType.DEFAULT_COMPILER
     can_build_with_system_clang: bool = True  # Not true for CheriBSD
 
-    # cheribsd-mfs-root-kernel doesn't have a default kernel-config, instead
-    # building a set, but kernel-config should still override that.
-    has_default_buildkernel_kernel_config: bool = True
-
     @classmethod
     def get_rootfs_dir(cls, caller, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls.get_install_dir(caller, cross_target)
@@ -791,7 +791,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 extra_fallback_config_names=["kernel-config"],
                 default=ComputedDefaultValue(
                     function=lambda _, p: (
-                        [p.default_kernel_config()] if p.has_default_buildkernel_kernel_config else []
+                        [p.default_kernel_config()] if p.has_default_buildkernel_kernel_config() else []
                     ),
                     as_string="target-dependent, usually GENERIC",
                 ),
@@ -890,6 +890,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return ConfigPlatform.FVP
         else:
             return ConfigPlatform.QEMU
+
+    # cheribsd-mfs-root-kernel doesn't have a default kernel-config, instead
+    # building a set, but kernel-config should still override that.
+    def has_default_buildkernel_kernel_config(self) -> bool:
+        try:
+            self.default_kernel_config()
+            return True
+        except ValueError:
+            return False
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
@@ -1063,7 +1072,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return
 
         self.kernel_toolchain_exists: bool = False
-        if self.has_default_buildkernel_kernel_config:
+        if self.has_default_buildkernel_kernel_config():
             assert self.kernel_config
         self.make_args.set(**self.arch_build_flags)
         self.extra_kernels: "list[str]" = []
@@ -1864,8 +1873,10 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     # NB: Full CHERI-MIPS purecap kernel support was never merged
     purecap_kernel_targets: "tuple[CrossCompileTarget, ...]" = (
-        CompilationTargets.CHERIBSD_RISCV_HYBRID,
-        CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP,
+        CompilationTargets.CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        CompilationTargets.CHERIBSD_RISCV_Y_PURECAP,
         CompilationTargets.CHERIBSD_MORELLO_HYBRID,
         CompilationTargets.CHERIBSD_MORELLO_PURECAP,
     )
@@ -2040,7 +2051,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         # Everything that is not the default kernconf
         option = inspect.getattr_static(self, "kernel_config")
         assert isinstance(option, ConfigOptionHandle)
-        if self.has_default_buildkernel_kernel_config and not option.is_default_value:
+        if self.has_default_buildkernel_kernel_config() and not option.is_default_value:
             return []
         configs = self._get_all_kernel_configs()
         default_kernconf = self.default_kernel_config()
@@ -2097,8 +2108,6 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
     )
-    # This exists specifically for this target
-    has_default_buildkernel_kernel_config: bool = False
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
     _config_inherits_from: "type[BuildCHERIBSD]" = BuildCHERIBSD
     _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildCHERIBSD)
@@ -2118,6 +2127,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(kernel_only_target=True, **kwargs)
+
+    def has_default_buildkernel_kernel_config(self) -> bool:
+        return False
 
     def kernconf_list(self) -> "list[str]":
         return self.get_kernel_configs(None)

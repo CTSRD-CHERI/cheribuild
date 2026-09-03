@@ -60,9 +60,9 @@ class BuildUBoot(Project):
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
-        CompilationTargets.FREESTANDING_RISCV64_HYBRID,
+        CompilationTargets.FREESTANDING_RISCV64_XCHERI_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
-        # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
+        # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP
     )
     supported_riscv_cheri_standard = [RiscvCheriISA.V9]  # Assembly code does not support standard draft
     make_kind = MakeCommandKind.GnuMake
@@ -198,7 +198,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
     )
     supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 

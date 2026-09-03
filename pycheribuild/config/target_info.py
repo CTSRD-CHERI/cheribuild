@@ -889,7 +889,7 @@ class CrossCompileTarget:
         non_cheri_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
         hybrid_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
         purecap_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None,
-        _cheri_isa: Optional[RiscvCheriISA] = None,
+        cheri_isa: Optional[RiscvCheriISA] = None,
     ) -> None:
         assert not arch_suffix.startswith("-"), arch_suffix
         assert not extra_target_suffix or extra_target_suffix.startswith("-"), extra_target_suffix
@@ -909,7 +909,7 @@ class CrossCompileTarget:
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
         self._is_cheri_hybrid = is_cheri_hybrid
-        self._cheri_isa = _cheri_isa
+        self._cheri_isa = cheri_isa
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self._rootfs_target = rootfs_target
@@ -933,6 +933,9 @@ class CrossCompileTarget:
         self._set_for(non_cheri_for_purecap_rootfs_target)
         self._set_for(hybrid_for_purecap_rootfs_target)
         self._set_for(purecap_for_hybrid_rootfs_target)
+
+        if self.is_riscv(include_purecap=True) and self.is_hybrid_or_purecap_cheri():
+            assert self._cheri_isa is not None, f"Missing CHERI ISA for target {arch_suffix}"
 
     def _set_from(self, other_target: "CrossCompileTarget") -> None:
         if self is other_target:
@@ -1094,7 +1097,7 @@ class CrossCompileTarget:
 
     def riscv_cheri_isa(self) -> Optional[RiscvCheriISA]:
         assert self.is_riscv(include_purecap=True)
-        return self._cheri_isa if self._cheri_isa else config.riscv_cheri_isa
+        return self._cheri_isa
 
     def is_arm32(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.ARM32, include_purecap)
@@ -1209,6 +1212,8 @@ class CrossCompileTarget:
             result += " purecap"
         if self._is_cheri_hybrid:
             result += " hybrid"
+        if self._cheri_isa:
+            result += " " + self._cheri_isa.value
         result += ")"
         if self._rootfs_target is not None:
             result += " for "

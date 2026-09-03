@@ -388,13 +388,6 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         self.debug_output = loader.add_commandline_only_bool_option(
             "debug-output", "vv", help="Extremely verbose output"
         )
-        self.riscv_cheri_isa = loader.add_option(
-            "riscv-cheri-isa",
-            default=RiscvCheriISA.V9,
-            type=RiscvCheriISA,
-            group=loader.cross_compile_options_group,
-            help="The CHERI ISA to target for RISC-V code",
-        )
         self.mips_float_abi = loader.add_option(
             "mips-float-abi",
             default=MipsFloatAbi.SOFT,

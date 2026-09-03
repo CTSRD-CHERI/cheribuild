@@ -339,7 +339,7 @@ class BuildCheriAllianceGDB(BuildGDBBase):
     _supported_architectures = (
         *CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
         *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
         CompilationTargets.NATIVE_NON_PURECAP,
     )

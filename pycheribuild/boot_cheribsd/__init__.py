@@ -68,8 +68,8 @@ SUPPORTED_ARCHITECTURES = {
     x.generic_target_suffix: x
     for x in (
         CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID,
-        CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP,
         CompilationTargets.CHERIBSD_X86_64,
         CompilationTargets.CHERIBSD_AARCH64,
         CompilationTargets.CHERIBSD_MORELLO_HYBRID,

@@ -147,7 +147,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if target_info.is_linux() and not target_info.is_native():
             return DefaultInstallDir.ROOTFS_LOCALBASE
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
-        if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
+        if self._xtarget is CompilationTargets.RTEMS_RISCV64_XCHERI_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
         elif self._xtarget is not None and target_info.is_baremetal():
             # Conflicting file names for RISC-V non-CHERI,hybrid, and purecap -> install to prefixed directory
@@ -262,9 +262,9 @@ class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     # Only use this target for the 0.9.3 RISC-V targets.
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
         CompilationTargets.FREESTANDING_RISCV32,
-        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV32_XCHERI_PURECAP,
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
     )
     llvm_project = BuildCheriAllianceLLVM

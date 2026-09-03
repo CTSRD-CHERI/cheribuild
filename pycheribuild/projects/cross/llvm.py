@@ -844,7 +844,7 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":
         triples = [
             CheriBSDTargetInfo.triple_for_target(
-                CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+                CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
                 self.config,
                 include_version=False,
             ),

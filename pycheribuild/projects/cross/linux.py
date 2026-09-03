@@ -285,7 +285,7 @@ class BuildCheriAllianceLinux(BuildLinux):
         CompilationTargets.LINUX_KERNEL_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
-    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
+    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_ZCHERI093_PURECAP
 
     # Override default defconfig for CHERI-enabled kernels
     def default_defconfig(self) -> str:
@@ -367,7 +367,7 @@ class LaunchCheriAllianceLinux(LaunchLinuxBase):
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+            result += ("cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap",)
         return *result, "linux-kernel", "busybox"
 
 
@@ -464,7 +464,7 @@ class LaunchCheriAllianceLinuxDebian(LaunchQEMUBase):
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+            result += ("cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap",)
         return *result, "linux-kernel"
 
 
