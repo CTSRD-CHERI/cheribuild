@@ -68,9 +68,9 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     custom_payload: Optional[str] = None
     mem_start = "0x80000000"
     _supported_architectures = (
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV32_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV32_XCHERI_PURECAP,
         CompilationTargets.FREESTANDING_RISCV32,
     )
 
@@ -205,9 +205,9 @@ class BuildBBLNoPayload(BuildBBLBase):
     @classmethod
     def get_cheri_bios(cls, caller: SimpleProject, xtarget: CrossCompileTarget):
         if xtarget.is_riscv32():
-            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_PURECAP
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_XCHERI_PURECAP
         else:
-            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP
         return cls.get_instance(caller, cross_target=bios_xtarget)._qemu_fw_install_path()
 
     def _qemu_fw_install_path(self) -> Path:

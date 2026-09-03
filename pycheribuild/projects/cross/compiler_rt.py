@@ -34,7 +34,6 @@ from pathlib import Path
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from .llvm import BuildCheriAllianceLLVM, BuildCheriLLVM, BuildMorelloLLVM, BuildUpstreamLLVM
 from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
-from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import LinuxTargetInfoBase
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
@@ -125,7 +124,6 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     llvm_project = BuildCheriLLVM
-    supported_riscv_cheri_standard = RiscvCheriISA.V9
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt-builtins"
     _check_install_dir_conflict = False
@@ -135,7 +133,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     _supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
         + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
-        + CompilationTargets.ALL_FREESTANDING_TARGETS
+        + CompilationTargets.ALL_FREESTANDING_NO_CHERI_TARGETS
+        + CompilationTargets.ALL_FREESTANDING_MORELLO_TARGETS
+        + CompilationTargets.ALL_FREESTANDING_RISCV_XCHERI_TARGETS
         + CompilationTargets.ALL_NATIVE
     )
 
@@ -147,7 +147,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if target_info.is_linux() and not target_info.is_native():
             return DefaultInstallDir.ROOTFS_LOCALBASE
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
-        if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
+        if self._xtarget is CompilationTargets.RTEMS_RISCV64_XCHERI_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
         elif self._xtarget is not None and target_info.is_baremetal():
             # Conflicting file names for RISC-V non-CHERI,hybrid, and purecap -> install to prefixed directory
@@ -258,13 +258,12 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "cheri-std093-compiler-rt-builtins"
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
     # Only use this target for the 0.9.3 RISC-V targets.
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
         CompilationTargets.FREESTANDING_RISCV32,
-        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV32_ZCHERI093_PURECAP,
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
     )
     llvm_project = BuildCheriAllianceLLVM

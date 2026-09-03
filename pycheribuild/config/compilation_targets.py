@@ -132,7 +132,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         elif cls.uses_upstream_llvm:
             assert not xtarget.is_hybrid_or_purecap_cheri(), "Not supported with upstream LLVM"
             llvm_target = SimpleProject.get_class_for_target_name("upstream-llvm", None)
-        elif xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config) or cls.uses_alliance_llvm:
+        elif xtarget.is_riscv_y() or xtarget.is_experimental_cheri093_std() or cls.uses_alliance_llvm:
             # Use the CHERI Alliance compiler when building for RISCV CHERI or building
             # non-CHERI aarch64/riscv64 CHERI Alliance projects (that use the Alliance LLVM).
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
@@ -312,9 +312,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
             )
-            if xtarget.is_cheri_purecap() and (
-                xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config)
-            ):
+            if xtarget.is_cheri_purecap() and (xtarget.is_riscv_y() or xtarget.is_experimental_cheri093_std()):
                 # Necessary for library compartmentalisation ABI
                 result.extend(
                     [
@@ -366,7 +364,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
     def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: Optional[bool]) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        if xtarget.is_riscv_y(config):
+        if xtarget.is_riscv_y():
             base = "y"
         else:
             base = "i"
@@ -375,9 +373,9 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            if xtarget.is_riscv_y(config):
+            if xtarget.is_riscv_y():
                 arch_string += "zyhybrid_zylevels1b"
-            elif xtarget.is_experimental_cheri093_std(config):
+            elif xtarget.is_experimental_cheri093_std():
                 arch_string += "zcherihybrid_zcherilevels"
             else:
                 arch_string += "xcheri"
@@ -920,12 +918,11 @@ class CheriLinuxTargetInfo(LinuxTargetInfoBase):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.target.is_riscv_y(self.config):
+        if self.target.is_riscv_y():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_rvy_sdk_directory_name
-        elif self.target.is_experimental_cheri093_std(self.config):
-            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
-            assert False, "Not Reached"
+            # Deafult to zcheri sdk sysroot for no-cheri targets as well
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         return sysroot_dir / "linux" / self.target.get_rootfs_target().generic_arch_suffix
 
 
@@ -1175,9 +1172,9 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.target.is_riscv_y(self.config):
+        if self.target.is_riscv_y():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_rvy_sdk_directory_name
-        elif self.target.is_experimental_cheri093_std(self.config):
+        elif self.target.is_experimental_cheri093_std():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
@@ -1383,26 +1380,58 @@ def enable_hybrid_for_purecap_rootfs_targets() -> bool:
 
 class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)
-    CHERIBSD_RISCV_HYBRID = CrossCompileTarget(
+    CHERIBSD_RISCV_XCHERI_HYBRID = CrossCompileTarget(
         "riscv64-hybrid",
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_hybrid=True,
         non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    CHERIBSD_RISCV_PURECAP = CrossCompileTarget(
+    _CHERIBSD_RISCV_Y_HYBRID = CrossCompileTarget(  # Unsupported by toolchain
+        "riscv64y-hybrid",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        is_cheri_hybrid=True,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    _CHERIBSD_RISCV_ZCHERI093_HYBRID = CrossCompileTarget(  # Unsupported by toolchain
+        "riscv64zcheri093-hybrid",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        is_cheri_hybrid=True,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+    CHERIBSD_RISCV_Y_PURECAP = CrossCompileTarget(
+        "riscv64y-purecap",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        is_cheri_purecap=True,
+        hybrid_target=_CHERIBSD_RISCV_Y_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    CHERIBSD_RISCV_ZCHERI093_PURECAP = CrossCompileTarget(
+        "riscv64zcheri093-purecap",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        is_cheri_purecap=True,
+        hybrid_target=_CHERIBSD_RISCV_ZCHERI093_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+    CHERIBSD_RISCV_XCHERI_PURECAP = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_purecap=True,
-        hybrid_target=CHERIBSD_RISCV_HYBRID,
+        hybrid_target=CHERIBSD_RISCV_XCHERI_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
     CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS = CrossCompileTarget(
         "riscv64",
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         extra_target_suffix="-for-hybrid-rootfs",
-        rootfs_target=CHERIBSD_RISCV_HYBRID,
+        rootfs_target=CHERIBSD_RISCV_XCHERI_HYBRID,
         non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
     )
     CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ROOTFS = CrossCompileTarget(
@@ -1410,26 +1439,48 @@ class CompilationTargets(BasicCompilationTargets):
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         extra_target_suffix="-for-purecap-rootfs",
-        rootfs_target=CHERIBSD_RISCV_PURECAP,
+        rootfs_target=CHERIBSD_RISCV_XCHERI_PURECAP,
         non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
     )
-    CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(
+    CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(
         "riscv64-hybrid",
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         extra_target_suffix="-for-purecap-rootfs",
         is_cheri_hybrid=True,
-        rootfs_target=CHERIBSD_RISCV_PURECAP,
+        rootfs_target=CHERIBSD_RISCV_XCHERI_PURECAP,
         non_cheri_for_hybrid_rootfs_target=CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    CHERIBSD_RISCV_PURECAP_FOR_HYBRID_ROOTFS = CrossCompileTarget(
+    _CHERIBSD_RISCV_Y_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(  # Unsupported
+        "riscv64y-hybrid",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        extra_target_suffix="-for-purecap-rootfs",
+        is_cheri_hybrid=True,
+        rootfs_target=CHERIBSD_RISCV_Y_PURECAP,
+        purecap_target=CHERIBSD_RISCV_Y_PURECAP,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    _CHERIBSD_RISCV_ZCHERI093_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(  # Unsupported
+        "riscv64zcheri093-hybrid",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        extra_target_suffix="-for-purecap-rootfs",
+        is_cheri_hybrid=True,
+        rootfs_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        purecap_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+    CHERIBSD_RISCV_XCHERI_PURECAP_FOR_HYBRID_ROOTFS = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         extra_target_suffix="-for-hybrid-rootfs",
         is_cheri_purecap=True,
-        rootfs_target=CHERIBSD_RISCV_HYBRID,
-        hybrid_for_purecap_rootfs_target=CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
+        rootfs_target=CHERIBSD_RISCV_XCHERI_HYBRID,
+        hybrid_for_purecap_rootfs_target=CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
 
     CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
@@ -1497,11 +1548,12 @@ class CompilationTargets(BasicCompilationTargets):
         CheriOSTargetInfo,
         is_cheri_purecap=True,
     )
-    CHERIOS_RISCV_PURECAP = CrossCompileTarget(
+    CHERIOS_RISCV_XCHERI_PURECAP = CrossCompileTarget(
         "riscv64",
         CPUArchitecture.RISCV64,
         CheriOSTargetInfo,
         is_cheri_purecap=True,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
 
     # Baremetal targets
@@ -1514,19 +1566,21 @@ class CompilationTargets(BasicCompilationTargets):
         non_cheri_target=BAREMETAL_NEWLIB_MIPS64,
     )
     BAREMETAL_NEWLIB_RISCV32 = CrossCompileTarget("riscv32", CPUArchitecture.RISCV32, NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_RISCV32_HYBRID = CrossCompileTarget(
+    BAREMETAL_NEWLIB_RISCV32_XCHERI_HYBRID = CrossCompileTarget(
         "riscv32-hybrid",
         CPUArchitecture.RISCV32,
         NewlibBaremetalTargetInfo,
         is_cheri_hybrid=True,
         non_cheri_target=BAREMETAL_NEWLIB_RISCV32,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    BAREMETAL_NEWLIB_RISCV32_PURECAP = CrossCompileTarget(
+    BAREMETAL_NEWLIB_RISCV32_XCHERI_PURECAP = CrossCompileTarget(
         "riscv32-purecap",
         CPUArchitecture.RISCV32,
         NewlibBaremetalTargetInfo,
         is_cheri_purecap=True,
-        hybrid_target=BAREMETAL_NEWLIB_RISCV32_HYBRID,
+        hybrid_target=BAREMETAL_NEWLIB_RISCV32_XCHERI_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
     BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget(
         "riscv64",
@@ -1534,29 +1588,31 @@ class CompilationTargets(BasicCompilationTargets):
         NewlibBaremetalTargetInfo,
         check_conflict_with=BAREMETAL_NEWLIB_MIPS64,
     )
-    BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget(
+    BAREMETAL_NEWLIB_RISCV64_XCHERI_HYBRID = CrossCompileTarget(
         "riscv64-hybrid",
         CPUArchitecture.RISCV64,
         NewlibBaremetalTargetInfo,
         is_cheri_hybrid=True,
         non_cheri_target=BAREMETAL_NEWLIB_RISCV64,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget(
+    BAREMETAL_NEWLIB_RISCV64_XCHERI_PURECAP = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
         NewlibBaremetalTargetInfo,
         is_cheri_purecap=True,
-        hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID,
+        hybrid_target=BAREMETAL_NEWLIB_RISCV64_XCHERI_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
     ALL_NEWLIB_TARGETS = (
         BAREMETAL_NEWLIB_MIPS64,
         BAREMETAL_NEWLIB_MIPS64_PURECAP,
         BAREMETAL_NEWLIB_RISCV32,
-        BAREMETAL_NEWLIB_RISCV32_HYBRID,
-        BAREMETAL_NEWLIB_RISCV32_PURECAP,
+        BAREMETAL_NEWLIB_RISCV32_XCHERI_HYBRID,
+        BAREMETAL_NEWLIB_RISCV32_XCHERI_PURECAP,
         BAREMETAL_NEWLIB_RISCV64,
-        BAREMETAL_NEWLIB_RISCV64_HYBRID,
-        BAREMETAL_NEWLIB_RISCV64_PURECAP,
+        BAREMETAL_NEWLIB_RISCV64_XCHERI_HYBRID,
+        BAREMETAL_NEWLIB_RISCV64_XCHERI_PURECAP,
     )
     FREESTANDING_ARM32 = CrossCompileTarget("arm32", CPUArchitecture.ARM32, BaremetalFreestandingTargetInfo)
     FREESTANDING_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, BaremetalFreestandingTargetInfo)
@@ -1583,62 +1639,99 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_purecap=True,
     )
     FREESTANDING_RISCV32 = CrossCompileTarget("riscv32", CPUArchitecture.RISCV32, BaremetalFreestandingTargetInfo)
-    FREESTANDING_RISCV32_HYBRID = CrossCompileTarget(
+    FREESTANDING_RISCV32_XCHERI_HYBRID = CrossCompileTarget(
         "riscv32-hybrid",
         CPUArchitecture.RISCV32,
         BaremetalFreestandingTargetInfo,
         is_cheri_hybrid=True,
         non_cheri_target=FREESTANDING_RISCV32,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    FREESTANDING_RISCV32_PURECAP = CrossCompileTarget(
+    FREESTANDING_RISCV32_Y_PURECAP = CrossCompileTarget(
+        "riscv32y-purecap",
+        CPUArchitecture.RISCV32,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    FREESTANDING_RISCV32_ZCHERI093_PURECAP = CrossCompileTarget(
+        "riscv32zcheri093-purecap",
+        CPUArchitecture.RISCV32,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+    FREESTANDING_RISCV32_XCHERI_PURECAP = CrossCompileTarget(
         "riscv32-purecap",
         CPUArchitecture.RISCV32,
         BaremetalFreestandingTargetInfo,
         is_cheri_purecap=True,
-        hybrid_target=FREESTANDING_RISCV32_HYBRID,
-    )
-    FREESTANDING_RISCV32_PURECAP_093 = CrossCompileTarget(
-        "riscv32-purecap",
-        CPUArchitecture.RISCV32,
-        BaremetalFreestandingTargetInfo,
-        is_cheri_purecap=True,
-        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+        hybrid_target=FREESTANDING_RISCV32_XCHERI_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
     FREESTANDING_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, BaremetalFreestandingTargetInfo)
-    FREESTANDING_RISCV64_HYBRID = CrossCompileTarget(
+    FREESTANDING_RISCV64_XCHERI_HYBRID = CrossCompileTarget(
         "riscv64-hybrid",
         CPUArchitecture.RISCV64,
         BaremetalFreestandingTargetInfo,
         is_cheri_hybrid=True,
         non_cheri_target=FREESTANDING_RISCV64,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    FREESTANDING_RISCV64_PURECAP = CrossCompileTarget(
+    FREESTANDING_RISCV64_Y_PURECAP = CrossCompileTarget(
+        "riscv64y-purecap",
+        CPUArchitecture.RISCV64,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    FREESTANDING_RISCV64_ZCHERI093_PURECAP = CrossCompileTarget(
+        "riscv64zcheri093-purecap",
+        CPUArchitecture.RISCV64,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+    FREESTANDING_RISCV64_XCHERI_PURECAP = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
         BaremetalFreestandingTargetInfo,
         is_cheri_purecap=True,
-        hybrid_target=FREESTANDING_RISCV64_HYBRID,
+        hybrid_target=FREESTANDING_RISCV64_XCHERI_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
-    FREESTANDING_RISCV64_PURECAP_093 = CrossCompileTarget(
-        "riscv64-purecap",
-        CPUArchitecture.RISCV64,
-        BaremetalFreestandingTargetInfo,
-        is_cheri_purecap=True,
-        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
-    )
-    ALL_FREESTANDING_TARGETS = (
+    ALL_FREESTANDING_NO_CHERI_TARGETS = (
         FREESTANDING_AARCH64,
         FREESTANDING_ARM32,
         FREESTANDING_MIPS64,
+        FREESTANDING_RISCV32,
+        FREESTANDING_RISCV64,
+    )
+    ALL_FREESTANDING_MORELLO_TARGETS = (
         FREESTANDING_MORELLO_NO_CHERI,
         FREESTANDING_MORELLO_HYBRID,
         FREESTANDING_MORELLO_PURECAP,
-        FREESTANDING_RISCV32,
-        FREESTANDING_RISCV32_HYBRID,
-        FREESTANDING_RISCV32_PURECAP,
-        FREESTANDING_RISCV64,
-        FREESTANDING_RISCV64_HYBRID,
-        FREESTANDING_RISCV64_PURECAP,
+    )
+    ALL_FREESTANDING_RISCV_XCHERI_TARGETS = (
+        FREESTANDING_RISCV32_XCHERI_HYBRID,
+        FREESTANDING_RISCV32_XCHERI_PURECAP,
+        FREESTANDING_RISCV64_XCHERI_HYBRID,
+        FREESTANDING_RISCV64_XCHERI_PURECAP,
+    )
+    ALL_FREESTANDING_RISCV_Y_TARGETS = (
+        FREESTANDING_RISCV32_Y_PURECAP,
+        FREESTANDING_RISCV64_Y_PURECAP,
+    )
+    ALL_FREESTANDING_RISCV_ZCHERI093_TARGETS = (
+        FREESTANDING_RISCV32_ZCHERI093_PURECAP,
+        FREESTANDING_RISCV64_ZCHERI093_PURECAP,
+    )
+    ALL_FREESTANDING_TARGETS = (
+        ALL_FREESTANDING_NO_CHERI_TARGETS
+        + ALL_FREESTANDING_MORELLO_TARGETS
+        + ALL_FREESTANDING_RISCV_XCHERI_TARGETS
+        + ALL_FREESTANDING_RISCV_ZCHERI093_TARGETS
+        + ALL_FREESTANDING_RISCV_Y_TARGETS
     )
     ARM_NONE_EABI = CrossCompileTarget(
         "arm-none-eabi",
@@ -1657,6 +1750,7 @@ class CompilationTargets(BasicCompilationTargets):
         PicolibcBaremetalTargetInfo,
         is_cheri_purecap=True,
         non_cheri_target=BAREMETAL_PICOLIBC_RISCV64,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
     BAREMETAL_PICOLIBC_ARM32 = CrossCompileTarget("arm32", CPUArchitecture.ARM32, PicolibcBaremetalTargetInfo)
     ALL_PICOLIBC_TARGETS = (
@@ -1700,23 +1794,31 @@ class CompilationTargets(BasicCompilationTargets):
 
     # RTEMS targets
     RTEMS_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
-    RTEMS_RISCV64_PURECAP = CrossCompileTarget(
+    RTEMS_RISCV64_XCHERI_PURECAP = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
         RTEMSTargetInfo,
         is_cheri_purecap=True,
         non_cheri_target=RTEMS_RISCV64,
+        riscv_cheri_isa=RiscvCheriISA.V9,
     )
 
     # Linux targets
     UPSTREAM_LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, UpstreamLinuxTargetInfo)
     CHERI_LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriLinuxTargetInfo)
-    CHERI_LINUX_RISCV64_PURECAP_093 = CrossCompileTarget(
-        "riscv64-purecap",
+    CHERI_LINUX_RISCV64_Y_PURECAP = CrossCompileTarget(
+        "riscv64y-purecap",
         CPUArchitecture.RISCV64,
         CheriLinuxTargetInfo,
         is_cheri_purecap=True,
-        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    CHERI_LINUX_RISCV64_ZCHERI093_PURECAP = CrossCompileTarget(
+        "riscv64zcheri093-purecap",
+        CPUArchitecture.RISCV64,
+        CheriLinuxTargetInfo,
+        is_cheri_purecap=True,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
     CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
@@ -1742,7 +1844,8 @@ class CompilationTargets(BasicCompilationTargets):
     )
     ALL_UPSTREAM_LINUX_TARGETS = (UPSTREAM_LINUX_AARCH64, UPSTREAM_LINUX_RISCV64)
     ALL_CHERI_LINUX_TARGETS = (
-        CHERI_LINUX_RISCV64_PURECAP_093,
+        # CHERI_LINUX_RISCV64_Y_PURECAP, ## Not yet
+        CHERI_LINUX_RISCV64_ZCHERI093_PURECAP,
         CHERI_LINUX_RISCV64,
         CHERI_LINUX_AARCH64,
         CHERI_LINUX_MORELLO_PURECAP,
@@ -1750,7 +1853,8 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_MORELLO_LINUX_TARGETS = (MORELLO_LINUX_MORELLO_PURECAP, MORELLO_LINUX_AARCH64)
     ALL_CHERI_AND_MORELLO_LINUX_TARGETS = (*ALL_CHERI_LINUX_TARGETS, *ALL_MORELLO_LINUX_TARGETS)
     ALL_LINUX_PURECAP_TARGETS = (
-        CHERI_LINUX_RISCV64_PURECAP_093,
+        # CHERI_LINUX_RISCV64_Y_PURECAP, ## Not yet
+        CHERI_LINUX_RISCV64_ZCHERI093_PURECAP,
         CHERI_LINUX_MORELLO_PURECAP,
         MORELLO_LINUX_MORELLO_PURECAP,
     )
@@ -1761,11 +1865,22 @@ class CompilationTargets(BasicCompilationTargets):
     LINUX_KERNEL_RISCV64_GCC = CrossCompileTarget("riscv64-gcc", CPUArchitecture.RISCV64, LinuxGccTargetInfo)
     LINUX_KERNEL_AARCH64_GCC = CrossCompileTarget("aarch64-gcc", CPUArchitecture.AARCH64, LinuxGccTargetInfo)
 
-    ALL_CHERIBSD_RISCV_TARGETS = (CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI)
+    ALL_CHERIBSD_RISCV_TARGETS = (
+        CHERIBSD_RISCV_XCHERI_PURECAP,
+        CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        CHERIBSD_RISCV_Y_PURECAP,
+        CHERIBSD_RISCV_XCHERI_HYBRID,
+        CHERIBSD_RISCV_NO_CHERI,
+    )
     ALL_CHERIBSD_NON_MORELLO_TARGETS = (*ALL_CHERIBSD_RISCV_TARGETS, CHERIBSD_AARCH64, CHERIBSD_X86_64)
     ALL_CHERIBSD_MORELLO_TARGETS = (CHERIBSD_MORELLO_PURECAP, CHERIBSD_MORELLO_HYBRID)
-    ALL_CHERIBSD_HYBRID_TARGETS = (CHERIBSD_RISCV_HYBRID, CHERIBSD_MORELLO_HYBRID)
-    ALL_CHERIBSD_PURECAP_TARGETS = (CHERIBSD_RISCV_PURECAP, CHERIBSD_MORELLO_PURECAP)
+    ALL_CHERIBSD_HYBRID_TARGETS = (CHERIBSD_RISCV_XCHERI_HYBRID, CHERIBSD_MORELLO_HYBRID)
+    ALL_CHERIBSD_PURECAP_TARGETS = (
+        CHERIBSD_RISCV_XCHERI_PURECAP,
+        CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        CHERIBSD_RISCV_Y_PURECAP,
+        CHERIBSD_MORELLO_PURECAP,
+    )
     ALL_CHERIBSD_TARGETS_WITH_HYBRID = ALL_CHERIBSD_NON_MORELLO_TARGETS + ALL_CHERIBSD_MORELLO_TARGETS
     ALL_CHERIBSD_NON_CHERI_TARGETS = (
         CHERIBSD_RISCV_NO_CHERI,
@@ -1787,11 +1902,11 @@ class CompilationTargets(BasicCompilationTargets):
     )
     ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS = (
         CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
-        CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
+        CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
     )
     ALL_CHERIBSD_PURECAP_FOR_HYBRID_ROOTFS_TARGETS = (
         CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS,
-        CHERIBSD_RISCV_PURECAP_FOR_HYBRID_ROOTFS,
+        CHERIBSD_RISCV_XCHERI_PURECAP_FOR_HYBRID_ROOTFS,
     )
 
     ALL_SUPPORTED_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_CHERI_TARGETS + ALL_CHERIBSD_PURECAP_TARGETS
@@ -1804,7 +1919,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
     ALL_SUPPORTED_BAREMETAL_TARGETS = ALL_NEWLIB_TARGETS + ALL_PICOLIBC_TARGETS
-    ALL_SUPPORTED_RTEMS_TARGETS = (RTEMS_RISCV64, RTEMS_RISCV64_PURECAP)
+    ALL_SUPPORTED_RTEMS_TARGETS = (RTEMS_RISCV64, RTEMS_RISCV64_XCHERI_PURECAP)
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = (
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
     )

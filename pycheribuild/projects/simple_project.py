@@ -957,8 +957,6 @@ class SimpleProjectBase(AbstractProject, ABC):
         # support
         if (not target.is_native() or self.add_build_dir_suffix_for_native) and not target.is_nocpu():
             result += target.build_suffix(config, include_os=self.include_os_in_target_suffix)
-        if target.is_experimental_cheri093_std(config):
-            result += "-std093"  # The current CHERI-Alliance repositories implement the 0.9.3 standard draft.
         return result
 
     @property
