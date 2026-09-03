@@ -156,7 +156,7 @@ def test_conditional_config_options():
         target = "test-multiarch-project"
         repository = ExternallyManagedSourceRepository()
         default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-        _supported_architectures = (CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_RISCV_PURECAP)
+        _supported_architectures = (CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP)
 
         cond_option = IntConfigOption(
             "cond-option",
@@ -184,7 +184,7 @@ def test_conditional_config_options():
 
     # Verify multi-architecture get_class_for_target registration
     native_cls = TestMultiArchProject.get_class_for_target(CompilationTargets.NATIVE)
-    cross_cls = TestMultiArchProject.get_class_for_target(CompilationTargets.CHERIBSD_RISCV_PURECAP)
+    cross_cls = TestMultiArchProject.get_class_for_target(CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP)
     assert "cond_option" in native_cls._local_config_options
     assert "cond_option" in cross_cls._local_config_options
 
@@ -210,7 +210,7 @@ def test_conditional_config_options():
     assert instance_cond.cond_option == 1234  # default value
     assert instance_cond.computed_option == 9999
 
-    instance_cross = cross_cls(config, crosscompile_target=CompilationTargets.CHERIBSD_RISCV_PURECAP)
+    instance_cross = cross_cls(config, crosscompile_target=CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP)
     assert isinstance(instance_cross.cond_option, int)
     assert instance_cross.cond_option == 1234  # default value evaluated via descriptor
     # computed default evaluated dynamically via descriptor and different per-instance

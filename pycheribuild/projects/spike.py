@@ -68,7 +68,7 @@ class BuildCheriSpike(AutotoolsProject):
 
 class RunCheriSpikeBase(SimpleProject):
     do_not_add_to_targets = True
-    _bbl_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP
+    _bbl_xtarget = CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP
     _bbl_class = BuildBBLNoPayload.get_class_for_target(_bbl_xtarget)
     _source_class = None
 
@@ -97,7 +97,7 @@ class RunCheriBsdSpike(RunCheriSpikeBase):
     target = "run-spike"
     _source_class = BuildCheriBsdMfsKernel
     _supported_architectures = (
-        CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP,
         CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID,
     )

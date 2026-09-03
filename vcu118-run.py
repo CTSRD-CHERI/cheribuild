@@ -210,7 +210,7 @@ class SerialConnection:
         else:
             print_command([executable, *args], config=get_global_config())
             self.cheribsd = CheriBSDInstance(
-                CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID,
                 executable,
                 args,
                 logfile=sys.stdout,

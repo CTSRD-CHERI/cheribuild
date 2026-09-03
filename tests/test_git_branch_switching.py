@@ -453,7 +453,7 @@ def test_handle_old_urls_branch_exists(shared_remote: Path, local_repo: Path, tm
     project = setup_test_project(
         local_repo,
         shared_remote,
-        crosscompile_target=CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        crosscompile_target=CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP,
         force_branch=False,
         old_urls=[str(old_remote_dir)],
     )

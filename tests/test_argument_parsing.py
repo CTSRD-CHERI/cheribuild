@@ -348,7 +348,7 @@ def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
     source_root = config.source_root
     assert config.cheri_sdk_dir is not None
-    xtarget = CompilationTargets.CHERIBSD_RISCV_PURECAP
+    xtarget = CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP
     project = BuildCheriBSDDiskImage.get_instance(None, config, cross_target=xtarget)
     assert project.extra_files_dir == source_root / "extra-files"
     _parse_arguments(["--disk-image/extra-files=/foo/bar"])
@@ -1417,7 +1417,7 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     )
     assert cheribsd_riscv64_purecap.kernel_config == ["BASE_CONFIG_RISCV64"]
     assert cheribsd_riscv64_hybrid.kernel_config == ["CHERI-PURECAP-QEMU"]
-    assert mfs_riscv64.kernel_config is None
+    assert mfs_riscv64.kernel_config == []
     assert mfs_riscv64_hybrid.kernel_config == ["MFS_CONFIG_RISCV64_HYBRID"]
     _parse_arguments(
         [

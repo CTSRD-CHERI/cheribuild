@@ -59,7 +59,7 @@ class BuildSyzkaller(CrossCompileProject):
     # is_sdk_target = True
     _supported_architectures = (
         CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
     )
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     _default_install_dir_fn = ComputedDefaultValue(
