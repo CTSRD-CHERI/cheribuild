@@ -254,9 +254,9 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     )
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV32,
-        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV32_PURECAP,
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
     supported_riscv_cheri_standard = [RiscvCheriISA.RVY, RiscvCheriISA.EXPERIMENTAL_STD093]
 
@@ -275,9 +275,9 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     def get_cheri_bios(cls, caller, xtarget: CrossCompileTarget):
         assert xtarget.is_riscv(include_purecap=True), "Should only call this for RISC-V"
         if xtarget.is_riscv32(include_purecap=True):
-            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_PURECAP_093
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_PURECAP
         else:
-            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP_093
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP
         # This version of OpenSBI requires a purecap build to support CHERI
         proj = cls.get_instance(caller, cross_target=bios_xtarget)
         assert isinstance(proj, BuildOpenSBI)

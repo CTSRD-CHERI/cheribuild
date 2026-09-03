@@ -198,7 +198,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
     supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 

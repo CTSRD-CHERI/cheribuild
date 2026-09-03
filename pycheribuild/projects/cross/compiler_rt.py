@@ -262,9 +262,9 @@ class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     # Only use this target for the 0.9.3 RISC-V targets.
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
         CompilationTargets.FREESTANDING_RISCV32,
-        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV32_PURECAP,
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
     )
     llvm_project = BuildCheriAllianceLLVM

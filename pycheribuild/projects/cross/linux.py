@@ -285,7 +285,7 @@ class BuildCheriAllianceLinux(BuildLinux):
         CompilationTargets.LINUX_KERNEL_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
-    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
+    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP
 
     # Override default defconfig for CHERI-enabled kernels
     def default_defconfig(self) -> str:
