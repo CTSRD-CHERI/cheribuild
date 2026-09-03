@@ -365,7 +365,7 @@ def get_all_branches(repo_dir: Path) -> "list[str]":
     )
 
 
-@pytest.mark.skipif(GIT_VERSION < (2, 29), reason="negative refspecs require git >= 2.29")
+@pytest.mark.skipif(GIT_VERSION < (2, 45), reason="git config get requires git >= 2.45")
 def test_negative_fetch_refspecs(tmp_path: Path):
     """Branches matching negative_fetch_refspecs should never be fetched, on the initial clone or later."""
     remote_dir = tmp_path / "remote"
