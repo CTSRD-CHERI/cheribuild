@@ -772,20 +772,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if cls._xtarget and not cls.universe_target:
             # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
             # the global --kernel-config option that is provided for convenience and backwards compat.
-            cls.kernel_config: Optional[str] = cls.add_config_option(
+            cls.kernel_config: "Optional[list[str]]" = cls.add_list_option(
                 "kernel-config",
                 metavar="CONFIG",
                 show_help=True,
                 extra_fallback_config_names=["kernel-config"],
                 default=ComputedDefaultValue(
                     function=lambda _, p: (
-                        p.default_kernel_config() if p.has_default_buildkernel_kernel_config else None
+                        [p.default_kernel_config()] if p.has_default_buildkernel_kernel_config else None
                     ),
                     as_string="target-dependent, usually GENERIC",
                 ),
                 use_default_fallback_config_names=False,  #
                 help="The kernel configuration to use for `make buildkernel`",
-            )  # ty:ignore[invalid-assignment]
+            )
 
         if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM
@@ -923,8 +923,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # FIXME: still needed?
                 result["WITH_CHERI"] = "1"
             else:
-                if self.crosscompile_target.is_experimental_cheri093_std(self.config):
+                if self.crosscompile_target.is_riscv_y(self.config):
                     result["TARGET_CPUTYPE"] = "rvy"
+                elif self.crosscompile_target.is_experimental_cheri093_std(self.config):
+                    result["TARGET_CPUTYPE"] = "rvy"
+                    result["CHERI_RISCV_STD_093"] = "1"
                 else:
                     result["TARGET_CPUTYPE"] = "cheri"
                 if self.compiling_for_mips(include_purecap=True):
@@ -1348,7 +1351,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def kernconf_list(self) -> "list[str]":
         assert self.kernel_config is not None
-        return [self.kernel_config, *self.extra_kernels]
+        assert type(self.kernel_config) is list
+        kcl = [*self.kernel_config, *self.extra_kernels]
+        return kcl
 
     def compile(self, *, mfs_root_image: "Optional[Path]" = None, sysroot_only=False, **kwargs) -> None:
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
@@ -1760,14 +1765,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
         Get the installed kernel path for the given kernel configuration. If no kernel config
         is given, the default kernel configuration is selected.
         """
-        return self._get_kernel_rootfs_install_path(kernconf, self.install_dir, self.kernel_config)
+        default_kernconf = self.kernel_config[0] if self.kernel_config else None
+        return self._get_kernel_rootfs_install_path(kernconf, self.install_dir, default_kernconf)
 
     def get_kern_module_path(self, kernconf: "Optional[str]" = None) -> "Optional[str]":
         """
         Get the path to provide to kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
         """
-        if kernconf is None or kernconf == self.kernel_config:
+        default_kernconf = self.kernel_config[0] if self.kernel_config else None
+        if kernconf is None or kernconf == default_kernconf:
             return None
         return "/boot/kernel." + kernconf
 
@@ -1789,7 +1796,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         The filter parameters in kwargs are mapped to CheriBSDConfig fields.
         """
         assert self.kernel_config is not None
-        config = CheriBSDConfigTable.get_entry(self.config, self.crosscompile_target, self.kernel_config)
+        config = CheriBSDConfigTable.get_entry(self.config, self.crosscompile_target, self.kernel_config[0])
         assert config is not None, "Invalid configuration name"
         return [c.kernconf for c in filter_kernel_configs([config], platform=platform, kernel_abi=None)]
 
@@ -2048,6 +2055,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         elif self.auto_var_init is AutoVarInit.PATTERN:
             self.make_args.set_with_options(INIT_ALL_PATTERN=True)
 
+        if self.crosscompile_target.is_riscv_y(self.config):
+            # Hybrid compat not supported yet
+            self.make_args.set_with_options(LIB64=False)
+
     def compile(self, **kwargs) -> None:
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
@@ -2161,7 +2172,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         if self.kernel_config is not None:
-            return [self.kernel_config]
+            return self.kernel_config
         configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kernel_abi=None)]
 

@@ -41,7 +41,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from .chericonfig import CheriConfig, RiscvCheriISA
+from .chericonfig import CheriConfig
 from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
@@ -364,12 +364,18 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
     def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: Optional[bool]) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + "ima"
+        if xtarget.is_riscv_y(config):
+            base = "y"
+        else:
+            base = "i"
+        arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + base + "ma"
         if not softfloat:
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y(config):
+                arch_string += "zyhybrid_zylevels1b"
+            elif xtarget.is_experimental_cheri093_std(config):
                 arch_string += "zcherihybrid_zcherilevels"
             else:
                 arch_string += "xcheri"
@@ -1582,13 +1588,6 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_purecap=True,
         hybrid_target=FREESTANDING_RISCV32_HYBRID,
     )
-    FREESTANDING_RISCV32_PURECAP_093 = CrossCompileTarget(
-        "riscv32-purecap",
-        CPUArchitecture.RISCV32,
-        BaremetalFreestandingTargetInfo,
-        is_cheri_purecap=True,
-        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
-    )
     FREESTANDING_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, BaremetalFreestandingTargetInfo)
     FREESTANDING_RISCV64_HYBRID = CrossCompileTarget(
         "riscv64-hybrid",
@@ -1603,13 +1602,6 @@ class CompilationTargets(BasicCompilationTargets):
         BaremetalFreestandingTargetInfo,
         is_cheri_purecap=True,
         hybrid_target=FREESTANDING_RISCV64_HYBRID,
-    )
-    FREESTANDING_RISCV64_PURECAP_093 = CrossCompileTarget(
-        "riscv64-purecap",
-        CPUArchitecture.RISCV64,
-        BaremetalFreestandingTargetInfo,
-        is_cheri_purecap=True,
-        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     ALL_FREESTANDING_TARGETS = (
         FREESTANDING_AARCH64,
@@ -1696,12 +1688,8 @@ class CompilationTargets(BasicCompilationTargets):
     # Linux targets
     UPSTREAM_LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, UpstreamLinuxTargetInfo)
     CHERI_LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriLinuxTargetInfo)
-    CHERI_LINUX_RISCV64_PURECAP_093 = CrossCompileTarget(
-        "riscv64-purecap",
-        CPUArchitecture.RISCV64,
-        CheriLinuxTargetInfo,
-        is_cheri_purecap=True,
-        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    CHERI_LINUX_RISCV64_PURECAP = CrossCompileTarget(
+        "riscv64-purecap", CPUArchitecture.RISCV64, CheriLinuxTargetInfo, is_cheri_purecap=True
     )
     UPSTREAM_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, UpstreamLinuxTargetInfo)
     CHERI_LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriLinuxTargetInfo)
@@ -1727,7 +1715,7 @@ class CompilationTargets(BasicCompilationTargets):
     )
     ALL_UPSTREAM_LINUX_TARGETS = (UPSTREAM_LINUX_AARCH64, UPSTREAM_LINUX_RISCV64)
     ALL_CHERI_LINUX_TARGETS = (
-        CHERI_LINUX_RISCV64_PURECAP_093,
+        CHERI_LINUX_RISCV64_PURECAP,
         CHERI_LINUX_RISCV64,
         CHERI_LINUX_AARCH64,
         CHERI_LINUX_MORELLO_PURECAP,
@@ -1735,7 +1723,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_MORELLO_LINUX_TARGETS = (MORELLO_LINUX_MORELLO_PURECAP, MORELLO_LINUX_AARCH64)
     ALL_CHERI_AND_MORELLO_LINUX_TARGETS = (*ALL_CHERI_LINUX_TARGETS, *ALL_MORELLO_LINUX_TARGETS)
     ALL_LINUX_PURECAP_TARGETS = (
-        CHERI_LINUX_RISCV64_PURECAP_093,
+        CHERI_LINUX_RISCV64_PURECAP,
         CHERI_LINUX_MORELLO_PURECAP,
         MORELLO_LINUX_MORELLO_PURECAP,
     )
