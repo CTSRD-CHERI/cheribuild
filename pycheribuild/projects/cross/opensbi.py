@@ -70,7 +70,7 @@ class BuildOpenSBI(Project):
     _default_install_dir_fn = ComputedDefaultValue(
         function=opensbi_install_dir, as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}"
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
+    supported_riscv_cheri_standard = [RiscvCheriISA.V9]  # Assembly code does not support standard draft
     target_info: BaremetalClangTargetInfo  # Specify the type of self.target_info to fix type checker warnings
 
     @property
@@ -187,7 +187,9 @@ class BuildOpenSBI(Project):
 
         if self.crosscompile_target.is_cheri_purecap():
             suffix = "cheri"
-            if self.crosscompile_target.is_experimental_cheri093_std(self.config):
+            if self.crosscompile_target.is_riscv_y(
+                self.config
+            ) or self.crosscompile_target.is_experimental_cheri093_std(self.config):
                 suffix += "std"
         return qemu_fw_dir / f"opensbi-riscv64{suffix}-generic-fw_{fw_type}.bin"
 
@@ -280,7 +282,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    supported_riscv_cheri_standard = [RiscvCheriISA.RVY, RiscvCheriISA.EXPERIMENTAL_STD093]
 
     def _qemu_install_dir(self) -> Path:
         return BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
