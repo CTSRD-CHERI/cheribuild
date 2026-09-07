@@ -247,7 +247,7 @@ class LaunchQEMUBase(SimpleProject):
         assert xtarget.is_riscv(include_purecap=True)
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             # FIXME: QEMU does not yet default to the correct BIOS image name.
-            if xtarget.is_experimental_cheri093_std(caller.config):
+            if xtarget.is_riscv_y(caller.config) or xtarget.is_experimental_cheri093_std(caller.config):
                 bios_file = BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget, prefer_opensbi_payload)
             elif prefer_bbl:
                 # Always use a purecap bbl
@@ -291,7 +291,7 @@ class LaunchQEMUBase(SimpleProject):
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config):
                 supported_qemu_classes += [BuildCheriAllianceQEMU]
             else:
                 supported_qemu_classes += [BuildQEMU]
@@ -928,7 +928,10 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         xtarget = cls.get_crosscompile_target()
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            bios_target = "cheri-std093-opensbi" if xtarget.is_experimental_cheri093_std(config) else "bbl"
+            if xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config):
+                bios_target = "cheri-std093-opensbi"
+            else:
+                bios_target = "bbl"
             result += (f"{bios_target}-baremetal-riscv64-purecap",)
         return result
 

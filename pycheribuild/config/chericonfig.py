@@ -786,6 +786,10 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         return "morello-sdk"
 
     @property
+    def default_rvy_sdk_directory_name(self) -> str:
+        return "cheri-rvy-sdk"
+
+    @property
     def default_cheri_alliance_sdk_directory_name(self) -> str:
         return "cheri-std093-sdk"
 
