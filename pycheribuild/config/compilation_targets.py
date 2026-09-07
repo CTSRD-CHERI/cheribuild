@@ -132,7 +132,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         elif cls.uses_upstream_llvm:
             assert not xtarget.is_hybrid_or_purecap_cheri(), "Not supported with upstream LLVM"
             llvm_target = SimpleProject.get_class_for_target_name("upstream-llvm", None)
-        elif xtarget.is_experimental_cheri093_std(config) or cls.uses_alliance_llvm:
+        elif xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config) or cls.uses_alliance_llvm:
             # Use the CHERI Alliance compiler when building for RISCV CHERI or building
             # non-CHERI aarch64/riscv64 CHERI Alliance projects (that use the Alliance LLVM).
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
@@ -312,7 +312,9 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
             )
-            if xtarget.is_cheri_purecap() and xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_cheri_purecap() and (
+                xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config)
+            ):
                 # Necessary for library compartmentalisation ABI
                 result.extend(
                     [
@@ -918,7 +920,12 @@ class CheriLinuxTargetInfo(LinuxTargetInfoBase):
 
     @property
     def sysroot_dir(self) -> Path:
-        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
+        if self.target.is_riscv_y(self.config):
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_rvy_sdk_directory_name
+        elif self.target.is_experimental_cheri093_std(self.config):
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
+        else:
+            assert False, "Not Reached"
         return sysroot_dir / "linux" / self.target.get_rootfs_target().generic_arch_suffix
 
 
@@ -1168,7 +1175,9 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.target.is_experimental_cheri093_std(self.config):
+        if self.target.is_riscv_y(self.config):
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_rvy_sdk_directory_name
+        elif self.target.is_experimental_cheri093_std(self.config):
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name

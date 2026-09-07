@@ -288,7 +288,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         return configs
 
 
-class RISCVStdKernelConfigFactory(KernelConfigFactory):
+class RISCVYKernelConfigFactory(KernelConfigFactory):
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
         kabi_name=None, nocaprevoke=None, platform_name=None, flags=None
     )
@@ -338,6 +338,16 @@ class RISCVStdKernelConfigFactory(KernelConfigFactory):
         configs.append(self.make_config({ConfigPlatform.PRIME}, KernelABI.PURECAP, mfsroot=True, benchmark=True))
 
         return configs
+
+
+class RISCVStdKernelConfigFactory(KernelConfigFactory):
+    def get_kabi_name(self, kernel_abi) -> Optional[str]:
+        if kernel_abi == KernelABI.HYBRID:
+            return "RVY-093"
+        elif kernel_abi == KernelABI.PURECAP:
+            return "RVY-093-PURECAP"
+        else:
+            return super().get_kabi_name(kernel_abi)
 
 
 class AArch64KernelConfigFactory(KernelConfigFactory):
@@ -445,7 +455,9 @@ class CheriBSDConfigTable:
         elif xtarget.is_mips(include_purecap=False):
             return cls.MIPS_CONFIGS
         elif xtarget.is_riscv(include_purecap=True):
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y(config):
+                return RISCVYKernelConfigFactory().make_all()
+            elif xtarget.is_experimental_cheri093_std(config):
                 return RISCVStdKernelConfigFactory().make_all()
             else:
                 return RISCVKernelConfigFactory().make_all()
