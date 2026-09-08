@@ -27,14 +27,12 @@
 import os
 
 from .crosscompileproject import CrossCompileMakefileProject, DefaultInstallDir, GitRepository, MakeCommandKind
-from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
 
 class BuildCheriOSTest(CrossCompileMakefileProject):
     _supported_architectures = CompilationTargets.ALL_LINUX_PURECAP_TARGETS
-    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
     target = "cheri-os-test"
     make_kind = MakeCommandKind.BsdMake
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")

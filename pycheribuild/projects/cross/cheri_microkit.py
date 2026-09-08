@@ -55,11 +55,10 @@ class BuildCheriseL4(CrossCompileProject):
     )
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
-    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     def compile(self, **kwargs):
         pass
@@ -82,11 +81,10 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     _needs_sysroot = False
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
-    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -326,9 +324,8 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
     target = "run-cheri-microkit"
     _supported_architectures = (
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
-        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
     )
-    supported_riscv_cheri_standard = [RiscvCheriISA.EXPERIMENTAL_STD093]
     forward_ssh_port = False
     qemu_user_networking = False
     _uses_disk_image = False
