@@ -132,7 +132,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         elif cls.uses_upstream_llvm:
             assert not xtarget.is_hybrid_or_purecap_cheri(), "Not supported with upstream LLVM"
             llvm_target = SimpleProject.get_class_for_target_name("upstream-llvm", None)
-        elif xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config) or cls.uses_alliance_llvm:
+        elif xtarget.is_riscv_y() or xtarget.is_experimental_cheri093_std() or cls.uses_alliance_llvm:
             # Use the CHERI Alliance compiler when building for RISCV CHERI or building
             # non-CHERI aarch64/riscv64 CHERI Alliance projects (that use the Alliance LLVM).
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
@@ -312,9 +312,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
             )
-            if xtarget.is_cheri_purecap() and (
-                xtarget.is_riscv_y(config) or xtarget.is_experimental_cheri093_std(config)
-            ):
+            if xtarget.is_cheri_purecap() and (xtarget.is_riscv_y() or xtarget.is_experimental_cheri093_std()):
                 # Necessary for library compartmentalisation ABI
                 result.extend(
                     [
@@ -366,7 +364,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
     def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: Optional[bool]) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        if xtarget.is_riscv_y(config):
+        if xtarget.is_riscv_y():
             base = "y"
         else:
             base = "i"
@@ -375,9 +373,9 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            if xtarget.is_riscv_y(config):
+            if xtarget.is_riscv_y():
                 arch_string += "zyhybrid_zylevels1b"
-            elif xtarget.is_experimental_cheri093_std(config):
+            elif xtarget.is_experimental_cheri093_std():
                 arch_string += "zcherihybrid_zcherilevels"
             else:
                 arch_string += "xcheri"
@@ -920,9 +918,9 @@ class CheriLinuxTargetInfo(LinuxTargetInfoBase):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.target.is_riscv_y(self.config):
+        if self.target.is_riscv_y():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_rvy_sdk_directory_name
-        elif self.target.is_experimental_cheri093_std(self.config):
+        elif self.target.is_experimental_cheri093_std():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             assert False, "Not Reached"
@@ -1175,9 +1173,9 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.target.is_riscv_y(self.config):
+        if self.target.is_riscv_y():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_rvy_sdk_directory_name
-        elif self.target.is_experimental_cheri093_std(self.config):
+        elif self.target.is_experimental_cheri093_std():
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name

@@ -60,7 +60,7 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
 
         if self.get_crosscompile_target().is_aarch64(include_purecap=True):
             self.make_args.set_env(MACHINE_ARCH="aarch64c")
-        elif self.get_crosscompile_target().is_experimental_cheri093_std(self.config):
+        elif self.get_crosscompile_target().is_experimental_cheri093_std():
             self.make_args.set_env(
                 # The CheriBSD bmake makefiles are not RVY aware and so we need
                 # to manually set MACHINE_ABI and the RISC-V arch string.

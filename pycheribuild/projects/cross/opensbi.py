@@ -187,9 +187,7 @@ class BuildOpenSBI(Project):
 
         if self.crosscompile_target.is_cheri_purecap():
             suffix = "cheri"
-            if self.crosscompile_target.is_riscv_y(
-                self.config
-            ) or self.crosscompile_target.is_experimental_cheri093_std(self.config):
+            if self.crosscompile_target.is_riscv_y() or self.crosscompile_target.is_experimental_cheri093_std():
                 suffix += "std"
         return qemu_fw_dir / f"opensbi-riscv64{suffix}-generic-fw_{fw_type}.bin"
 

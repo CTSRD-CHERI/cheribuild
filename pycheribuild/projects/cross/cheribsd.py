@@ -455,9 +455,9 @@ class CheriBSDConfigTable:
         elif xtarget.is_mips(include_purecap=False):
             return cls.MIPS_CONFIGS
         elif xtarget.is_riscv(include_purecap=True):
-            if xtarget.is_riscv_y(config):
+            if xtarget.is_riscv_y():
                 return RISCVYKernelConfigFactory().make_all()
-            elif xtarget.is_experimental_cheri093_std(config):
+            elif xtarget.is_experimental_cheri093_std():
                 return RISCVStdKernelConfigFactory().make_all()
             else:
                 return RISCVKernelConfigFactory().make_all()
@@ -935,9 +935,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # FIXME: still needed?
                 result["WITH_CHERI"] = "1"
             else:
-                if self.crosscompile_target.is_riscv_y(self.config):
+                if self.crosscompile_target.is_riscv_y():
                     result["TARGET_CPUTYPE"] = "rvy"
-                elif self.crosscompile_target.is_experimental_cheri093_std(self.config):
+                elif self.crosscompile_target.is_experimental_cheri093_std():
                     result["TARGET_CPUTYPE"] = "rvy"
                     result["CHERI_RISCV_STD_093"] = "1"
                 else:
@@ -2067,7 +2067,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         elif self.auto_var_init is AutoVarInit.PATTERN:
             self.make_args.set_with_options(INIT_ALL_PATTERN=True)
 
-        if self.crosscompile_target.is_riscv_y(self.config):
+        if self.crosscompile_target.is_riscv_y():
             # Hybrid compat not supported yet
             self.make_args.set_with_options(LIB64=False)
 
