@@ -36,6 +36,8 @@ from .crosscompileproject import (
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
+from ..project import ComputedDefaultValue
+
 
 class BuildCheriOSTest(CrossCompileMakefileProject):
     _supported_architectures = (
@@ -116,9 +118,7 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
 
 
 class BuildCheriOSTestCmake(CrossCompileCMakeProject):
-    _supported_architectures = (
-        CompilationTargets.ALL_LINUX_PURECAP_TARGETS + CompilationTargets.ALL_CHERIBSD_PURECAP_TARGETS
-    )
+    _supported_architectures = (CompilationTargets.ALL_CHERIBSD_PURECAP_TARGETS)
     target = "cheri-os-test-cmake"
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/cheri-os-test.git",
@@ -127,8 +127,26 @@ class BuildCheriOSTestCmake(CrossCompileCMakeProject):
         url_override_reason="Add CMake build system and CheriBSD fixes",
     )
 
+    default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    _default_install_dir_fn = ComputedDefaultValue(
+            # pyrefly: ignore [bad-argument-type]
+            function=lambda config, proj: proj.target_info.sysroot_dir / "usr" / "local",
+            as_string="$INSTALL_ROOT/usr/local/"
+        )
+
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             return ()  # No need for extra libraries
         return "libxo", "libbsd"
+
+class BuildLinuxCheriOSTestCmake(BuildCheriOSTestCmake):
+    _supported_architectures = (CompilationTargets.ALL_LINUX_PURECAP_TARGETS)
+    target = "cheri-os-test-cmake"
+
+    default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    _default_install_dir_fn = ComputedDefaultValue(
+            # pyrefly: ignore [bad-argument-type]
+            function=lambda config, proj: proj.target_info.sysroot_dir / "rootfs" / "opt" / "cheri-os-test",
+            as_string="$INSTALL_ROOT/opt/cheri-os-test/"
+        )
