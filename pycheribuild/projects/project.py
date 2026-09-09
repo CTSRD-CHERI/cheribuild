@@ -975,12 +975,8 @@ class Project(SimpleProject):
             if install_dir_kind == DefaultInstallDir.ROOTFS_LOCALBASE:
                 self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                 self.destdir = self._install_dir
-            elif install_dir_kind == DefaultInstallDir.ROOTFS_LOCALBASE_NO_ABI_DIR:
-                if hasattr(self.target_info, "sysroot_install_prefix_relative_no_abi_dir"):
-                    prefix = self.target_info.sysroot_install_prefix_relative_no_abi_dir
-                else:
-                    prefix = self.target_info.sysroot_install_prefix_relative
-                self._install_prefix = Path("/", prefix)
+            elif install_dir_kind == DefaultInstallDir.ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR:
+                self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative_without_abi_subdir)
                 self.destdir = self._install_dir
             elif install_dir_kind in (DefaultInstallDir.ROOTFS_OPTBASE, DefaultInstallDir.KDE_PREFIX):
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_dir))

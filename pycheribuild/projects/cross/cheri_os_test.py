@@ -126,13 +126,7 @@ class BuildCheriOSTestCmake(CrossCompileCMakeProject):
         temporary_url_override="https://github.com/arichardson/cheri-os-test.git",
         url_override_reason="Add CMake build system and CheriBSD fixes",
     )
-
-    default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    _default_install_dir_fn = ComputedDefaultValue(
-            # pyrefly: ignore [bad-argument-type]
-            function=lambda config, proj: proj.target_info.sysroot_dir / "usr" / "local",
-            as_string="$INSTALL_ROOT/usr/local/"
-        )
+    default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
