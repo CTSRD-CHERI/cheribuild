@@ -171,6 +171,8 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             return Path(self._rootfs_path(), "opt", self.install_prefix_dirname, "kde")
         elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
             return self.sysroot_dir
+        elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR:
+            return self.sysroot_dir
         return super().default_install_dir(install_dir)
 
     @property
@@ -748,6 +750,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return Path("usr/local", self.install_prefix_dirname)
 
     @property
+    def sysroot_install_prefix_relative_without_abi_subdir(self) -> Path:
+        return Path("usr/local")
+
+    @property
     def additional_rpath_directories(self) -> "list[str]":
         # /usr/local/<arch>/lib is not part of the default linker search path, add it here for build systems that
         # don't infer it automatically.
@@ -925,6 +931,10 @@ endif()
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return [cls.kernel_target, cls.musl_target, cls.compiler_rt_target]
+
+    @property
+    def sysroot_install_prefix_relative_without_abi_subdir(self) -> Path:
+        return Path("usr/local")
 
 
 class UpstreamLinuxTargetInfo(LinuxTargetInfoBase):
