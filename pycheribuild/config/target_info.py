@@ -150,6 +150,7 @@ class DefaultInstallDir(Enum):
     # This also works for ROOTFS_LOCALBASE
     ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
     ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
+    ROOTFS_LOCALBASE_NO_ABI_DIR = "The sysroot for this target (<rootfs>/usr/local/ by default)"
     KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
