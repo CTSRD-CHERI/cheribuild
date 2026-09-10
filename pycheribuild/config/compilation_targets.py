@@ -1393,6 +1393,7 @@ class CompilationTargets(BasicCompilationTargets):
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_hybrid=True,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
         cheri_isa=RiscvCheriISA.RVY,
     )
     _CHERIBSD_RISCV_ZCHERI093_HYBRID = CrossCompileTarget(  # Unsupported by toolchain
@@ -1400,6 +1401,7 @@ class CompilationTargets(BasicCompilationTargets):
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_hybrid=True,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
         cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     CHERIBSD_RISCV_Y_PURECAP = CrossCompileTarget(
@@ -1407,6 +1409,7 @@ class CompilationTargets(BasicCompilationTargets):
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_purecap=True,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
         hybrid_target=_CHERIBSD_RISCV_Y_HYBRID,
         cheri_isa=RiscvCheriISA.RVY,
     )
@@ -1415,6 +1418,7 @@ class CompilationTargets(BasicCompilationTargets):
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_purecap=True,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
         hybrid_target=_CHERIBSD_RISCV_ZCHERI093_HYBRID,
         cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
@@ -1423,6 +1427,7 @@ class CompilationTargets(BasicCompilationTargets):
         CPUArchitecture.RISCV64,
         CheriBSDTargetInfo,
         is_cheri_purecap=True,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
         hybrid_target=CHERIBSD_RISCV_XCHERI_HYBRID,
         cheri_isa=RiscvCheriISA.V9,
     )
@@ -1433,6 +1438,7 @@ class CompilationTargets(BasicCompilationTargets):
         extra_target_suffix="-for-hybrid-rootfs",
         rootfs_target=CHERIBSD_RISCV_XCHERI_HYBRID,
         non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
+        hybrid_target=CHERIBSD_RISCV_XCHERI_HYBRID,
     )
     CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ROOTFS = CrossCompileTarget(
         "riscv64",
@@ -1441,6 +1447,25 @@ class CompilationTargets(BasicCompilationTargets):
         extra_target_suffix="-for-purecap-rootfs",
         rootfs_target=CHERIBSD_RISCV_XCHERI_PURECAP,
         non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
+        purecap_target=CHERIBSD_RISCV_XCHERI_PURECAP,
+    )
+    CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_RVY_ROOTFS = CrossCompileTarget(
+        "riscv64",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        extra_target_suffix="-for-purecap-rvy-rootfs",
+        rootfs_target=CHERIBSD_RISCV_Y_PURECAP,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
+        purecap_target=CHERIBSD_RISCV_Y_PURECAP,
+    )
+    CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ZCHERI093_ROOTFS = CrossCompileTarget(
+        "riscv64",
+        CPUArchitecture.RISCV64,
+        CheriBSDTargetInfo,
+        extra_target_suffix="-for-purecap-zcheri093-rootfs",
+        rootfs_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        non_cheri_target=CHERIBSD_RISCV_NO_CHERI,
+        purecap_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
     )
     CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(
         "riscv64-hybrid",
@@ -1450,6 +1475,7 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_hybrid=True,
         rootfs_target=CHERIBSD_RISCV_XCHERI_PURECAP,
         non_cheri_for_hybrid_rootfs_target=CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS,
+        purecap_target=CHERIBSD_RISCV_XCHERI_PURECAP,
         cheri_isa=RiscvCheriISA.V9,
     )
     _CHERIBSD_RISCV_Y_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(  # Unsupported
@@ -1459,7 +1485,7 @@ class CompilationTargets(BasicCompilationTargets):
         extra_target_suffix="-for-purecap-rootfs",
         is_cheri_hybrid=True,
         rootfs_target=CHERIBSD_RISCV_Y_PURECAP,
-        purecap_target=CHERIBSD_RISCV_Y_PURECAP,
+        # purecap_target=CHERIBSD_RISCV_Y_PURECAP,
         cheri_isa=RiscvCheriISA.RVY,
     )
     _CHERIBSD_RISCV_ZCHERI093_HYBRID_FOR_PURECAP_ROOTFS = CrossCompileTarget(  # Unsupported
@@ -1469,7 +1495,7 @@ class CompilationTargets(BasicCompilationTargets):
         extra_target_suffix="-for-purecap-rootfs",
         is_cheri_hybrid=True,
         rootfs_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
-        purecap_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
+        # purecap_target=CHERIBSD_RISCV_ZCHERI093_PURECAP,
         cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     CHERIBSD_RISCV_XCHERI_PURECAP_FOR_HYBRID_ROOTFS = CrossCompileTarget(
@@ -1505,6 +1531,7 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_purecap=True,
         check_conflict_with=CHERIBSD_MORELLO_HYBRID,
         hybrid_target=CHERIBSD_MORELLO_HYBRID,
+        non_cheri_target=CHERIBSD_MORELLO_NO_CHERI,
     )
     CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS = CrossCompileTarget(
         "morello-aarch64",
@@ -1530,6 +1557,7 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_hybrid=True,
         rootfs_target=CHERIBSD_MORELLO_PURECAP,
         non_cheri_for_hybrid_rootfs_target=CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS,
+        purecap_target=CHERIBSD_MORELLO_PURECAP,
     )
     CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS = CrossCompileTarget(
         "morello-purecap",

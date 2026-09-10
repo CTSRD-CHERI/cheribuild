@@ -570,9 +570,15 @@ class BuildDiskImageBase(SimpleProject):
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
         cross_target = self.source_project.crosscompile_target
         cross_target = get_gdb_xtarget(cross_target, self.config)
+        if cross_target is None:
+            # gdb for this source target is not supported, skip
+            self.warning(
+                "GDB cannot be built for architecture ", self.source_project.crosscompile_target, " -> not adding it"
+            )
+            return
         gdb_cls = get_build_gdb_class(cross_target, self.config)
         if cross_target not in gdb_cls.supported_architectures():
-            self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
+            self.warning("GDB cannot be built for architecture ", cross_target, " -> not adding it")
             return
         if self.include_kgdb:
             gdb_instance = BuildKGDB.get_instance_for_cross_target(cross_target, self.config)
@@ -1445,9 +1451,10 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         xtarget = cls.get_crosscompile_target()
         gdb_xtarget = get_gdb_xtarget(xtarget, config)
-        gdb_cls = get_build_gdb_class(gdb_xtarget, config)
-        if gdb_xtarget in gdb_cls.supported_architectures():
-            result += (gdb_cls.get_class_for_target(gdb_xtarget).target,)
+        if gdb_xtarget is not None:
+            gdb_cls = get_build_gdb_class(gdb_xtarget, config)
+            if gdb_xtarget in gdb_cls.supported_architectures():
+                result += (gdb_cls.get_class_for_target(gdb_xtarget).target,)
         return result
 
     @classmethod

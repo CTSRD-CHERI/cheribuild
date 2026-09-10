@@ -643,11 +643,23 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
     def add_compilers_with_config_files(self, prefix: str, rootfs_target: CrossCompileTarget):
         targets = [rootfs_target]
         if rootfs_target.is_cheri_hybrid():
-            targets.append(rootfs_target.get_non_cheri_for_hybrid_rootfs_target())
-            targets.append(rootfs_target.get_cheri_purecap_for_hybrid_rootfs_target())
+            try:
+                targets.append(rootfs_target.get_non_cheri_for_hybrid_rootfs_target())
+            except ValueError:
+                self.info("Not creating non-cheri-for-hybrid-rootfs compiler, unsupported for ", rootfs_target.name)
+            try:
+                targets.append(rootfs_target.get_cheri_purecap_for_hybrid_rootfs_target())
+            except ValueError:
+                self.info("Not creating purecap-for-hybrid-rootfs compiler, unsupported for", rootfs_target.name)
         elif rootfs_target.is_cheri_purecap():
-            targets.append(rootfs_target.get_non_cheri_for_purecap_rootfs_target())
-            targets.append(rootfs_target.get_cheri_hybrid_for_purecap_rootfs_target())
+            try:
+                targets.append(rootfs_target.get_non_cheri_for_purecap_rootfs_target())
+            except ValueError:
+                self.info("Not creating non-cheri-for-purecap-rootfs compiler, unsupported for", rootfs_target.name)
+            try:
+                targets.append(rootfs_target.get_cheri_hybrid_for_purecap_rootfs_target())
+            except ValueError:
+                self.info("Not creating hybrid-for-purecap-rootfs compiler, unsupported for", rootfs_target.name)
 
         for target in targets:
             self.add_compiler_with_config_file(prefix, target)
