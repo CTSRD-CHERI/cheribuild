@@ -827,12 +827,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/llvm-project.git",
-        # TODO: Use the previous default once it can build CheriBSD:
-        # default_branch="codasip-cheri-riscv-20",
-        # https://github.com/CHERI-Alliance/llvm-project/pull/29
-        default_branch="fix-copy-relocs",
+        default_branch="codasip-cheri-riscv-20",
         force_branch=True,
-        temporary_url_override="https://github.com/jrtc27/cheri-alliance-llvm-project.git",
     )
 
     default_directory_basename = "cheri-std093-llvm-project"
