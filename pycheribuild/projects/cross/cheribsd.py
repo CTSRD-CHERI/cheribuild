@@ -2057,7 +2057,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.has_default_buildkernel_kernel_config() and not option.is_default_value:
             return []
         configs = self._get_all_kernel_configs()
-        default_kernconf = self.default_kernel_config()
+        try:
+            default_kernconf = self.default_kernel_config()
+        except ValueError:
+            default_kernconf = None
         return [c for c in configs if c.kernconf != default_kernconf]
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
