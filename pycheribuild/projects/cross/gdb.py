@@ -30,6 +30,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from .crosscompileproject import (
     BuildType,
@@ -367,9 +368,11 @@ class BuildKGDB(BuildGDB):
     )
 
 
-def get_gdb_xtarget(target: CrossCompileTarget, config: CheriConfig) -> CrossCompileTarget:
+def get_gdb_xtarget(target: CrossCompileTarget, config: CheriConfig) -> Optional[CrossCompileTarget]:
     if target.is_cheri_purecap() and target.is_riscv_y_or_cheri093():
-        return target.get_cheri_hybrid_for_purecap_rootfs_target()
+        # FIXME! RVY and zcheri do not support hybrid builds at this point
+        # return target.get_cheri_hybrid_for_purecap_rootfs_target()
+        return None
     return target
 
 
