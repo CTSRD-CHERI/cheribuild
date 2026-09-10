@@ -332,6 +332,9 @@ class RISCVYKernelConfigFactory(KernelConfigFactory):
         configs.append(self.make_config({ConfigPlatform.QEMU}, KernelABI.PURECAP, default=True))
         configs.append(self.make_config({ConfigPlatform.QEMU}, KernelABI.PURECAP, benchmark=True, default=True))
         configs.append(self.make_config({ConfigPlatform.QEMU}, KernelABI.PURECAP, mfsroot=True, default=True))
+        configs.append(
+            self.make_config({ConfigPlatform.QEMU}, KernelABI.PURECAP, mfsroot=True, benchmark=True, default=True)
+        )
 
         # Generate RVY FPGA kernels
         configs.append(self.make_config({ConfigPlatform.PRIME}, KernelABI.PURECAP, mfsroot=True, default=True))
