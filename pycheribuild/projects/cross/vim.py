@@ -34,6 +34,8 @@ class BuildVim(CrossCompileAutotoolsProject):
     def setup(self):
         super().setup()
         self.configure_args.extend(["--disable-gui", "--without-x"])
+        self.make_args.set(INSTALL_DATA_R="cp -rL")
+
         if self.compiling_for_cheri():
             # Options storage uses void * with some longs stuffed in
             # TODO: Upstream using intptr_t?
