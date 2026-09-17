@@ -169,6 +169,8 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             return Path(self._rootfs_path(), "opt", self.install_prefix_dirname, "kde")
         elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
             return self.sysroot_dir
+        elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR:
+            return self.sysroot_dir
         return super().default_install_dir(install_dir)
 
     @property
@@ -738,6 +740,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @property
     def sysroot_install_prefix_relative(self) -> Path:
         return Path("usr/local", self.install_prefix_dirname)
+
+    @property
+    def sysroot_install_prefix_relative_without_abi_subdir(self) -> Path:
+        return Path("usr/local")
 
     @property
     def additional_rpath_directories(self) -> "list[str]":
