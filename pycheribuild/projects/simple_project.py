@@ -957,10 +957,6 @@ class SimpleProjectBase(AbstractProject, ABC):
         # support
         if (not target.is_native() or self.add_build_dir_suffix_for_native) and not target.is_nocpu():
             result += target.build_suffix(config, include_os=self.include_os_in_target_suffix)
-        if target.is_experimental_cheri093_std():
-            result += "-std093"
-        elif target.is_riscv_y():
-            result += "-rvy"
         return result
 
     @property

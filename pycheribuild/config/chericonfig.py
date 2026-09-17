@@ -780,7 +780,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
 
     @property
     def default_rvy_sdk_directory_name(self) -> str:
-        return "cheri-rvy-sdk"
+        return "rvy-sdk"
 
     @property
     def default_cheri_alliance_sdk_directory_name(self) -> str:
