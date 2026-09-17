@@ -369,16 +369,15 @@ class BuildKGDB(BuildGDB):
 
 
 def get_gdb_xtarget(target: CrossCompileTarget, config: CheriConfig) -> Optional[CrossCompileTarget]:
-    if target.is_cheri_purecap():
-        if target.is_riscv_y() or target.is_experimental_cheri093_std():
-            # FIXME! RVY and zcheri do not support hybrid builds at this point
-            # return target.get_cheri_hybrid_for_purecap_rootfs_target()
-            return None
+    if target.is_cheri_purecap() and target.is_riscv_y_or_cheri093():
+        # FIXME! RVY and zcheri do not support hybrid builds at this point
+        # return target.get_cheri_hybrid_for_purecap_rootfs_target()
+        return None
     return target
 
 
 def get_build_gdb_class(target: CrossCompileTarget, config: CheriConfig) -> "type[BuildGDBBase]":
-    if target.is_riscv_y() or target.is_experimental_cheri093_std():
+    if target.is_riscv_y_or_cheri093():
         return BuildCheriAllianceGDB
     else:
         return BuildGDB
@@ -386,7 +385,7 @@ def get_build_gdb_class(target: CrossCompileTarget, config: CheriConfig) -> "typ
 
 def get_native_gdb_binary_to_debug_target(target: CrossCompileTarget, caller: AbstractProject) -> Path:
     real_cls = get_build_gdb_class(target, caller.config)
-    if target.is_riscv_y() or target.is_experimental_cheri093_std():
+    if target.is_riscv_y_or_cheri093():
         prefix = CompilationTargets.NATIVE_NON_PURECAP
     else:
         prefix = CompilationTargets.NATIVE

@@ -132,7 +132,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         elif cls.uses_upstream_llvm:
             assert not xtarget.is_hybrid_or_purecap_cheri(), "Not supported with upstream LLVM"
             llvm_target = SimpleProject.get_class_for_target_name("upstream-llvm", None)
-        elif xtarget.is_riscv_y() or xtarget.is_experimental_cheri093_std() or cls.uses_alliance_llvm:
+        elif xtarget.is_riscv_y_or_cheri093() or cls.uses_alliance_llvm:
             # Use the CHERI Alliance compiler when building for RISCV CHERI or building
             # non-CHERI aarch64/riscv64 CHERI Alliance projects (that use the Alliance LLVM).
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
@@ -312,7 +312,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
             )
-            if xtarget.is_cheri_purecap() and (xtarget.is_riscv_y() or xtarget.is_experimental_cheri093_std()):
+            if xtarget.is_cheri_purecap() and xtarget.is_riscv_y_or_cheri093():
                 # Necessary for library compartmentalisation ABI
                 result.extend(
                     [

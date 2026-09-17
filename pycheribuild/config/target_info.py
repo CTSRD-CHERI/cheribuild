@@ -1083,6 +1083,9 @@ class CrossCompileTarget:
             and self.riscv_cheri_isa() == RiscvCheriISA.RVY
         )
 
+    def is_riscv_y_or_cheri093(self) -> bool:
+        return self.is_riscv_y() or self.is_experimental_cheri093_std()
+
     def riscv_cheri_isa(self) -> Optional[RiscvCheriISA]:
         assert self.is_riscv(include_purecap=True)
         return self._riscv_cheri_isa
