@@ -658,6 +658,28 @@ class Project(SimpleProject):
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
         super().setup_config_options(**kwargs)
+
+        cls.warnings_as_errors = cls.add_bool_option(
+            "warnings-as-errors",
+            help="Treat compiler warnings as errors (disabling this strips -Werror from default flags)",
+            default=True,
+        )
+        cls.cflags = cls.add_list_option(
+            "cflags",
+            metavar="FLAGS",
+            help="Additional C/C++ compiler flags to append",
+        )
+        cls.cxxflags = cls.add_list_option(
+            "cxxflags",
+            metavar="FLAGS",
+            help="Additional C++ compiler flags to append",
+        )
+        cls.ldflags = cls.add_list_option(
+            "ldflags",
+            metavar="FLAGS",
+            help="Additional linker flags to append",
+        )
+
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
         default_xtarget = cls.default_architecture()
@@ -843,9 +865,14 @@ class Project(SimpleProject):
     @property
     def compiler_warning_flags(self) -> "list[str]":
         if self.compiling_for_host():
-            return self.common_warning_flags + self.host_warning_flags
+            flags = self.common_warning_flags + self.host_warning_flags
         else:
-            return self.common_warning_flags + self.cross_warning_flags
+            flags = self.common_warning_flags + self.cross_warning_flags
+
+        if not self.warnings_as_errors:
+            flags = [f for f in flags if not f.startswith("-Werror")]
+
+        return flags
 
     def default_compiler_flags(self, lang: CompilerLanguage = "c") -> "list[str]":
         assert self._setup_called
@@ -873,6 +900,7 @@ class Project(SimpleProject):
             else:
                 self.warning("Compiler", compiler.path, "does not support -fsanitize=cheri, please update your SDK")
         if self.compiling_for_host():
+            result.extend(self.cflags if lang == "c" else self.cxxflags)
             return result
         if self.config.csetbounds_stats:
             result.extend(
@@ -884,6 +912,7 @@ class Project(SimpleProject):
                     # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
                 ]
             )
+        result.extend(self.cflags if lang == "c" else self.cxxflags)
         return result
 
     @property
@@ -898,6 +927,7 @@ class Project(SimpleProject):
             result.append("-fsanitize=cfi")
             result.append("-fsanitize-cfi-cross-dso")
         if self.compiling_for_host():
+            result.extend(self.ldflags)
             return result
 
         # Should work fine without linker emulation (the linker should infer it from input files)
@@ -918,6 +948,7 @@ class Project(SimpleProject):
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
+        result.extend(self.ldflags)
         return result
 
     def add_asan_flags(self):
