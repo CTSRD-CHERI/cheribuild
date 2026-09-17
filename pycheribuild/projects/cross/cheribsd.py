@@ -343,7 +343,7 @@ class RISCVYKernelConfigFactory(KernelConfigFactory):
         return configs
 
 
-class RISCVStdKernelConfigFactory(RISCVYKernelConfigFactory):
+class RISCVCheri093KernelConfigFactory(RISCVYKernelConfigFactory):
     def get_kabi_name(self, kernel_abi) -> Optional[str]:
         if kernel_abi == KernelABI.HYBRID:
             return "RVY-093"
@@ -461,7 +461,7 @@ class CheriBSDConfigTable:
             if xtarget.is_riscv_y():
                 return RISCVYKernelConfigFactory().make_all()
             elif xtarget.is_experimental_cheri093_std():
-                return RISCVStdKernelConfigFactory().make_all()
+                return RISCVCheri093KernelConfigFactory().make_all()
             else:
                 return RISCVKernelConfigFactory().make_all()
         elif xtarget.is_aarch64(include_purecap=True):
