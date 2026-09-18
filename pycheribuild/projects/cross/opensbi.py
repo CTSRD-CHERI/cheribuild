@@ -95,6 +95,10 @@ class BuildOpenSBI(Project):
         super().setup()
         compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
+        # OpenSBI performs its own relocations in M-mode and has no loader
+        # to enforce PT_GNU_RELRO after relocation. The resulting RELRO
+        # metadata therefore does not provide protection by itself.
+        compflags += " -z norelro"
         if OSInfo.IS_MAC:
             self.make_args.set(READLINK="greadlink")
         self.make_args.set(
