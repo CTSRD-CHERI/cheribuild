@@ -247,7 +247,7 @@ class LaunchQEMUBase(SimpleProject):
         assert xtarget.is_riscv(include_purecap=True)
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             # FIXME: QEMU does not yet default to the correct BIOS image name.
-            if xtarget.is_experimental_cheri093_std(caller.config):
+            if xtarget.is_riscv_y_or_cheri093():
                 bios_file = BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget, prefer_opensbi_payload)
             elif prefer_bbl:
                 # Always use a purecap bbl
@@ -291,7 +291,7 @@ class LaunchQEMUBase(SimpleProject):
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y_or_cheri093():
                 supported_qemu_classes += [BuildCheriAllianceQEMU]
             else:
                 supported_qemu_classes += [BuildQEMU]
@@ -403,7 +403,7 @@ class LaunchQEMUBase(SimpleProject):
             uboot_xtarget = None
             if xtarget.cpu_architecture == CPUArchitecture.RISCV64:
                 if xtarget.is_hybrid_or_purecap_cheri():
-                    uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64_HYBRID
+                    uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64_XCHERI_HYBRID
                 else:
                     uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64
 
@@ -928,8 +928,13 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         xtarget = cls.get_crosscompile_target()
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            bios_target = "cheri-std093-opensbi" if xtarget.is_experimental_cheri093_std(config) else "bbl"
-            result += (f"{bios_target}-baremetal-riscv64-purecap",)
+            if xtarget.is_riscv_y():
+                bios_target = "cheri-std093-opensbi-baremetal-riscv64y-purecap"
+            elif xtarget.is_experimental_cheri093_std():
+                bios_target = "cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap"
+            else:
+                bios_target = "bbl-baremetal-riscv64-purecap"
+            result += (bios_target,)
         return result
 
     def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:

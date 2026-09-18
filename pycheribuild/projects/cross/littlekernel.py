@@ -44,7 +44,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
         CompilationTargets.FREESTANDING_RISCV32,
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
     )
     repository = GitRepository(
         "https://github.com/littlekernel/lk",

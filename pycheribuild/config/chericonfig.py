@@ -126,6 +126,7 @@ class AArch64FloatSimdOptions(Enum):
 class RiscvCheriISA(Enum):
     V9 = "v9"
     EXPERIMENTAL_STD093 = "experimental-std093"
+    RVY = "rvy"
 
 
 class RiscvFloatAbi(Enum):
@@ -386,13 +387,6 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         # Attributes for code completion:
         self.debug_output = loader.add_commandline_only_bool_option(
             "debug-output", "vv", help="Extremely verbose output"
-        )
-        self.riscv_cheri_isa = loader.add_option(
-            "riscv-cheri-isa",
-            default=RiscvCheriISA.V9,
-            type=RiscvCheriISA,
-            group=loader.cross_compile_options_group,
-            help="The CHERI ISA to target for RISC-V code",
         )
         self.mips_float_abi = loader.add_option(
             "mips-float-abi",
@@ -783,6 +777,10 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
     @property
     def default_morello_sdk_directory_name(self) -> str:
         return "morello-sdk"
+
+    @property
+    def default_rvy_sdk_directory_name(self) -> str:
+        return "rvy-sdk"
 
     @property
     def default_cheri_alliance_sdk_directory_name(self) -> str:

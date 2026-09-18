@@ -30,6 +30,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from .crosscompileproject import (
     BuildType,
@@ -339,7 +340,7 @@ class BuildCheriAllianceGDB(BuildGDBBase):
     _supported_architectures = (
         *CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS,
-        CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
         *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
         CompilationTargets.NATIVE_NON_PURECAP,
     )
@@ -367,19 +368,24 @@ class BuildKGDB(BuildGDB):
     )
 
 
-def get_gdb_xtarget(target: CrossCompileTarget, config: CheriConfig) -> CrossCompileTarget:
-    if target.is_cheri_purecap() and target.is_experimental_cheri093_std(config):
-        return target.get_cheri_hybrid_for_purecap_rootfs_target()
+def get_gdb_xtarget(target: CrossCompileTarget, config: CheriConfig) -> Optional[CrossCompileTarget]:
+    if target.is_cheri_purecap() and target.is_riscv_y_or_cheri093():
+        # FIXME! RVY and zcheri do not support hybrid builds at this point
+        # return target.get_cheri_hybrid_for_purecap_rootfs_target()
+        return None
     return target
 
 
 def get_build_gdb_class(target: CrossCompileTarget, config: CheriConfig) -> "type[BuildGDBBase]":
-    return BuildCheriAllianceGDB if target.is_experimental_cheri093_std(config) else BuildGDB
+    if target.is_riscv_y_or_cheri093():
+        return BuildCheriAllianceGDB
+    else:
+        return BuildGDB
 
 
 def get_native_gdb_binary_to_debug_target(target: CrossCompileTarget, caller: AbstractProject) -> Path:
     real_cls = get_build_gdb_class(target, caller.config)
-    if target.is_experimental_cheri093_std(caller.config):
+    if target.is_riscv_y_or_cheri093():
         prefix = CompilationTargets.NATIVE_NON_PURECAP
     else:
         prefix = CompilationTargets.NATIVE

@@ -42,7 +42,6 @@ from ..project import (
     Project,
     ReuseOtherProjectRepository,
 )
-from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import BaremetalClangTargetInfo, CompilationTargets
 from ...config.target_info import CrossCompileTarget
 from ...qemu_utils import QemuOptions
@@ -60,9 +59,9 @@ class BuildOpenSBI(Project):
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
-        CompilationTargets.FREESTANDING_RISCV64_HYBRID,
+        CompilationTargets.FREESTANDING_RISCV64_XCHERI_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
-        # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
+        # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP
     )
     make_kind = MakeCommandKind.GnuMake
     _needs_sysroot = False  # BIOS -> can build without a sysroot present
@@ -70,7 +69,6 @@ class BuildOpenSBI(Project):
     _default_install_dir_fn = ComputedDefaultValue(
         function=opensbi_install_dir, as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}"
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
     target_info: BaremetalClangTargetInfo  # Specify the type of self.target_info to fix type checker warnings
 
     @property
@@ -187,7 +185,7 @@ class BuildOpenSBI(Project):
 
         if self.crosscompile_target.is_cheri_purecap():
             suffix = "cheri"
-            if self.crosscompile_target.is_experimental_cheri093_std(self.config):
+            if self.crosscompile_target.is_riscv_y_or_cheri093():
                 suffix += "std"
         return qemu_fw_dir / f"opensbi-riscv64{suffix}-generic-fw_{fw_type}.bin"
 
@@ -205,7 +203,7 @@ class BuildOpenSBI(Project):
     @classmethod
     def get_hybrid_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
         assert cpu_arch == CPUArchitecture.RISCV64, "RISCV32 not supported yet"
-        return cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64_HYBRID)
+        return cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64_XCHERI_HYBRID)
 
     @classmethod
     def get_nocap_bios(cls, caller, xtarget: CrossCompileTarget, is_payload=False) -> Path:
@@ -276,11 +274,12 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     )
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV32,
-        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV32_ZCHERI093_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV32_Y_PURECAP,
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
     )
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     def _qemu_install_dir(self) -> Path:
         return BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
@@ -297,9 +296,17 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     def get_cheri_bios(cls, caller, xtarget: CrossCompileTarget, is_payload=False):
         assert xtarget.is_riscv(include_purecap=True), "Should only call this for RISC-V"
         if xtarget.is_riscv32(include_purecap=True):
-            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_PURECAP_093
+            if xtarget.is_riscv_y():
+                bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_Y_PURECAP
+            else:
+                assert xtarget.is_experimental_cheri093_std()
+                bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_ZCHERI093_PURECAP
         else:
-            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP_093
+            if xtarget.is_riscv_y():
+                bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP
+            else:
+                assert xtarget.is_experimental_cheri093_std()
+                bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP
         # This version of OpenSBI requires a purecap build to support CHERI
         proj = cls.get_instance(caller, cross_target=bios_xtarget)
         assert isinstance(proj, BuildOpenSBI)
@@ -319,7 +326,7 @@ class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
     target = "cheri-std093-opensbi-u-boot"
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
     )
 
     @classmethod
