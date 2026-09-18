@@ -497,3 +497,32 @@ class LaunchCheriAllianceLinuxMorelloDebian(LaunchCheriAllianceLinuxDebian):
     def setup(self):
         super().setup()
         self._project_specific_options = ["-append", "root=/dev/vda3"]
+
+
+class BuildMochaLinux(BuildCheriAllianceLinux):
+    target = "mocha-linux-kernel"
+    repository = GitRepository("https://github.com/lowRISC/linux.git", default_branch="mocha-mvp2")
+
+    def default_defconfig(self) -> str:
+        return "lowrisc_cheri_mocha_defconfig"
+
+    def configure(self, **kwargs):
+        assert self.defconfig is not None
+        self.run_make(str(self.defconfig), cwd=self.source_dir, parallel=False)
+
+
+class BuildCVA6CheriLinux(BuildCheriAllianceLinux):
+    target = "cva6cheri-linux-kernel"
+    repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="capltd-cheri-7.1")
+
+    def default_defconfig(self) -> str:
+        return "capltd_cva6_cheri_genesys2_defconfig"
+
+    def configure(self, **kwargs):
+        assert self.defconfig is not None
+        self.run_make(str(self.defconfig), cwd=self.source_dir, parallel=False)
+
+        if self.compiling_for_riscv(include_purecap=True):
+            self._set_config("CONFIG_RISCV_CHERI")
+            self._set_config("CONFIG_EFI", "n")
+            self.run_make("olddefconfig")  # regen dependencies

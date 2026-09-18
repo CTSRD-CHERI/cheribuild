@@ -138,7 +138,7 @@ echo
 
 # Install udhcpc DHCP helper script
 ifconfig eth0 up
-udhcpc -i eth0
+udhcpc -n -t 3 -T 3 -i eth0 || echo "DHCP failed"
 ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
 route add default gw 10.0.2.2
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
@@ -237,3 +237,14 @@ class BuildAllianceBusyBox(BuildBusyBox):
 
     def configure(self) -> None:
         self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
+
+
+class BuildMochaBusyBox(BuildAllianceBusyBox):
+    target = "mocha-busybox"
+    repository = GitRepository("https://github.com/lowRISC/busybox.git", default_branch="mocha-mvp2")
+    _supported_architectures = (CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093,)
+    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+
+    def configure(self) -> None:
+        self.run_make("mocha_defconfig", cwd=self.source_dir)
