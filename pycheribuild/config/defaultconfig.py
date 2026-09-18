@@ -244,10 +244,10 @@ class DefaultCheriConfig(CheriConfig):
         )
         default_rvy_sdk = ComputedDefaultValue(
             function=lambda p, cls: p.tools_root / p.default_rvy_sdk_directory_name,
-            as_string="'<TOOLS_ROOT>/cheri-rvy-sdk'",
+            as_string="'<TOOLS_ROOT>/rvy-sdk'",
         )
         self.cheri_rvy_sdk_dir = loader.add_path_option(
-            "cheri-rvy-sdk-root",
+            "rvy-sdk-root",
             default=default_rvy_sdk,
             group=loader.path_group,
             help="The directory to find/install the CHERI RVY SDK",
