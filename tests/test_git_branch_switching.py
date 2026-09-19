@@ -381,8 +381,10 @@ def test_negative_fetch_refspecs(tmp_path: Path):
     )
     project.repository.ensure_cloned(project, src_dir=local_dir, base_project_source_dir=None)
     assert get_all_branches(remote_dir) == ["main", "other-branch", "revert-123", "target-branch", "users/someone/wip"]
-    # In the new clone, we should not have fetched the revert-123 or users/someone/wip branches
-    assert get_all_branches(local_dir) == [
+    # In the new clone, we should not have fetched the revert-123 or users/someone/wip branches.
+    # Older git versions format refs/remotes/origin/HEAD as "origin/HEAD" instead of "origin".
+    local_branches = ["origin" if b == "origin/HEAD" else b for b in get_all_branches(local_dir)]
+    assert local_branches == [
         "main",
         "origin",
         "origin/main",
@@ -390,7 +392,7 @@ def test_negative_fetch_refspecs(tmp_path: Path):
         "origin/target-branch",
     ]
     fetch_config = (
-        subprocess.check_output(["git", "config", "get", "--all", "remote.origin.fetch"], cwd=local_dir)
+        subprocess.check_output(["git", "config", "--get-all", "remote.origin.fetch"], cwd=local_dir)
         .decode("utf-8")
         .split()
     )
