@@ -150,6 +150,7 @@ class DefaultInstallDir(Enum):
     # This also works for ROOTFS_LOCALBASE
     ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
     ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
+    ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR = "The sysroot for this target (<rootfs>/usr/local/ by default)"
     KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
@@ -367,6 +368,10 @@ class TargetInfo(ABC):
         <sysroot>/usr/local/<target> to allow installing hybrid/non-cheri/cheri to the same sysroot.
         """
         return Path()
+
+    @property
+    def sysroot_install_prefix_relative_without_abi_subdir(self) -> Path:
+        return self.sysroot_install_prefix_relative
 
     @property
     def additional_rpath_directories(self) -> "list[str]":
