@@ -73,6 +73,10 @@ search-path = [
 python-version = "3.8.0"
 python-platform = "linux"
 
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
+
 [tool.pyrefly.errors]
 # bad-override would cause lots of churn
 bad-override = false

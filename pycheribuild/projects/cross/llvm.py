@@ -643,11 +643,23 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
     def add_compilers_with_config_files(self, prefix: str, rootfs_target: CrossCompileTarget):
         targets = [rootfs_target]
         if rootfs_target.is_cheri_hybrid():
-            targets.append(rootfs_target.get_non_cheri_for_hybrid_rootfs_target())
-            targets.append(rootfs_target.get_cheri_purecap_for_hybrid_rootfs_target())
+            try:
+                targets.append(rootfs_target.get_non_cheri_for_hybrid_rootfs_target())
+            except ValueError:
+                self.info("Not creating non-cheri-for-hybrid-rootfs compiler, unsupported for ", rootfs_target.name)
+            try:
+                targets.append(rootfs_target.get_cheri_purecap_for_hybrid_rootfs_target())
+            except ValueError:
+                self.info("Not creating purecap-for-hybrid-rootfs compiler, unsupported for", rootfs_target.name)
         elif rootfs_target.is_cheri_purecap():
-            targets.append(rootfs_target.get_non_cheri_for_purecap_rootfs_target())
-            targets.append(rootfs_target.get_cheri_hybrid_for_purecap_rootfs_target())
+            try:
+                targets.append(rootfs_target.get_non_cheri_for_purecap_rootfs_target())
+            except ValueError:
+                self.info("Not creating non-cheri-for-purecap-rootfs compiler, unsupported for", rootfs_target.name)
+            try:
+                targets.append(rootfs_target.get_cheri_hybrid_for_purecap_rootfs_target())
+            except ValueError:
+                self.info("Not creating hybrid-for-purecap-rootfs compiler, unsupported for", rootfs_target.name)
 
         for target in targets:
             self.add_compiler_with_config_file(prefix, target)
@@ -827,12 +839,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/llvm-project.git",
-        # TODO: Use the previous default once it can build CheriBSD:
-        # default_branch="codasip-cheri-riscv-20",
-        # https://github.com/CHERI-Alliance/llvm-project/pull/29
-        default_branch="fix-copy-relocs",
+        default_branch="codasip-cheri-riscv-20",
         force_branch=True,
-        temporary_url_override="https://github.com/jrtc27/cheri-alliance-llvm-project.git",
     )
 
     default_directory_basename = "cheri-std093-llvm-project"
@@ -848,7 +856,7 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":
         triples = [
             CheriBSDTargetInfo.triple_for_target(
-                CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+                CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
                 self.config,
                 include_version=False,
             ),

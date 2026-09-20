@@ -381,11 +381,16 @@ def test_negative_fetch_refspecs(tmp_path: Path):
     )
     project.repository.ensure_cloned(project, src_dir=local_dir, base_project_source_dir=None)
     assert get_all_branches(remote_dir) == ["main", "other-branch", "revert-123", "target-branch", "users/someone/wip"]
-    # In the new clone, we should not have fetched the revert-123 or users/someone/wip branches
-    local_branches = get_all_branches(local_dir)
-    assert "revert-123" not in local_branches
-    assert "users/someone/wip" not in local_branches
-
+    # In the new clone, we should not have fetched the revert-123 or users/someone/wip branches.
+    # Older git versions format refs/remotes/origin/HEAD as "origin/HEAD" instead of "origin".
+    local_branches = ["origin" if b == "origin/HEAD" else b for b in get_all_branches(local_dir)]
+    assert local_branches == [
+        "main",
+        "origin",
+        "origin/main",
+        "origin/other-branch",
+        "origin/target-branch",
+    ]
     fetch_config = (
         subprocess.check_output(["git", "config", "--get-all", "remote.origin.fetch"], cwd=local_dir)
         .decode("utf-8")
@@ -448,7 +453,7 @@ def test_handle_old_urls_branch_exists(shared_remote: Path, local_repo: Path, tm
     project = setup_test_project(
         local_repo,
         shared_remote,
-        crosscompile_target=CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        crosscompile_target=CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP,
         force_branch=False,
         old_urls=[str(old_remote_dir)],
     )

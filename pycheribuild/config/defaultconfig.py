@@ -242,6 +242,16 @@ class DefaultCheriConfig(CheriConfig):
             group=loader.path_group,
             help="The directory to find/install the Morello SDK",
         )
+        default_rvy_sdk = ComputedDefaultValue(
+            function=lambda p, cls: p.tools_root / p.default_rvy_sdk_directory_name,
+            as_string="'<TOOLS_ROOT>/rvy-sdk'",
+        )
+        self.cheri_rvy_sdk_dir = loader.add_path_option(
+            "rvy-sdk-root",
+            default=default_rvy_sdk,
+            group=loader.path_group,
+            help="The directory to find/install the CHERI RVY SDK",
+        )
         default_cheri_alliance_sdk = ComputedDefaultValue(
             function=lambda p, cls: p.tools_root / p.default_cheri_alliance_sdk_directory_name,
             as_string="'<TOOLS_ROOT>/cheri-std093-sdk'",

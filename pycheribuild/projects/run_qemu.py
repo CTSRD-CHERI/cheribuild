@@ -219,6 +219,13 @@ class LaunchQEMUBase(SimpleProject):
             "bios", metavar="BIOS", help="If set, force QEMU to use the given bios binary"
         )
 
+        cls.use_opensbi_payload = cls.add_bool_option(
+            "use-opensbi-fw-payload ",
+            default=False,
+            show_help=True,
+            help="Force QEMU to use OpenSBI's fw_payload variant instead of fw_jump. This is only for RISC-V.",
+        )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.current_kernel: Optional[Path] = None
@@ -234,13 +241,14 @@ class LaunchQEMUBase(SimpleProject):
         self._after_disk_options = []
 
     @staticmethod
-    def riscv_bios_arguments(xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=True) -> "list[str]":
+    def riscv_bios_arguments(
+        xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=True, prefer_opensbi_payload=False
+    ) -> "list[str]":
         assert xtarget.is_riscv(include_purecap=True)
-        xlen = 32 if xtarget.is_riscv32() else 64
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             # FIXME: QEMU does not yet default to the correct BIOS image name.
-            if xtarget.is_experimental_cheri093_std(caller.config):
-                bios_file = BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget)
+            if xtarget.is_riscv_y_or_cheri093():
+                bios_file = BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget, prefer_opensbi_payload)
             elif prefer_bbl:
                 # Always use a purecap bbl
                 bios_file = BuildBBLNoPayload.get_cheri_bios(caller, xtarget)
@@ -251,17 +259,17 @@ class LaunchQEMUBase(SimpleProject):
                 return ["-bios", bios_file.name]
             return ["-bios", str(bios_file)]
         if xtarget.target_info_cls.is_linux():
-            # For Linux non-CHERI targets, use the bundled openSBI firmware
-            # even when launching CHERI QEMU since bbl does not work with Linux
-            return ["-bios", f"opensbi-riscv{xlen}-generic-fw_dynamic.bin"]
-        # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
-        # return BuildOpenSBI.get_nocap_bios(caller)
+            # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
+            bios_file = BuildAllianceOpenSBI.get_nocap_bios(caller, xtarget, prefer_opensbi_payload)
+            return ["-bios", str(bios_file)]
         return ["-bios", "default"]
 
     def get_riscv_bios_args(self) -> "list[str]":
         if self.bios:
             return ["-bios", str(self.bios)]
-        return self.riscv_bios_arguments(self.crosscompile_target, self)
+        return self.riscv_bios_arguments(
+            self.crosscompile_target, self, prefer_opensbi_payload=self.use_opensbi_payload
+        )
 
     @classmethod
     def targets_reset(cls) -> None:
@@ -283,7 +291,7 @@ class LaunchQEMUBase(SimpleProject):
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_riscv_y_or_cheri093():
                 supported_qemu_classes += [BuildCheriAllianceQEMU]
             else:
                 supported_qemu_classes += [BuildQEMU]
@@ -395,7 +403,7 @@ class LaunchQEMUBase(SimpleProject):
             uboot_xtarget = None
             if xtarget.cpu_architecture == CPUArchitecture.RISCV64:
                 if xtarget.is_hybrid_or_purecap_cheri():
-                    uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64_HYBRID
+                    uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64_XCHERI_HYBRID
                 else:
                     uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64
 
@@ -920,8 +928,13 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         xtarget = cls.get_crosscompile_target()
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            bios_target = "cheri-std093-opensbi" if xtarget.is_experimental_cheri093_std(config) else "bbl"
-            result += (f"{bios_target}-baremetal-riscv64-purecap",)
+            if xtarget.is_riscv_y():
+                bios_target = "cheri-std093-opensbi-baremetal-riscv64y-purecap"
+            elif xtarget.is_experimental_cheri093_std():
+                bios_target = "cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap"
+            else:
+                bios_target = "bbl-baremetal-riscv64-purecap"
+            result += (bios_target,)
         return result
 
     def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
