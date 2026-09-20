@@ -235,6 +235,8 @@ def keep_terminal_sane(gave_tty_control=False, command: "Optional[Sequence[str |
         # Can seemingly get unwanted SIGTTOU's whilst restoring so just ignore
         # them temporarily.
         with suppress_sigttou(suppress=gave_tty_control):
+            if gave_tty_control:
+                _set_tty_foreground_pgrp(None, os.getpgrp())
             if stdin_state is not None:
                 stdin_state.restore()
             if stdout_state is not None:
@@ -356,21 +358,24 @@ def scoped_open(*args, ignore_open_error, **kwargs):
             os.close(fd)
 
 
+def _set_tty_foreground_pgrp(expected_old_pgrp: Optional[int], new_pgrp: int) -> bool:
+    with suppress_sigttou(), scoped_open("/dev/tty", os.O_RDWR, ignore_open_error=True) as tty:
+        if tty is not None and (expected_old_pgrp is None or os.tcgetpgrp(tty) == expected_old_pgrp):
+            with contextlib.suppress(OSError):
+                os.tcsetpgrp(tty, new_pgrp)
+                return True
+    return False
+
+
 # https://stackoverflow.com/a/15257702/894271
 def _new_tty_foreground_process_group() -> None:
+    orig_pgrp = os.getpgrp()
     try:
         os.setpgrp()
     except Exception as e:
         warning_message("Failed to call os.setpgrp()", e)
         raise e
-    with suppress_sigttou():
-        try:
-            with scoped_open("/dev/tty", os.O_RDWR, ignore_open_error=True) as tty:
-                if tty is not None:
-                    os.tcsetpgrp(tty, os.getpgrp())
-        except Exception as e:
-            warning_message("Failed to call os.tcsetpgrp()", e)
-            raise e
+    _set_tty_foreground_pgrp(orig_pgrp, os.getpgrp())
 
 
 # Python 3.7 has contextlib.nullcontext
@@ -971,19 +976,22 @@ def is_debugger_attached() -> bool:
 
 def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
     error = False
+    opgrp = os.getpgrp()
+    changed_tty_pgrp = False
     try:
-        opgrp = os.getpgrp()
         if opgrp != os.getpid():
             # Create new process group and become its leader
             os.setpgrp()
             # Preserve whether our process group is the terminal leader
-            with suppress_sigttou():
-                with scoped_open("/dev/tty", os.O_RDWR, ignore_open_error=True) as tty:
-                    if tty is not None and os.tcgetpgrp(tty) == opgrp:
-                        os.tcsetpgrp(tty, os.getpgrp())
+            changed_tty_pgrp = _set_tty_foreground_pgrp(opgrp, os.getpgrp())
         fn()
     except KeyboardInterrupt:
         error = True
+        if changed_tty_pgrp:
+            _set_tty_foreground_pgrp(os.getpgrp(), opgrp)
+            changed_tty_pgrp = False
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(opgrp, signal.SIGINT)
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
         error = True
@@ -1008,3 +1016,5 @@ def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
             os.killpg(0, signal.SIGTERM)  # Tell all child processes to exit
+        if changed_tty_pgrp:
+            _set_tty_foreground_pgrp(os.getpgrp(), opgrp)
