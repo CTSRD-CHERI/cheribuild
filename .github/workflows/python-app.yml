@@ -21,15 +21,21 @@ jobs:
             -   uses: actions/checkout@v7
             -   name: Install Python
                 if: startsWith(matrix.image, 'ubuntu:')
-                run: apt-get update && apt-get install -y python3 python3-pip adduser
+                run: apt-get update && apt-get install -y python3 adduser
+            -   name: Install uv
+                uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+                with:
+                    enable-cache: true
+                    python-preference: only-system
             -   name: Install dependencies
                 run: |
                     # Run as a non-root user to avoid cheribuild errors
                     adduser --disabled-password --gecos "Not Root" notroot
-                    su -c "python3 -m pip config set global.break-system-packages true || true" notroot
-                    su -c "python3 -m pip install --user --upgrade pip pytest pytest-xdist" notroot
+                    mkdir -p "$UV_CACHE_DIR"
+                    chown -R notroot "$PWD" "$UV_CACHE_DIR"
+                    su -c "'$(which uv)' sync --locked --only-group test" notroot
             -   name: Run basic regression tests
-                run: su -c "tests/run_basic_tests.sh" notroot
+                run: su -c "'$(which uv)' run --frozen tests/run_basic_tests.sh" notroot
     build:
         strategy:
             fail-fast: false
