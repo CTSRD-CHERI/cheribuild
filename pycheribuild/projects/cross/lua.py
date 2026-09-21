@@ -32,7 +32,7 @@ class BuildLua(CrossCompileMakefileProject):
     dependencies = ("libxml2",)
 
     def setup(self):
-        if (self.crosscompile_target.is_cheri_purecap()):
+        if self.crosscompile_target.is_cheri_purecap():
             self.fatal("Lua currently does not support building for purecap")
 
         super().setup()
