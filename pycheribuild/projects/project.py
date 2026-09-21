@@ -39,10 +39,11 @@ import sys
 import time
 import typing
 from collections import OrderedDict
+from collections.abc import Sequence
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Callable, Literal, Optional, Sequence, Union
+from typing import Callable, Literal, Optional, Union
 
 from .repository import (
     ExternallyManagedSourceRepository,

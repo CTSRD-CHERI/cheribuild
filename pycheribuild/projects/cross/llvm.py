@@ -30,8 +30,9 @@
 import os
 import sys
 import typing
+from collections.abc import Iterable
 from pathlib import Path
-from typing import ClassVar, Iterable, Optional
+from typing import ClassVar, Optional
 
 from ..cmake_project import CMakeProject
 from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRepository

@@ -45,9 +45,10 @@ import sys
 import tempfile
 import termios
 import typing
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Callable, Iterable, Optional, Sequence, Union
+from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
 from .utils import ConfigBase, OSInfo, Type_T, fatal_error, status_update, warning_message

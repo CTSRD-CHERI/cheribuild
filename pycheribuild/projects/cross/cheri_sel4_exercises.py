@@ -16,8 +16,9 @@ import copy
 import os
 import subprocess
 import threading
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 from .cheri_microkit import BuildCheriMicrokit
 from .crosscompileproject import CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository

@@ -39,10 +39,11 @@ import threading
 import time
 import typing
 from abc import ABC, ABCMeta
+from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
-from typing import Callable, Optional, Sequence, TypeVar, Union
+from typing import Callable, Optional, TypeVar, Union
 
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue, MipsFloatAbi, RiscvFloatAbi
 from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionHandle, DefaultValueOnlyConfigOption

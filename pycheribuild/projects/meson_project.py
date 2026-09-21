@@ -31,8 +31,9 @@ import contextlib
 import itertools
 import os
 import shutil
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
 from .simple_project import FakeProject, ListConfigOption

@@ -31,9 +31,10 @@ import os
 import shutil
 import tempfile
 import typing
+from collections.abc import Sequence
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any, Dict, Sequence, Tuple, Union
+from typing import Union
 
 from .cmake_project import CMakeProject
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind, Project
@@ -128,12 +129,12 @@ class OpamMixin(_MixinBase):
             else:
                 raise
 
-    def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
+    def _run_in_ocaml_env_prepare(self, cwd=None) -> "tuple[dict[str, Union[str, int, Path]], Path]":
         if cwd is None:
-            cwd = self.source_dir if getattr(self, "source_dir") else "/"
+            cwd = self.source_dir if getattr(self, "source_dir") else Path("/")
 
         self._ensure_correct_switch()
-        opam_env = dict(
+        opam_env: dict[str, Union[str, int, Path]] = dict(
             GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
             OPAMROOT=self.opamroot,
             CCACHE_DISABLE=1,  # https://github.com/ocaml/opam/issues/3395

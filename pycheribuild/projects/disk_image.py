@@ -33,10 +33,11 @@ import os
 import shutil
 import sys
 import tempfile
+from collections.abc import Sequence
 from enum import Enum
 from functools import cached_property
 from pathlib import Path, PurePath
-from typing import Optional, Sequence, Union
+from typing import Optional, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildKGDB, get_build_gdb_class, get_gdb_xtarget
