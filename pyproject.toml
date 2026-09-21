@@ -2,7 +2,7 @@
 
 name = "cheribuild"
 version = "0.99.0"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = []  # Should work without any packages installed.
 
 [project.optional-dependencies]
@@ -16,7 +16,7 @@ extras = [
 
 [tool.ruff]
 # Ensure suggested fixes are compatible with our minimum supported version
-target-version = "py38"
+target-version = "py39"
 line-length = 120
 src = ["pycheribuild", "release-scripts", "test-scripts", "tests"]
 exclude = [
@@ -34,7 +34,9 @@ show-fixes = true
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW", "PT"]
 ignore = [
-    "UP037",  # Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
+    "UP006",  # TODO: Use `tuple` instead of `typing.Tuple` for type annotation
+    "UP035", # TODO: Import from `collections.abc` instead: `Sequence`
+    "UP037",  # TODO: Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
     "PLW2901", # `for` loop variable `value` overwritten by assignment target
     "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar` (cannot be fixed due to bug)
     "COM812",  # Incompatible with `ruff format`
@@ -51,7 +53,7 @@ known-local-folder = ["pycheribuild"]
 
 [tool.black]
 line-length = 120
-target-version = ['py38']
+target-version = ['py39']
 # 'extend-exclude' excludes files or directories in addition to the defaults
 # Currently reformatting pycheribuild/ results in lots of weird formatting, so
 # let's restrict this to the other files for now.
@@ -70,7 +72,7 @@ search-path = [
     "3rdparty/ptyprocess",
     "test-scripts"
 ]
-python-version = "3.8.0"
+python-version = "3.9.6"
 python-platform = "linux"
 
 [[tool.uv.index]]
@@ -124,7 +126,7 @@ invalid-argument-type = "ignore" # Weird false positive with pytest.skip/fail
 too-many-positional-arguments = "ignore" # Weird false positive with pytest.skip/fail
 
 [dependency-groups]
-# Runtime/test-only deps: this is what the Jenkins python-baseline (python:3.8.0)
+# Runtime/test-only deps: this is what the Jenkins python-baseline (python:3.9.6)
 # and python-latest containers install via requirements.txt to run the test suite.
 # Keep this free of the heavier lint/type-check tools below, which aren't
 # guaranteed to support ancient Python versions.
@@ -140,8 +142,7 @@ test = [
 # Full contributor/CI toolchain: test deps plus linting/type-checking.
 dev = [
     { include-group = "test" },
-    "flake8==5.0.4; python_version < '3.9'",
-    "flake8==7.3.0; python_version >= '3.9'",
+    "flake8==7.3.0",
     "pre-commit>=3.5.0",
     "psutil>=7.2.2",
     "pyrefly==1.2.0",

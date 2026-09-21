@@ -18,7 +18,7 @@ repos:
       # Ensure uv.lock stays in sync automatically.
       - id: uv-lock
       # requirements.txt only tracks the "test" group (no lint/type-check
-      # tools) so the Jenkins python-baseline (python:3.8.0) container can
+      # tools) so the Jenkins python-baseline (python:3.9.6) container can
       # still install it to run the test suite.
       - id: uv-export
         args: [ "--format", "requirements-txt", "--no-hashes", "--only-group", "test", "-o", "requirements.txt" ]
