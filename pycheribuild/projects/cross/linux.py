@@ -366,7 +366,7 @@ class LaunchCheriAllianceLinux(LaunchLinuxBase):
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap",)
+            result += ("alliance-opensbi-baremetal-riscv64zcheri093-purecap",)
         return *result, "linux-kernel", "busybox"
 
 
@@ -463,7 +463,7 @@ class LaunchCheriAllianceLinuxDebian(LaunchQEMUBase):
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap",)
+            result += ("alliance-opensbi-baremetal-riscv64zcheri093-purecap",)
         return *result, "linux-kernel"
 
 
