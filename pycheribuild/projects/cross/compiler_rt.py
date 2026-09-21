@@ -161,7 +161,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         xtarget = cls.get_crosscompile_target()
         if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
             # The builtins for Linux need C library and kernel headers available.
-            ti = typing.cast(typing.Type[LinuxTargetInfoBase], xtarget.target_info_cls)
+            ti = typing.cast(type[LinuxTargetInfoBase], xtarget.target_info_cls)
             result += (ti.kernel_target, ti.musl_target + "-headers")
         return result
 

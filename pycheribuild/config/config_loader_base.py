@@ -148,7 +148,7 @@ class ConfigLoaderBase(typing.Generic[_ConfigType], ABC):
         **kwargs,
     ) -> "list[T]":
         return typing.cast(
-            typing.List[T],
+            list[T],
             self.add_commandline_only_option(
                 *args,
                 default=[] if default is None else default,

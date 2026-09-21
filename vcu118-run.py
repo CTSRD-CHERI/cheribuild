@@ -35,7 +35,6 @@ import shutil
 import sys
 import tempfile
 import time
-import typing
 from abc import abstractmethod
 from pathlib import Path
 from threading import Thread
@@ -288,7 +287,7 @@ def reset_soc(conn: FpgaConnection):
     conn.gdb.sendintr()
 
 
-def start_openocd(openocd_cmd: Path, num_cores: int) -> typing.Tuple[pexpect.spawn, int]:
+def start_openocd(openocd_cmd: Path, num_cores: int) -> tuple[pexpect.spawn, int]:
     with tempfile.NamedTemporaryFile() as t:
         t.write(generate_openocd_script(num_cores))
         t.flush()

@@ -55,7 +55,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
-        ti = typing.cast(typing.Type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
+        ti = typing.cast(type[LinuxTargetInfoBase], cls.get_crosscompile_target().target_info_cls)
         # Musl needs the kernel headers and the compiler-rt builtins
         return ti.kernel_target, ti.compiler_rt_target
 

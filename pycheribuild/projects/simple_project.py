@@ -485,7 +485,7 @@ else:
                 ),
             )
 
-    class ListConfigOption(PerProjectConfigOption[typing.List[str]]):
+    class ListConfigOption(PerProjectConfigOption[list[str]]):
         def __init__(
             self,
             name: str,
@@ -697,7 +697,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         result is filtered based on various parameters such as config.include_dependencies.
         """
         # look only in __dict__ to avoid parent class lookup
-        result = typing.cast(Optional[typing.List[Target]], cls.__dict__.get("_cached_filtered_deps", None))
+        result = typing.cast(Optional[list[Target]], cls.__dict__.get("_cached_filtered_deps", None))
         if result is None:
             with_toolchain_deps = config.include_toolchain_dependencies and not cls.skip_toolchain_dependencies
             with_sdk_deps = not config.skip_sdk
@@ -769,7 +769,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     @classmethod
     def cached_full_dependencies(cls) -> "list[Target]":
         # look only in __dict__ to avoid parent class lookup
-        cached = typing.cast(Optional[typing.List[Target]], cls.__dict__.get("_cached_full_deps", None))
+        cached = typing.cast(Optional[list[Target]], cls.__dict__.get("_cached_full_deps", None))
         if cached is None:
             raise ValueError("cached_full_dependencies called before value was cached")
         return cached
@@ -1212,7 +1212,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         **kwargs,
     ) -> "list[T]":
         return typing.cast(
-            typing.List[T],
+            list[T],
             cls.add_config_option(
                 name, kind=element_type, is_list=True, default=[] if default is None else default, **kwargs
             ),
@@ -1987,7 +1987,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 new_cls = typing.cast(
-                    typing.Type[SimpleProjectBase],
+                    type[SimpleProjectBase],
                     type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict),
                 )
                 assert issubclass(new_cls, SimpleProjectBase)

@@ -178,7 +178,7 @@ VOLUME /diskimg
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def _fvp_base_command(self, need_tty=True, docker_image=None) -> typing.Tuple[list, Path]:
+    def _fvp_base_command(self, need_tty=True, docker_image=None) -> tuple[list, Path]:
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
             if docker_image is None:
@@ -418,7 +418,7 @@ VOLUME /diskimg
                     self.warning("Error killing background process:", e)
 
     @cached_property
-    def fvp_revision(self) -> "typing.Tuple[int, ...]":
+    def fvp_revision(self) -> "tuple[int, ...]":
         return self._get_version(result_if_invalid=self.latest_known_fvp)
 
     def _get_version(self, docker_image=None, *, result_if_invalid) -> "tuple[int, ...]":
