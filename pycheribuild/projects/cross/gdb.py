@@ -330,7 +330,7 @@ class BuildGDB(BuildGDBBase):
 
 
 class BuildCheriAllianceGDB(BuildGDBBase):
-    target = "cheri-std093-gdb"
+    target = "alliance-gdb"
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/gdb.git",

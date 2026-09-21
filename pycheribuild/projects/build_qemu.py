@@ -644,7 +644,7 @@ class BuildQEMU(BuildCheriQEMUBase):
 
 
 class BuildCheriAllianceQEMU(BuildQEMU):
-    target = "cheri-std093-qemu"
+    target = "alliance-qemu"
     repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     default_targets = (
