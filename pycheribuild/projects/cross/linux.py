@@ -367,6 +367,8 @@ class LaunchCheriAllianceLinux(LaunchLinuxBase):
         result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("alliance-opensbi-baremetal-riscv64zcheri093-purecap",)
+        elif cls.get_crosscompile_target().is_riscv64():
+            result += ("alliance-opensbi-baremetal-riscv64",)
         return *result, "linux-kernel", "busybox"
 
 
