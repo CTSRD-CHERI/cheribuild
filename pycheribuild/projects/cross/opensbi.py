@@ -272,11 +272,8 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
 
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/opensbi",
-        temporary_url_override="https://github.com/qwattash/cheri-alliance-opensbi",
-        url_override_reason="https://github.com/CHERI-Alliance/opensbi/pull/3",
-        default_branch="toooba-fixes",
+        default_branch="codasip-cheri-riscv-1.8.1",
         force_branch=True,
-        # TODO: restore default branch: default_branch="codasip-cheri-riscv",
     )
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV32,
