@@ -335,10 +335,10 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
         result = tuple()
         result += ("cheri-microkit",)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-llvm",)
-            result += ("cheri-std093-opensbi",)
-            result += ("cheri-std093-gdb-native",)
-            result += ("cheri-std093-qemu",)
+            result += ("cheri-alliance-llvm",)
+            result += ("cheri-alliance-opensbi",)
+            result += ("cheri-alliance-gdb-native",)
+            result += ("cheri-alliance-qemu",)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-llvm-native",)
             result += ("gdb-native",)
