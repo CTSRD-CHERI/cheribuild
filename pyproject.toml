@@ -143,7 +143,7 @@ dev = [
     "pre-commit>=3.5.0",
     "psutil>=7.2.2",
     "pyrefly==1.2.0",
-    "ruff==0.16.1",
+    "ruff==0.16.8",
     "setuptools<82",
     "ty==0.0.66",
 ]
