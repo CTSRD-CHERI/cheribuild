@@ -49,8 +49,9 @@ import tempfile
 import time
 import traceback
 import typing
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, Optional, Union
 
 from ..colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget

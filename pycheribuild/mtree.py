@@ -37,8 +37,9 @@ import stat
 import sys
 import typing
 from collections import OrderedDict
+from collections.abc import Iterator
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Iterator, Optional, Union
+from typing import Optional, Union
 
 from .utils import fatal_error, status_update, warning_message
 

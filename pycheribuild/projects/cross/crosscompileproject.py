@@ -30,8 +30,9 @@
 
 import os
 import typing
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 from ..cmake_project import CMakeProject
 from ..meson_project import MesonProject
