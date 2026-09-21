@@ -44,7 +44,6 @@ from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
 from ..project import CheriConfig, CPUArchitecture
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import BoolConfigOption, OptionalStringConfigOption, StringConfigOption
-from ...config.chericonfig import RiscvCheriISA
 
 
 class BuildCheriseL4(CrossCompileProject):
@@ -209,7 +208,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
             ]
         elif (
             self.compiling_for_riscv(include_purecap=True)
-            and self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093
+            and self.get_crosscompile_target().is_experimental_cheri093_std()
         ):
             qemu = BuildCheriAllianceQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
             bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self)
