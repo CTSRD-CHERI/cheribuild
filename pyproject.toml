@@ -131,7 +131,7 @@ test = [
     "argcomplete>=3.6.3",
     "libtmux>=0.38.1",
     "pyserial>=3.5",  # Only needed for RISC-V FPGA boot -> not bundled
-    "pytest>=7.0,<9.0",
+    "pytest==8.4.2",
     "pytest-pycharm>=0.7.0",
     "pytest-xdist>=3.6.1",
     "typing-extensions>=4.12.2",  # libtmux 0.40+ uses typing_extensions
