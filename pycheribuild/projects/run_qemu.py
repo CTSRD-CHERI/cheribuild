@@ -929,9 +929,9 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         xtarget = cls.get_crosscompile_target()
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             if xtarget.is_riscv_y():
-                bios_target = "cheri-std093-opensbi-baremetal-riscv64y-purecap"
+                bios_target = "alliance-opensbi-baremetal-riscv64y-purecap"
             elif xtarget.is_experimental_cheri093_std():
-                bios_target = "cheri-std093-opensbi-baremetal-riscv64zcheri093-purecap"
+                bios_target = "alliance-opensbi-baremetal-riscv64zcheri093-purecap"
             else:
                 bios_target = "bbl-baremetal-riscv64-purecap"
             result += (bios_target,)
