@@ -172,8 +172,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             self.clean_directory(self.build_dir / "run", keep_root=False)
         testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
-        extra_args: "list[str | Path]" = []
-        tools: "list[str]" = []
+        extra_args: list[str | Path] = []
+        tools: list[str] = []
         if self.compiling_for_cheri():
             tools.append("cheri")
             if self.config.subobject_bounds and self.config.subobject_bounds != "conservative":

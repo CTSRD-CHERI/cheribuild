@@ -76,7 +76,7 @@ __all__ = [
 
 
 def __filter_env(env: "dict[str, str]") -> "dict[str, str]":
-    result: "dict[str, str]" = dict()
+    result: dict[str, str] = dict()
     for k, v in env.items():
         if k not in os.environ or os.environ[k] != v:
             result[k] = v
@@ -460,7 +460,7 @@ def run_command(
         kwargs["stdout"] = subprocess.DEVNULL
 
     if env is not None:
-        env_arg: "dict[str, str]" = {k: str(v) for k, v in env.items()}  # make sure everything is a string
+        env_arg: dict[str, str] = {k: str(v) for k, v in env.items()}  # make sure everything is a string
         if not replace_env:
             new_env = os.environ.copy()
             new_env.update(env_arg)
@@ -548,10 +548,10 @@ class CompilerInfo:
         self.version_str = version_str
         self.default_target = default_target
         self.config = config
-        self._resource_dir: "Optional[Path]" = None
-        self._supported_warning_flags: "dict[str, bool]" = {}
-        self._supported_sanitizer_flags: "dict[tuple[str, tuple[str, ...]], bool]" = {}
-        self._include_dirs: "dict[tuple[str, ...], list[Path]]" = {}
+        self._resource_dir: Optional[Path] = None
+        self._supported_warning_flags: dict[str, bool] = {}
+        self._supported_sanitizer_flags: dict[tuple[str, tuple[str, ...]], bool] = {}
+        self._include_dirs: dict[tuple[str, ...], list[Path]] = {}
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:

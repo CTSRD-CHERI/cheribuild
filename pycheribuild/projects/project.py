@@ -147,19 +147,19 @@ class MakeCommandKind(Enum):
 class MakeOptions:
     def __init__(self, kind: MakeCommandKind, project: SimpleProject, **kwargs) -> None:
         self.__project = project
-        self._vars: "typing.OrderedDict[str, str]" = OrderedDict()
+        self._vars: typing.OrderedDict[str, str] = OrderedDict()
         # Used by e.g. FreeBSD:
-        self._with_options: "typing.OrderedDict[str, bool]" = OrderedDict()
-        self._flags: "list[str]" = []
-        self.env_vars: "dict[str, str]" = {}
+        self._with_options: typing.OrderedDict[str, bool] = OrderedDict()
+        self._flags: list[str] = []
+        self.env_vars: dict[str, str] = {}
         self.set(**kwargs)
         self.kind = kind
         # We currently need to differentiate cmake driving ninja and cmake driving make since there is no
         # generator-independent option to pass -k (and ninja/make expect a different format)
         self.subkind = None
-        self.__can_pass_j_flag: "Optional[bool]" = None
-        self.__command: "Optional[str]" = None
-        self.__command_args: "list[str | Path]" = []
+        self.__can_pass_j_flag: Optional[bool] = None
+        self.__command: Optional[str] = None
+        self.__command_args: list[str | Path] = []
 
     def __deepcopy__(self, memo) -> "typing.NoReturn":
         raise RuntimeError("Should not be called!")
@@ -952,8 +952,8 @@ class Project(SimpleProject):
             self._initial_build_dir = self.source_dir
 
         # non-assignable variables:
-        self.configure_args: "list[str | Path]" = []
-        self.configure_environment: "dict[str, str]" = {}
+        self.configure_args: list[str | Path] = []
+        self.configure_environment: dict[str, str] = {}
         self.make_args = MakeOptions(self.make_kind, self)
         self._compiledb_tool: Optional[str] = None
         if self.config.create_compilation_db and self.compile_db_requires_bear:
@@ -1023,16 +1023,16 @@ class Project(SimpleProject):
                 # compressed debug info is broken on big endian until
                 # we depend on a lld version with the fix.
                 self.COMMON_FLAGS.append("-gz")
-        self.CFLAGS: "list[str]" = []
-        self.CXXFLAGS: "list[str]" = []
-        self.ASMFLAGS: "list[str]" = []
-        self.LDFLAGS: "list[str]" = self.target_info.required_link_flags()
-        self.COMMON_LDFLAGS: "list[str]" = []
+        self.CFLAGS: list[str] = []
+        self.CXXFLAGS: list[str] = []
+        self.ASMFLAGS: list[str] = []
+        self.LDFLAGS: list[str] = self.target_info.required_link_flags()
+        self.COMMON_LDFLAGS: list[str] = []
         if self.crosscompile_target.is_libcompat_target():
             self.COMMON_LDFLAGS.append("-L" + str(self.sdk_sysroot / "usr" / self.target_info.default_libdir))
 
-        self._lto_linker_flags: "list[str]" = []
-        self._lto_compiler_flags: "list[str]" = []
+        self._lto_linker_flags: list[str] = []
+        self._lto_compiler_flags: list[str] = []
 
     @cached_property
     def dependency_install_prefixes(self) -> "list[Path]":
@@ -1200,7 +1200,7 @@ class Project(SimpleProject):
     def rootfs_dir(self) -> Path:
         xtarget = self.crosscompile_target.get_rootfs_target()
         # noinspection PyProtectedMember
-        rootfs_cls: "type[AbstractProject]" = self.target_info._get_rootfs_class(xtarget)
+        rootfs_cls: type[AbstractProject] = self.target_info._get_rootfs_class(xtarget)
         assert rootfs_cls.is_rootfs_target
         return rootfs_cls.get_install_dir(self, xtarget)
 
@@ -1309,7 +1309,7 @@ class Project(SimpleProject):
             options = self.make_args
         if not make_command:
             make_command = options.command
-        make_targets_list: "list[str]" = (
+        make_targets_list: list[str] = (
             [] if make_targets is None else ([make_targets] if isinstance(make_targets, str) else make_targets)
         )
         all_args = self._get_make_commandline(

@@ -553,7 +553,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 LIBCXX_SHARED_OUTPUT_NAME="libc++-shared",
             )
 
-        test_executor: "list[str]" = []
+        test_executor: list[str] = []
         if not self.compiling_for_host():
             if self.target_info.is_baremetal() and (self.source_dir / "../libcxx/utils/qemu_baremetal.py").exists():
                 test_executor = [

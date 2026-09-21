@@ -1611,8 +1611,8 @@ def _main(
     starttime = datetime.datetime.now()
 
     # validate args:
-    test_archives: "list[Path]" = []
-    test_ld_preload_files: "list[Path]" = []
+    test_archives: list[Path] = []
+    test_ld_preload_files: list[Path] = []
     if not args.use_smb_instead_of_ssh and not args.skip_ssh_setup:
         if args.ssh_key is None:
             failure(

@@ -213,7 +213,7 @@ class GitRepository(SourceRepository):
         self.old_branches = old_branches
         # e.g. ("^refs/heads/users/*", "^refs/heads/revert-*") to avoid fetching the hundreds
         # of user branches that only exist in the upstream repository (and not in our forks).
-        self.negative_fetch_refspecs: "typing.Sequence[str]" = (
+        self.negative_fetch_refspecs: typing.Sequence[str] = (
             [] if negative_fetch_refspecs is None else negative_fetch_refspecs
         )
 

@@ -105,7 +105,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         # allow a -G flag in cmake-options to override the default generator (Ninja).
         custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         generator = custom_generator if custom_generator else self._default_cmake_generator_arg
-        self.ctest_environment: "dict[str, str]" = {}
+        self.ctest_environment: dict[str, str] = {}
         self.configure_args.append(generator)
         self.build_type_var_suffix = ""
         if "Ninja" in generator:
@@ -114,7 +114,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.make_args.subkind = MakeCommandKind.DefaultMake
         else:
             self.make_args.subkind = MakeCommandKind.CustomMakeTool  # VS/XCode, etc.
-        self._toolchain_file: "Optional[Path]" = None
+        self._toolchain_file: Optional[Path] = None
         if not self.compiling_for_host():
             self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
             self._toolchain_file = self.build_dir / "CrossToolchain.cmake"

@@ -64,7 +64,7 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
     """Factory for creating enum object types"""
 
     def __init__(self, enumclass: "type[EnumTy]"):
-        self.enums: "type[EnumTy]" = enumclass
+        self.enums: type[EnumTy] = enumclass
         # Validate that all enum keys match the expected format
         for member in enumclass:
             # only upppercase letters, numbers and _ allowed
@@ -640,7 +640,7 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
         super().__init__(
             argparser_class, option_cls=option_cls, command_line_only_options_cls=command_line_only_options_cls
         )
-        self._config_path: "Optional[Path]" = None
+        self._config_path: Optional[Path] = None
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
         # that pick up the right config file in ~/.config or the cheribuild directory

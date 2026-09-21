@@ -150,7 +150,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         if self.crosscompile_target.is_riscv(include_purecap=True):
             flags.append("-G0")
 
-        cmd: "list[str | Path]" = [ccc, target, self.board]
+        cmd: list[str | Path] = [ccc, target, self.board]
         cmd.extend(flags)
         cmd.extend(sources)
         cmd.extend(["-o", output_elf])
