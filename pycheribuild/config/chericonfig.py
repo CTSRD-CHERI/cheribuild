@@ -476,7 +476,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
             "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.",
         )
-        self.skip_dependency_filters: "list[re.Pattern]" = loader.add_commandline_only_list_option(
+        self.skip_dependency_filters: list[re.Pattern] = loader.add_commandline_only_list_option(
             "skip-dependency-filter",
             group=loader.dependencies_group,
             element_type=re.compile,
@@ -708,7 +708,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "test suites on the remote board instead of QEMU.",
         )
 
-        self.targets: "list[str]" = []
+        self.targets: list[str] = []
         self.__optional_properties = [
             "internet_connection_last_checked_at",
             "start_after",

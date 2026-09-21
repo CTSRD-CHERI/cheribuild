@@ -302,7 +302,7 @@ class _TargetAliasBase(Target, metaclass=abc.ABCMeta):
 class MultiArchTargetAlias(_TargetAliasBase):
     def __init__(self, name, project_class) -> None:
         super().__init__(name, project_class)
-        self.derived_targets: "list[MultiArchTarget]" = []
+        self.derived_targets: list[MultiArchTarget] = []
 
     def __repr__(self) -> str:
         return "<Cross target alias " + self.name + ">"
@@ -382,8 +382,8 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
 
 class TargetManager:
     def __init__(self) -> None:
-        self._all_targets: "dict[str, Target]" = {}
-        self._targets_for_command_line_options_only: "dict[str, MultiArchTargetAlias]" = {}
+        self._all_targets: dict[str, Target] = {}
+        self._targets_for_command_line_options_only: dict[str, MultiArchTargetAlias] = {}
 
     def add_target_for_config_options_only(self, target: MultiArchTargetAlias) -> None:
         # TODO remove this ugly hack
@@ -485,7 +485,7 @@ class TargetManager:
         targets = list(OrderedDict((x, True) for x in targets).keys())
         # Perform a topological sort using Kahn's algorithm
         in_degree = {node: 0 for node in targets}
-        adj: "dict[Target, list[Target]]" = {node: [] for node in targets}
+        adj: dict[Target, list[Target]] = {node: [] for node in targets}
 
         for node in targets:
             for dep in node.project_class.cached_full_dependencies():
@@ -500,7 +500,7 @@ class TargetManager:
             if in_degree[node] == 0:
                 heapq.heappush(priority_queue, (node.name_sort_order(), node))
 
-        result: "list[Target]" = []
+        result: list[Target] = []
         while priority_queue:
             # Get the node with the alphabetically smallest name sorting order (run-* first, then alphabetical)
             _, current_node = heapq.heappop(priority_queue)
@@ -518,7 +518,7 @@ class TargetManager:
         return result
 
     def get_all_targets(self, explicit_targets: "list[Target]", config: CheriConfig) -> "list[Target]":
-        chosen_targets: "list[Target]" = []
+        chosen_targets: list[Target] = []
         for t in explicit_targets:
             if isinstance(t, SimpleTargetAlias):
                 t = t.get_real_target(None, config)

@@ -55,7 +55,7 @@ class BuildCheriExercises(CrossCompileProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.compiled_files: "list[Path]" = []
+        self.compiled_files: list[Path] = []
 
     def _compile_file(self, output: Path, *args, target_override: "Optional[CrossCompileTarget]" = None):
         assert isinstance(self.target_info, CheriBSDTargetInfo)

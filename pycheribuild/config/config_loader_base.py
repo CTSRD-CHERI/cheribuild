@@ -82,8 +82,8 @@ class ConfigLoaderBase(typing.Generic[_ConfigType], ABC):
     def __init__(
         self, *, option_cls: "type[ConfigOptionBase]", command_line_only_options_cls: "type[ConfigOptionBase]"
     ):
-        self.__option_cls: "type[ConfigOptionBase]" = option_cls
-        self.__command_line_only_options_cls: "type[ConfigOptionBase]" = command_line_only_options_cls
+        self.__option_cls: type[ConfigOptionBase] = option_cls
+        self.__command_line_only_options_cls: type[ConfigOptionBase] = command_line_only_options_cls
         self.unknown_config_option_is_error = False
         self.completion_excludes = []
         # Add argparse groups
@@ -314,7 +314,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         self.shortname = shortname
         self.default = default
         self.value_type = value_type
-        self._cached: "Optional[T]" = None
+        self._cached: Optional[T] = None
         self._loader = _loader
         # if none it means the global CheriConfig is the class containing this option
         self._owning_class = _owning_class

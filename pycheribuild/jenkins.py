@@ -98,8 +98,8 @@ class SdkArchive:
         self.output_dir = output_dir
         self.cheri_config = cheri_config
         self.archive = cheri_config.workspace / name
-        self.required_globs: "list[str]" = [] if required_globs is None else required_globs
-        self.extra_args: "list[str]" = [] if extra_args is None else extra_args
+        self.required_globs: list[str] = [] if required_globs is None else required_globs
+        self.extra_args: list[str] = [] if extra_args is None else extra_args
 
     def extract(self) -> None:
         assert self.archive.exists(), str(self.archive)

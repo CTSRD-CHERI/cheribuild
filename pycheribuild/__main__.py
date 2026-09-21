@@ -149,7 +149,7 @@ def get_config_option_value(handle: ConfigOptionHandle, config: DefaultCheriConf
             "for a target-specific option. Please use the target-suffixed on instead."
         )
     if option._owning_class is not None:
-        project_cls: "type[SimpleProject]" = option._owning_class
+        project_cls: type[SimpleProject] = option._owning_class
         Target.instantiating_targets_should_warn = False
         t = target_manager.get_target(project_cls.target, config=config, caller="get_config_option")
         obj = t._get_or_create_project_no_setup(None, config, caller=None)

@@ -34,7 +34,6 @@ show-fixes = true
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW", "PT"]
 ignore = [
-    "UP037",  # TODO: Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
     "PLW2901", # `for` loop variable `value` overwritten by assignment target
     "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar` (cannot be fixed due to bug)
     "COM812",  # Incompatible with `ruff format`

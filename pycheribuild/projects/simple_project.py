@@ -990,7 +990,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def get_class_for_target(cls, arch: CrossCompileTarget) -> "type[typing.Self]":
-        base_class: "type[typing.Self]" = getattr(cls, "synthetic_base", cls)  # pytype: disable=invalid-annotation
+        base_class: type[typing.Self] = getattr(cls, "synthetic_base", cls)  # pytype: disable=invalid-annotation
         result = cls.get_class_for_target_name(base_class.target, arch)
         assert issubclass(result, base_class)
         return result
@@ -1511,7 +1511,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         """
         print_command(args, cwd=cwd, env=env, config=self.config)
         # make sure that env is either None or a os.environ with the updated entries entries
-        new_env: "Optional[dict[str, str]]" = None
+        new_env: Optional[dict[str, str]] = None
         if env:
             new_env = os.environ.copy()
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
@@ -1616,7 +1616,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             with file.open("rb") as f:
                 if f.read(4) == b"\x7fELF" and self.should_strip_elf_file(file):
                     self.verbose_print("Stripping ELF binary", file)
-                    cmd: "list[str | Path]" = [self.target_info.strip_tool, file]
+                    cmd: list[str | Path] = [self.target_info.strip_tool, file]
                     if output_path:
                         self.makedirs(output_path.parent)
                         cmd += ["-o", output_path]
@@ -1885,7 +1885,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
     # pytype: disable=invalid-annotation
     def __init__(cls, name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs) -> None:
         # Retrieve the modifiable dict of local config options.
-        local_opts: "dict[str, PerProjectConfigOption]" = getattr(cls, "_local_config_options", {})
+        local_opts: dict[str, PerProjectConfigOption] = getattr(cls, "_local_config_options", {})
         if local_opts and isinstance(local_opts, dict):
             # Prune overridden options that have been redefined as static/non-descriptor values in this subclass
             for key in list(local_opts.keys()):
@@ -1911,7 +1911,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
 
         # load "target" field first then use that to infer the default source/build/install dir names
-        target_name: "Optional[str]" = None
+        target_name: Optional[str] = None
         if "target" in clsdict:
             target_name = clsdict["target"]
         elif name.startswith("Build"):

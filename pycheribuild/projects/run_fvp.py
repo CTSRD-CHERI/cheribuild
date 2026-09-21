@@ -257,7 +257,7 @@ VOLUME /diskimg
             pre_cmd += [self.container_name]
         if interactive:
             kwargs["give_tty_control"] = True
-        bg_processes: "list[tuple[subprocess.Popen, bool]]" = []
+        bg_processes: list[tuple[subprocess.Popen, bool]] = []
         if self.use_docker_container and x11 and OSInfo.IS_MAC:
             # To use X11 via docker on macos we need to run socat on port 6000
             socat_cmd = ["socat", "TCP-LISTEN:6000,reuseaddr,fork", 'UNIX-CLIENT:"' + display + '"']
@@ -549,7 +549,7 @@ class LaunchFVPBase(SimpleProject):
             "remote-disk-image-path",
             help="When set rsync will be used to update the image from the remote server prior to running it.",
         )
-        cls.extra_tcp_forwarding: "list[str]" = cls.add_list_option(
+        cls.extra_tcp_forwarding: list[str] = cls.add_list_option(
             "extra-tcp-forwarding",
             help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
         )
@@ -800,7 +800,7 @@ class LaunchFVPBase(SimpleProject):
             # countdown to roughly match real time since otherwise each second of countdown takes around 2 minutes:
             fvp_args += ["-C", "board.rtc_clk_frequency=300"]
 
-            tcp_ports: "list[int]" = []
+            tcp_ports: list[int] = []
 
             # Expose to the real host all TCP ports exposed by the FVP
             if self.ssh_port is not None:
@@ -817,7 +817,7 @@ class LaunchFVPBase(SimpleProject):
                 if len(hg) != 2:
                     self.fatal(f"Bad extra-tcp-forwarding (not just one '=' in '{x}')")
                     continue
-                gaddrport: "list[str]" = hg[1].split(":")
+                gaddrport: list[str] = hg[1].split(":")
                 if len(gaddrport) > 2:
                     self.fatal(f"Bad extra-tcp-forwarding (excess ':' in '{x}')")
                     continue

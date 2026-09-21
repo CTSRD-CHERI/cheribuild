@@ -307,7 +307,7 @@ def run_remote_lit_tests_impl(
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
     lit_cmd.append("--timeout=120")  # 2 minutes max per test (in case there is an infinite loop)
-    xunit_file: "Optional[Path]" = None
+    xunit_file: Optional[Path] = None
     if args.xunit_output:
         lit_cmd.append("--xunit-xml-output")
         xunit_file = Path(args.xunit_output).absolute()

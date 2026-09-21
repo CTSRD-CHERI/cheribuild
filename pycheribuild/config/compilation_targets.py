@@ -636,7 +636,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         script = self.project.get_test_script_path(script_name)
         if not script.exists():
             self.project.fatal("Could not find test script", script)
-        cmd: "list[str | Path]" = [script, "--architecture", rootfs_xtarget.base_arch_suffix]
+        cmd: list[str | Path] = [script, "--architecture", rootfs_xtarget.base_arch_suffix]
         if self.config.test_ssh_key is not None:
             cmd.extend(["--ssh-key", self.config.test_ssh_key])
         if kernel_path and not has_test_extra_arg_override("--kernel"):
@@ -654,7 +654,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 bios_args = run_instance.get_riscv_bios_args()
                 assert len(bios_args) == 2 and bios_args[0] == "-bios"
                 cmd.extend(["--bios", bios_args[1]])
-        build_dir: "Optional[Path]" = getattr(self.project, "build_dir", None)
+        build_dir: Optional[Path] = getattr(self.project, "build_dir", None)
         if mount_builddir and build_dir is not None and not has_test_extra_arg_override("--build-dir"):
             cmd.extend(["--build-dir", build_dir])
         if mount_sourcedir and self.project.source_dir and not has_test_extra_arg_override("--source-dir"):

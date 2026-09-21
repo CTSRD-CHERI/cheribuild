@@ -225,7 +225,7 @@ class BuildDiskImageBase(SimpleProject):
     def __init__(self, *args, **kwargs) -> None:
         # TODO: different extra-files directory
         super().__init__(*args, **kwargs)
-        self.extra_files: "list[Path]" = []
+        self.extra_files: list[Path] = []
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
         self.makefs_cmd: Optional[Path] = None
         self.mkimg_cmd: Optional[Path] = None
@@ -238,7 +238,7 @@ class BuildDiskImageBase(SimpleProject):
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
-        self.stripped_contents: "dict[Union[str,PurePath], PurePath]" = {}
+        self.stripped_contents: dict[Union[str, PurePath], PurePath] = {}
 
     @cached_property
     def source_project(self) -> BuildFreeBSD:

@@ -185,7 +185,7 @@ class KernelConfigFactory:
     def _prepare_kernconf_context(self, platforms: "set[ConfigPlatform]", kernel_abi, base_context=None, **kwargs):
         if base_context is None:
             base_context = self.kernconf_components
-        ctx: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(base_context)
+        ctx: typing.OrderedDict[str, Optional[str]] = OrderedDict(base_context)
         if "kabi_name" in ctx:
             ctx["kabi_name"] = self.get_kabi_name(kernel_abi)
         if "platform_name" in ctx:
@@ -937,7 +937,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     @property
     def arch_build_flags(self) -> "dict[str, str | int | bool]":
         assert isinstance(self.target_info, FreeBSDTargetInfo)
-        result: "dict[str, str | int | bool]" = {
+        result: dict[str, str | int | bool] = {
             "TARGET": self.target_info.freebsd_target,
             "TARGET_ARCH": self.target_info.freebsd_target_arch,
         }
@@ -1078,7 +1078,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.has_default_buildkernel_kernel_config():
             assert self.kernel_config
         self.make_args.set(**self.arch_build_flags)
-        self.extra_kernels: "list[str]" = []
+        self.extra_kernels: list[str] = []
 
     def setup(self) -> None:
         super().setup()
@@ -1970,7 +1970,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().__init__(*args, **kwargs)
         if self.universe_target:
             return
-        self.extra_kernels_with_mfs: "list[str]" = []
+        self.extra_kernels_with_mfs: list[str] = []
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]

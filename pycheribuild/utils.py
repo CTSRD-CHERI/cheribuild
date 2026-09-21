@@ -115,7 +115,7 @@ class ConfigBase:
         self.pretend = pretend
         self.force = force
         self.presume_connectivity = False
-        self.internet_connection_last_checked_at: "Optional[float]" = None
+        self.internet_connection_last_checked_at: Optional[float] = None
         self.internet_connection_last_check_result = False
 
 
@@ -523,9 +523,9 @@ class ThreadJoiner:
     def __init__(self, threads: "Optional[Union[threading.Thread, list[threading.Thread]]]" = None):
         if not isinstance(threads, list):
             if threads is None:
-                self.threads: "list[threading.Thread]" = []
+                self.threads: list[threading.Thread] = []
             else:
-                self.threads: "list[threading.Thread]" = [threads]
+                self.threads: list[threading.Thread] = [threads]
         else:
             self.threads = typing.cast(list[threading.Thread], threads)
 

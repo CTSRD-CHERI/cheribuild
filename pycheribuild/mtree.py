@@ -137,8 +137,8 @@ class MtreeEntry:
 
 class MtreeSubtree(collections.abc.MutableMapping):
     def __init__(self):
-        self.entry: "Optional[MtreeEntry]" = None
-        self.children: "dict[str, MtreeSubtree]" = OrderedDict()
+        self.entry: Optional[MtreeEntry] = None
+        self.children: dict[str, MtreeSubtree] = OrderedDict()
 
     @staticmethod
     def _split_key(key):
@@ -226,8 +226,8 @@ class MtreeSubtree(collections.abc.MutableMapping):
             return
         if self.entry is not None and self.entry.attributes["type"] != "dir":
             return
-        files: "list[str]" = []
-        dirs: "list[tuple[str, MtreeSubtree]]" = []
+        files: list[str] = []
+        dirs: list[tuple[str, MtreeSubtree]] = []
         for k, v in self.children.items():
             if v.entry is not None and v.entry.attributes["type"] != "dir":
                 files.append(k)
