@@ -527,7 +527,7 @@ class ThreadJoiner:
             else:
                 self.threads: "list[threading.Thread]" = [threads]
         else:
-            self.threads = typing.cast(typing.List[threading.Thread], threads)
+            self.threads = typing.cast(list[threading.Thread], threads)
 
     def __enter__(self) -> None:
         for thread in self.threads:

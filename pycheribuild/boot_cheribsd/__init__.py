@@ -234,7 +234,7 @@ if typing.TYPE_CHECKING:
     MixinBase = pexpect.spawn
 else:
     MixinBase = object
-PatternListType = Sequence[Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
+PatternListType = Sequence[Union[str, typing.Pattern, type[pexpect.ExceptionPexpect]]]
 
 
 class CheriBSDSpawnMixin(MixinBase):
