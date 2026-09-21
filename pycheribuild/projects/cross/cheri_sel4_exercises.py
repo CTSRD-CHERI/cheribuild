@@ -25,7 +25,6 @@ from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
 from ..project import ComputedDefaultValue
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import StringConfigOption
-from ...config.chericonfig import RiscvCheriISA
 from ...qemu_utils import QemuOptions
 
 # -------------------------------------------------------------------------
@@ -458,7 +457,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
 
         # Select QEMU binary
         qemu_cmd = BuildQEMU.qemu_binary(self)
-        if self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
+        if self.get_crosscompile_target().is_experimental_cheri093_std():
             qemu_cmd = BuildCheriAllianceQEMU.qemu_binary(self)
         else:
             qemu_cmd = BuildQEMU.qemu_binary_for_target(CompilationTargets.FREESTANDING_MORELLO_PURECAP, self.config)
