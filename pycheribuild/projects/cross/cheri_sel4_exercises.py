@@ -21,7 +21,7 @@ from typing import Sequence, Union
 
 from .cheri_microkit import BuildCheriMicrokit
 from .crosscompileproject import CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
-from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
+from ..build_qemu import BuildQEMU
 from ..project import ComputedDefaultValue
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import StringConfigOption
@@ -456,11 +456,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
             return
 
         # Select QEMU binary
-        qemu_cmd = BuildQEMU.qemu_binary(self)
-        if self.get_crosscompile_target().is_experimental_cheri093_std():
-            qemu_cmd = BuildCheriAllianceQEMU.qemu_binary(self)
-        else:
-            qemu_cmd = BuildQEMU.qemu_binary_for_target(CompilationTargets.FREESTANDING_MORELLO_PURECAP, self.config)
+        qemu_cmd = BuildQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
 
         # Base QEMU options per architecture (never mutate these in loops)
         if self.crosscompile_target.is_riscv(include_purecap=True):
