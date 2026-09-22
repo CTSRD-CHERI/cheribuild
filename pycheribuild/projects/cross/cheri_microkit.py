@@ -40,7 +40,7 @@ from .crosscompileproject import (
     DefaultInstallDir,
     GitRepository,
 )
-from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
+from ..build_qemu import BuildQEMU
 from ..project import CheriConfig, CPUArchitecture
 from ..run_qemu import LaunchQEMUBase
 
@@ -191,9 +191,9 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
 
         board = "qemu_virt_riscv64"
         qemu_cmd = []
+        qemu = BuildQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
 
         if self.compiling_for_aarch64(include_purecap=True):
-            qemu = BuildQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
             board = "morello_qemu"
             qemu_cmd += [
                 qemu,
@@ -213,7 +213,6 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
             self.compiling_for_riscv(include_purecap=True)
             and self.get_crosscompile_target().is_experimental_cheri093_std()
         ):
-            qemu = BuildCheriAllianceQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
             bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self)
             qemu_cmd += [
                 qemu,
@@ -336,15 +335,14 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = tuple()
         result += ("cheri-microkit",)
+        result += ("qemu",)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("alliance-llvm",)
             result += ("alliance-opensbi",)
             result += ("alliance-gdb-native",)
-            result += ("alliance-qemu",)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-llvm-native",)
             result += ("gdb-native",)
-            result += ("qemu",)
         return result
 
     def setup(self):

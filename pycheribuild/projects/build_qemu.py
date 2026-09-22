@@ -641,19 +641,3 @@ class BuildQEMU(BuildCheriQEMUBase):
             *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.bmp"),
             *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.svg"),
         )
-
-
-class BuildCheriAllianceQEMU(BuildQEMU):
-    target = "alliance-qemu"
-    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
-    native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
-    default_targets = (
-        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
-        "riscv64-softmmu,riscv64xcheri-softmmu,riscv64cheristd-softmmu,"
-        "riscv32-softmmu,riscv32xcheri-softmmu,riscv32cheristd-softmmu,"
-        "x86_64-softmmu"
-    )
-
-    @classmethod
-    def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
-        return config.cheri_alliance_qemu_bindir
