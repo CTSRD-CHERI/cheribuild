@@ -76,7 +76,11 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
                 import argcomplete
             except ImportError:
                 sys.exit("argcomplete missing")
-            target_completer = argcomplete.completers.ChoicesCompleter(available_targets)
+            # Note: the `type: ignore` is needed for argcomplete 3.7.1/3.7.2, which wrongly annotate the
+            # ChoicesCompleter() argument as a Mapping (https://github.com/kislyuk/argcomplete/issues/562).
+            target_completer = argcomplete.completers.ChoicesCompleter(
+                available_targets,  # type: ignore  # ty: ignore[unused-type-ignore-comment, unused-ignore-comment]
+            )
             target_option.completer = target_completer
             argcomplete.autocomplete(
                 self._parser,
