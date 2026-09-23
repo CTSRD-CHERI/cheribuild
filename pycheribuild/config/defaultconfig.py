@@ -83,7 +83,11 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
 
             visible_targets = available_targets.copy()
             visible_targets.remove("__run_everything__")
-            target_completer = argcomplete.completers.ChoicesCompleter(visible_targets)
+            # Note: the `type: ignore` is needed for argcomplete 3.7.1/3.7.2, which wrongly annotate the
+            # ChoicesCompleter() argument as a Mapping (https://github.com/kislyuk/argcomplete/issues/562).
+            target_completer = argcomplete.completers.ChoicesCompleter(
+                visible_targets,  # type: ignore  # ty: ignore[unused-type-ignore-comment, unused-ignore-comment]
+            )
             target_option.completer = target_completer
             # make sure we get target completion for the unparsed args too by adding another zero_or more options
             # not sure why this works but it's a nice hack
