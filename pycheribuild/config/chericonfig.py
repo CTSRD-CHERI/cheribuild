@@ -784,7 +784,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
 
     @property
     def default_cheri_alliance_sdk_directory_name(self) -> str:
-        return "cheri-std093-sdk"
+        return "alliance-sdk"
 
     @property
     def cheri_sdk_bindir(self):

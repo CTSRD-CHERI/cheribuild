@@ -1246,9 +1246,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             option = inspect.getattr_static(cls, k)
             # Register the option if it's a raw descriptor or a ConfigOptionHandle inherited from a concrete
             # parent target class that hasn't been registered specifically on this subclass yet (i.e. not in
-            # cls.__dict__). For example, BuildCheriAllianceQEMU (cheri-std093-qemu) inherits the 'targets' option
-            # as a ConfigOptionHandle from its concrete parent BuildQEMU (qemu), and we must register it
-            # specifically on cheri-std093-qemu so it resolves to the custom default_targets list.
+            # cls.__dict__).
             if isinstance(option, PerProjectConfigOption) or (
                 isinstance(option, ConfigOptionHandle) and k not in cls.__dict__
             ):

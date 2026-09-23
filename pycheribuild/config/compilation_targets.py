@@ -135,7 +135,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         elif xtarget.is_riscv_y_or_cheri093() or cls.uses_alliance_llvm:
             # Use the CHERI Alliance compiler when building for RISCV CHERI or building
             # non-CHERI aarch64/riscv64 CHERI Alliance projects (that use the Alliance LLVM).
-            llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
+            llvm_target = SimpleProject.get_class_for_target_name("alliance-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
         return typing.cast("type[BuildLLVMInterface]", llvm_target)
@@ -914,7 +914,7 @@ class CheriLinuxTargetInfo(LinuxTargetInfoBase):
     uses_alliance_llvm: bool = True
     kernel_target = "linux-kernel"
     musl_target = "muslc"
-    compiler_rt_target = "cheri-std093-compiler-rt-builtins"
+    compiler_rt_target = "alliance-compiler-rt-builtins"
 
     @property
     def sysroot_dir(self) -> Path:

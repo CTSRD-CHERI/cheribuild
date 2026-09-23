@@ -844,8 +844,8 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
         force_branch=True,
     )
 
-    default_directory_basename = "cheri-std093-llvm-project"
-    target = "cheri-std093-llvm"
+    default_directory_basename = "alliance-llvm-project"
+    target = "alliance-llvm"
     skip_cheri_symlinks = False  # add target-specific symlinks
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK

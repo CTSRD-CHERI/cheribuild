@@ -30,7 +30,7 @@
 from pathlib import Path
 
 from .u_boot import BuildCheriAllianceUBoot
-from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
+from ..build_qemu import BuildQEMU
 from ..project import (
     BuildType,
     CheriConfig,
@@ -253,24 +253,21 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
     )
 
 
-def cheri_093_opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
+def alliance_opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
     dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
     return config.cheri_alliance_sdk_dir / ("opensbi" + project.build_dir_suffix) / dir_name
 
 
 class BuildAllianceOpenSBI(BuildOpenSBI):
-    target = "cheri-std093-opensbi"
+    target = "alliance-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
-        function=cheri_093_opensbi_install_dir, as_string="$CHERI093_SDK_ROOT/opensbi/riscv{32,64}{-purecap,}"
+        function=alliance_opensbi_install_dir, as_string="$ALLIANCE_SDK_ROOT/opensbi/riscv{32,64}{-purecap,}"
     )
 
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/opensbi",
-        temporary_url_override="https://github.com/qwattash/cheri-alliance-opensbi",
-        url_override_reason="https://github.com/CHERI-Alliance/opensbi/pull/3",
-        default_branch="toooba-fixes",
+        default_branch="codasip-cheri-riscv-1.8.1",
         force_branch=True,
-        # TODO: restore default branch: default_branch="codasip-cheri-riscv",
     )
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV32,
@@ -282,7 +279,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     )
 
     def _qemu_install_dir(self) -> Path:
-        return BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+        return BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
     def setup(self):
         super().setup()
@@ -314,7 +311,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
 
 
 class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
-    target = "cheri-std093-opensbi-gfe"
+    target = "alliance-opensbi-gfe"
     repository = ReuseOtherProjectRepository(BuildAllianceOpenSBI, do_update=True)
 
     def setup(self):
@@ -323,7 +320,7 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
 
 
 class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
-    target = "cheri-std093-opensbi-u-boot"
+    target = "alliance-opensbi-u-boot"
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
@@ -331,7 +328,7 @@ class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        return *super().dependencies(config), "cheri-std093-u-boot"
+        return *super().dependencies(config), "alliance-u-boot"
 
     def setup(self):
         super().setup()
