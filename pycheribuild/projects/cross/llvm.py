@@ -840,12 +840,16 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/llvm-project.git",
-        default_branch="codasip-cheri-riscv-20",
+        # default_branch="codasip-cheri-riscv-20",
+        # TODO: Use the previous default once the RR is merged
+        # https://github.com/CHERI-Alliance/llvm-project/pull/34
+        default_branch="merge-cheri-llvm-2026-09-22",
+        temporary_url_override="https://github.com/jrtc27/cheri-alliance-llvm-project.git",
         force_branch=True,
     )
 
-    default_directory_basename = "cheri-std093-llvm-project"
-    target = "cheri-std093-llvm"
+    default_directory_basename = "alliance-llvm-project"
+    target = "alliance-llvm"
     skip_cheri_symlinks = False  # add target-specific symlinks
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
