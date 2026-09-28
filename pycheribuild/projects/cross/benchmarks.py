@@ -45,7 +45,7 @@ from .crosscompileproject import (
 )
 from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ReuseOtherProjectRepository
-from ..simple_project import BoolConfigOption
+from ..simple_project import BoolConfigOption, StringConfigOption
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...targets import target_manager
@@ -690,8 +690,11 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
 
-    hw_counters = BoolConfigOption(
-        "enable-hw-counters", choices=("pmc", "statcounters"), help="Use hardware performance counters"
+    hw_counters = StringConfigOption(
+        "enable-hw-counters",
+        choices=("pmc", "statcounters"),
+        default="statcounters",
+        help="Use hardware performance counters",
     )
 
     def configure(self, **kwargs):
