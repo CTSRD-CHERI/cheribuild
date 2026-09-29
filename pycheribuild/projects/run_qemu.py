@@ -220,7 +220,7 @@ class LaunchQEMUBase(SimpleProject):
         )
 
         cls.use_opensbi_payload = cls.add_bool_option(
-            "use-opensbi-fw-payload ",
+            "use-opensbi-fw-payload",
             default=False,
             show_help=True,
             help="Force QEMU to use OpenSBI's fw_payload variant instead of fw_jump. This is only for RISC-V.",
@@ -1031,7 +1031,7 @@ class BuildAndRunCheriBSD(TargetAliasWithDependencies):
     target = "build-and-run-cheribsd"
     include_os_in_target_suffix = False
     dependencies = ("cheribsd", "disk-image", "run")
-    direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
+    # direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
@@ -1042,7 +1042,7 @@ class BuildAndRunFreeBSD(TargetAliasWithDependencies):
     target = "build-and-run-freebsd"
     include_os_in_target_suffix = False
     dependencies = ("freebsd", "disk-image-freebsd", "run-freebsd")
-    direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
+    # direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
