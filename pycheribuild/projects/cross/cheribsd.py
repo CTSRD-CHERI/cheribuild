@@ -1855,7 +1855,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     )
 
     @classmethod
-    def setup_config_options(cls, install_directory_help=None, **kwargs) -> None:
+    def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(bootstrap_toolchain=True, **kwargs)
 
     def add_cross_build_options(self) -> None:
@@ -1889,11 +1889,8 @@ class BuildCHERIBSD(BuildFreeBSD):
     )
 
     @classmethod
-    def setup_config_options(cls, kernel_only_target=False, install_directory_help=None, **kwargs) -> None:
-        if install_directory_help is None:
-            install_directory_help = "Install directory for CheriBSD root file system"
+    def setup_config_options(cls, kernel_only_target=False, **kwargs) -> None:
         super().setup_config_options(
-            install_directory_help=install_directory_help,
             use_upstream_llvm=False,
             kernel_only_target=kernel_only_target,
         )

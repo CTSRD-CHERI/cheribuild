@@ -655,7 +655,7 @@ class Project(SimpleProject):
     use_lto: bool
 
     @classmethod
-    def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
+    def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
@@ -665,7 +665,7 @@ class Project(SimpleProject):
                 "build-directory",
                 metavar="DIR",
                 default=cls.default_build_dir,
-                help="Override default source directory for " + cls.target,
+                help="Override default build directory",
                 use_default_fallback_config_names=cls._xtarget == default_xtarget,
             )
         if cls.can_build_with_asan():
@@ -717,10 +717,11 @@ class Project(SimpleProject):
             help="Override --(no-)reconfigure/--(no-)force-configure for this target only",
         )
 
-        if not install_directory_help:
-            install_directory_help = "Override default install directory for " + cls.target
         cls._install_dir = cls.add_path_option(
-            "install-directory", metavar="DIR", help=install_directory_help, default=cls._default_install_dir_fn
+            "install-directory",
+            metavar="DIR",
+            help="Override default install directory",
+            default=cls._default_install_dir_fn,
         )
         if (
             "repository" in dir(cls)
