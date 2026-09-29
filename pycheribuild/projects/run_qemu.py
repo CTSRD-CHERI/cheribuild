@@ -1031,7 +1031,7 @@ class BuildAndRunCheriBSD(TargetAliasWithDependencies):
     target = "build-and-run-cheribsd"
     include_os_in_target_suffix = False
     dependencies = ("cheribsd", "disk-image", "run")
-    # direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
+    direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
@@ -1042,7 +1042,7 @@ class BuildAndRunFreeBSD(TargetAliasWithDependencies):
     target = "build-and-run-freebsd"
     include_os_in_target_suffix = False
     dependencies = ("freebsd", "disk-image-freebsd", "run-freebsd")
-    # direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
+    direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classmethod
     def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
