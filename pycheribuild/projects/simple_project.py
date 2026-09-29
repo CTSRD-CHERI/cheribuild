@@ -1070,10 +1070,14 @@ class SimpleProjectBase(AbstractProject, ABC):
         return commandline_to_str(args)
 
     @classmethod
+    def _get_config_option_handle(cls, option: str) -> ConfigOptionHandle:
+        attr = inspect.getattr_static(cls, option)
+        assert isinstance(attr, ConfigOptionHandle), f"Expected ConfigOptionHandle for {option}, got {attr}"
+        return attr
+
+    @classmethod
     def get_config_option_name(cls, option: str) -> str:
-        option = inspect.getattr_static(cls, option)
-        assert isinstance(option, ConfigOptionHandle)
-        return option.full_option_name
+        return cls._get_config_option_handle(option).full_option_name
 
     @classmethod
     def add_config_option(

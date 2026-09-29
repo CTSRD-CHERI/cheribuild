@@ -27,10 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import inspect
 import shutil
 import sys
-import typing
 from contextlib import suppress
 from pathlib import Path
 from types import SimpleNamespace
@@ -50,7 +48,6 @@ from .project import (
 )
 from .simple_project import BoolConfigOption, OptionalBoolConfigOption, SimpleProject, StringConfigOption
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
-from ..config.config_loader_base import ConfigOptionHandle
 from ..processutils import cached_get_homebrew_prefix
 from ..utils import OSInfo
 
@@ -408,8 +405,7 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.append("--smbd=" + str(smbd_path))
 
         chosen_targets = self.qemu_targets
-        qemu_targets_option = typing.cast(ConfigOptionHandle, inspect.getattr_static(self, "qemu_targets"))
-        if qemu_targets_option.is_default_value:
+        if self._get_config_option_handle("qemu_targets").is_default_value:
             if (self.source_dir / "configs/targets/riscv32cheristd-softmmu.mak").exists():
                 if "riscv32cheristd-softmmu" not in chosen_targets:
                     chosen_targets += ",riscv32cheristd-softmmu"

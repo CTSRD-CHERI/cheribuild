@@ -30,7 +30,6 @@
 import contextlib
 import copy
 import datetime
-import inspect
 import os
 import re
 import shutil
@@ -64,7 +63,6 @@ from ..config.chericonfig import (
     Linkage,
     supported_build_type_strings,
 )
-from ..config.config_loader_base import ConfigOptionHandle
 from ..config.target_info import (
     AbstractProject,
     AutoVarInit,
@@ -938,8 +936,7 @@ class Project(SimpleProject):
             self.repository.url = self._repository_url
         if self._build_dir is not None:
             assert isinstance(self._build_dir, ReuseOtherProjectBuildDir)
-            initial_build_dir = inspect.getattr_static(self, "_initial_build_dir")
-            assert isinstance(initial_build_dir, ConfigOptionHandle)
+            initial_build_dir = self._get_config_option_handle("_initial_build_dir")
             # noinspection PyProtectedMember
             assert initial_build_dir._get_default_value(self.config, self) is None, (
                 "initial build dir != None for ReuseOtherProjectBuildDir"
