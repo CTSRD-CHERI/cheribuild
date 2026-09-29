@@ -180,9 +180,12 @@ class BuildOpenSBI(Project):
             fw_type = "payload"
 
         if self.crosscompile_target.is_cheri_purecap():
-            suffix = "cheri"
-            if self.crosscompile_target.is_riscv_y_or_cheri093():
-                suffix += "std"
+            if self.crosscompile_target.is_riscv_y():
+                suffix = "y"
+            elif self.crosscompile_target.is_experimental_cheri093_std():
+                suffix = "cheristd"
+            else:
+                suffix = "cheri"
         return qemu_fw_dir / f"opensbi-riscv64{suffix}-generic-fw_{fw_type}.bin"
 
     def _fw_path(self, is_payload=False) -> Path:
