@@ -257,7 +257,7 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
 
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
-    target = "alliance-compiler-rt-builtins"
+    target = "cheri-alliance-compiler-rt-builtins"
     # Only use this target for the 0.9.3 RISC-V targets.
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,

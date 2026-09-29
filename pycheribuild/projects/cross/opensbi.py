@@ -255,7 +255,7 @@ def alliance_opensbi_install_dir(config: CheriConfig, project: "Project") -> Pat
 
 
 class BuildAllianceOpenSBI(BuildOpenSBI):
-    target = "alliance-opensbi"
+    target = "cheri-alliance-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
         function=alliance_opensbi_install_dir, as_string="$ALLIANCE_SDK_ROOT/opensbi/riscv{32,64}{-purecap,}"
     )
@@ -307,7 +307,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
 
 
 class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
-    target = "alliance-opensbi-gfe"
+    target = "cheri-alliance-opensbi-gfe"
     repository = ReuseOtherProjectRepository(BuildAllianceOpenSBI, do_update=True)
 
     def setup(self):
@@ -316,7 +316,7 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
 
 
 class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
-    target = "alliance-opensbi-u-boot"
+    target = "cheri-alliance-opensbi-u-boot"
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
@@ -324,7 +324,7 @@ class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        return *super().dependencies(config), "alliance-u-boot"
+        return *super().dependencies(config), "cheri-alliance-u-boot"
 
     def setup(self):
         super().setup()
