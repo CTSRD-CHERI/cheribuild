@@ -114,7 +114,7 @@ class CompilerType(Enum):
     CHERI_LLVM = "cheri-llvm"  # Compile with CHERI LLVM built by cheribuild
     MORELLO_LLVM = "morello-llvm"  # Compile with Morello LLVM built by cheribuild
     RVY_LLVM = "rvy-llvm"  # Compile with RVY LLVM built by cheribuild
-    CHERI_ALLIANCE_LLVM = "alliance-llvm"  # Compile with CHERI Alliance LLVM built by cheribuild
+    CHERI_ALLIANCE_LLVM = "cheri-alliance-llvm"  # Compile with CHERI Alliance LLVM built by cheribuild
     UPSTREAM_LLVM = "upstream-llvm"  # Compile with upstream LLVM built by cheribuild
     SYSTEM_LLVM = "system-llvm"  # Compile with system installation of LLVM/Clang
     BOOTSTRAPPED = "bootstrap"  # Compiler is included with the project

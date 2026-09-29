@@ -187,12 +187,12 @@ def alliance_uboot_install_dir(config: CheriConfig, project: "Project") -> Path:
 
 
 class BuildCheriAllianceUBoot(BuildUBoot):
-    target = "alliance-u-boot"
+    target = "cheri-alliance-u-boot"
     repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
     _default_install_dir_fn = ComputedDefaultValue(
         function=alliance_uboot_install_dir, as_string="$ALLIANCE_SDK_ROOT/u-boot/riscv{32,64}{-purecap,}"
     )
-    dependencies = ("alliance-compiler-rt-builtins",)
+    dependencies = ("cheri-alliance-compiler-rt-builtins",)
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
