@@ -54,6 +54,7 @@ from ..project import (
     ReuseOtherProjectAnyTargetRepository,
     ReuseOtherProjectBuildDir,
     ReuseOtherProjectRepository,
+    TargetBranchInfo,
 )
 from ..simple_project import (
     BoolConfigOption,
@@ -1870,8 +1871,14 @@ class BuildCHERIBSD(BuildFreeBSD):
     default_directory_basename: str = "cheribsd"
     target: str = "cheribsd"
     can_build_with_system_clang: bool = False  # We need CHERI LLVM for most architectures
+    _rvy_target_branch_info = TargetBranchInfo(branch="cheri-rv64y-098", directory_name="cheribsd-rvy")
     repository: GitRepository = GitRepository(
-        "https://github.com/CTSRD-CHERI/cheribsd.git", old_branches={"master": "main"}
+        "https://github.com/CTSRD-CHERI/cheribsd.git",
+        old_branches={"master": "main"},
+        per_target_branches={
+            CompilationTargets.CHERIBSD_RISCV_ZCHERI093_PURECAP: _rvy_target_branch_info,
+            CompilationTargets.CHERIBSD_RISCV_Y_PURECAP: _rvy_target_branch_info,
+        },
     )
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("rootfs")
     _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
