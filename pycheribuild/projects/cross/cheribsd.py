@@ -1097,6 +1097,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             CompilerType.UPSTREAM_LLVM,
             CompilerType.CHERI_LLVM,
             CompilerType.MORELLO_LLVM,
+            CompilerType.RVY_LLVM,
             CompilerType.CHERI_ALLIANCE_LLVM,
         ):
             return BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)

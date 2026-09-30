@@ -77,6 +77,8 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
         return config.cheri_sdk_dir
     elif config.compiler_type == CompilerType.MORELLO_LLVM:
         return config.morello_sdk_dir
+    elif config.compiler_type == CompilerType.RVY_LLVM:
+        return config.rvy_sdk_dir
     elif config.compiler_type == CompilerType.CHERI_ALLIANCE_LLVM:
         return config.cheri_alliance_sdk_dir
     elif config.compiler_type == CompilerType.UPSTREAM_LLVM:
@@ -118,6 +120,7 @@ class JenkinsConfig(CheriConfig):
             enum_choices=[
                 CompilerType.CHERI_LLVM,
                 CompilerType.MORELLO_LLVM,
+                CompilerType.RVY_LLVM,
                 CompilerType.CHERI_ALLIANCE_LLVM,
                 CompilerType.UPSTREAM_LLVM,
             ],

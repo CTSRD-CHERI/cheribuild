@@ -667,6 +667,8 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
             return BuildCheriLLVM.get_native_install_path(caller.config)
         if compiler_type == CompilerType.MORELLO_LLVM:
             return BuildMorelloLLVM.get_native_install_path(caller.config)
+        if compiler_type == CompilerType.RVY_LLVM:
+            return BuildMorelloLLVM.get_native_install_path(caller.config)
         if compiler_type == CompilerType.CHERI_ALLIANCE_LLVM:
             return BuildCheriAllianceLLVM.get_native_install_path(caller.config)
         if compiler_type == CompilerType.UPSTREAM_LLVM:
@@ -870,6 +872,50 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     @classmethod
     def get_native_install_path(cls, config: CheriConfig):
         return config.cheri_alliance_sdk_dir
+
+
+class BuildRVYLLVM(BuildLLVMMonoRepoBase):
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/cheri-alliance-llvm-project.git",
+        default_branch="rvy-099-wip",
+    )
+
+    default_directory_basename = "rvy-llvm-project"
+    target = "rvy-llvm"
+    skip_cheri_symlinks = False  # add target-specific symlinks
+    is_sdk_target = True
+    native_install_dir = DefaultInstallDir.RVY_SDK
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+
+    _supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
+
+    @property
+    def triple_prefixes_for_binaries(self) -> "Iterable[str]":
+        triples = [
+            CheriBSDTargetInfo.triple_for_target(
+                CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP,
+                self.config,
+                include_version=False,
+            ),
+        ]
+        return [x + "-" for x in triples]
+
+    def configure(self, **kwargs):
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="ARM;AArch64;RISCV;Mips;host")
+        # The current master branch isn't ready yet to switch over to the new pass manager
+        # CLANG_ROUND_TRIP_CC1_ARGS doesn't work for us yet. See e.g. https://reviews.llvm.org/D97462#2677130
+        self.add_cmake_options(CLANG_ROUND_TRIP_CC1_ARGS=False)
+        super().configure(**kwargs)
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        if self.compiling_for_host():
+            for tgt in CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS:
+                self.add_compilers_with_config_files("cheribsd", tgt)
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.rvy_sdk_dir
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
