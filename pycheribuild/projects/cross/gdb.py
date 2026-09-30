@@ -354,6 +354,15 @@ class BuildCheriAllianceGDB(BuildGDBBase):
         return base_target + "-" + xtarget.generic_target_suffix
 
 
+class BuildRVYGDB(BuildGDBBase):
+    target = "rvy-gdb"
+    native_install_dir = DefaultInstallDir.RVY_SDK
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/cheri-alliance-gdb.git",
+        default_branch="rvy-099-wip",
+    )
+
+
 class BuildKGDB(BuildGDB):
     default_branch = "cheri-14-kgdb"
     repository = GitRepository(
