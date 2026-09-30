@@ -61,3 +61,8 @@ class BuildRISCV_OpenOCD(BuildOpenOCDBase):  # noqa: N801
 class BuildAllianceOpenOCD(BuildOpenOCDBase):
     target = "cheri-std093-openocd"
     repository = GitRepository("https://github.com/CHERI-Alliance/openocd.git", default_branch="codasip-cheri-riscv")
+
+
+class BuildRVYOpenOCD(BuildOpenOCDBase):
+    target = "rvy-openocd"
+    repository = GitRepository("https://github.com/Capabilities-Limited/openocd.git", default_branch="cva6-rvy-099")
