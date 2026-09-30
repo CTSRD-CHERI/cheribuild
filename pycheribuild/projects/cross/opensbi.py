@@ -266,8 +266,8 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/opensbi",
         temporary_url_override="https://github.com/qwattash/cheri-alliance-opensbi",
-        url_override_reason="https://github.com/CHERI-Alliance/opensbi/pull/3",
-        default_branch="toooba-fixes",
+        url_override_reason="https://github.com/CHERI-Alliance/opensbi/pull/8 (plus changes for FPGA)",
+        default_branch="cheri-rvy-099-toooba-fixes",
         force_branch=True,
         # TODO: restore default branch: default_branch="codasip-cheri-riscv",
     )
