@@ -153,6 +153,7 @@ class DefaultInstallDir(Enum):
     KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
+    RVY_SDK = "The RVY SDK directory"
     CHERI_ALLIANCE_SDK = "The CHERI Alliance SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
     CUSTOM_INSTALL_DIR = "Custom install directory"
@@ -692,6 +693,8 @@ class NativeTargetInfo(TargetInfo):
             return config.cheri_sdk_dir
         elif install_dir == DefaultInstallDir.MORELLO_SDK:
             return config.morello_sdk_dir
+        elif install_dir == DefaultInstallDir.RVY_SDK:
+            return config.rvy_sdk_dir
         elif install_dir == DefaultInstallDir.CHERI_ALLIANCE_SDK:
             return config.cheri_alliance_sdk_dir
         elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
