@@ -181,10 +181,10 @@ class JenkinsConfig(CheriConfig):
             type=Path,
             help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)",
         )
-        self._cheri_rvy_sdk_dir_override = loader.add_optional_commandline_only_option(
+        self._rvy_sdk_dir_override = loader.add_optional_commandline_only_option(
             "rvy-sdk-path",
             type=Path,
-            help="Override the path to the CHERI RVY SDK (default is $WORKSPACE/rvy-sdk)",
+            help="Override the path to the RVY SDK (default is $WORKSPACE/rvy-sdk)",
         )
         self._cheri_alliance_sdk_dir_override = loader.add_optional_commandline_only_option(
             "cheri-std093-sdk-path",
@@ -304,12 +304,12 @@ class JenkinsConfig(CheriConfig):
         else:
             self.cheri_sdk_dir = self.workspace / self.default_cheri_sdk_directory_name
 
-        if self._cheri_rvy_sdk_dir_override is not None:
-            self.cheri_rvy_sdk_dir = self._cheri_rvy_sdk_dir_override
+        if self._rvy_sdk_dir_override is not None:
+            self.rvy_sdk_dir = self._rvy_sdk_dir_override
         elif Path("/rvy-sdk/bin/clang").exists():  # check for docker image
-            self.cheri_rvy_sdk_dir = Path("/rvy-sdk")
+            self.rvy_sdk_dir = Path("/rvy-sdk")
         else:
-            self.cheri_rvy_sdk_dir = self.workspace / self.default_rvy_sdk_directory_name
+            self.rvy_sdk_dir = self.workspace / self.default_rvy_sdk_directory_name
 
         if self._cheri_alliance_sdk_dir_override is not None:
             self.cheri_alliance_sdk_dir = self._cheri_alliance_sdk_dir_override
