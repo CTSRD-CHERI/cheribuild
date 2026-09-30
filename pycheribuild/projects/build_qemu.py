@@ -656,3 +656,19 @@ class BuildCheriAllianceQEMU(BuildQEMU):
     @classmethod
     def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         return config.cheri_alliance_qemu_bindir
+
+
+class BuildRVYQEMU(BuildQEMU):
+    target = "rvy-qemu"
+    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="user/qwattash/rvfi-fixes")
+    native_install_dir = DefaultInstallDir.RVY_SDK
+    default_targets = (
+        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
+        "riscv64-softmmu,riscv64xcheri-softmmu,riscv64cheristd-softmmu,riscv64y-softmmu,"
+        "riscv32-softmmu,riscv32xcheri-softmmu,riscv32cheristd-softmmu,riscv32y-softmmu,"
+        "x86_64-softmmu"
+    )
+
+    @classmethod
+    def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        return config.rvy_qemu_bindir

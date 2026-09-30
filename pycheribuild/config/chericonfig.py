@@ -795,8 +795,16 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         return self.morello_sdk_dir / "bin"
 
     @property
+    def rvy_sdk_bindir(self):
+        return self.rvy_sdk_dir / "bin"
+
+    @property
     def cheri_alliance_sdk_bindir(self):
         return self.cheri_alliance_sdk_dir / "bin"
+
+    @property
+    def rvy_qemu_bindir(self):
+        return self.rvy_sdk_bindir
 
     @property
     def cheri_alliance_qemu_bindir(self):

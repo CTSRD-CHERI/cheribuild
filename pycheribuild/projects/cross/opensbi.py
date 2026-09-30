@@ -30,7 +30,7 @@
 from pathlib import Path
 
 from .u_boot import BuildCheriAllianceUBoot
-from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
+from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
 from ..project import (
     BuildType,
     CheriConfig,
@@ -281,6 +281,8 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     )
 
     def _qemu_install_dir(self) -> Path:
+        if self.crosscompile_target.is_riscv_y():
+            return BuildRVYQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
         return BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
     def setup(self):
