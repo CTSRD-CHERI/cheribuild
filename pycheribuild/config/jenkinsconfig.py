@@ -77,6 +77,8 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
         return config.cheri_sdk_dir
     elif config.compiler_type == CompilerType.MORELLO_LLVM:
         return config.morello_sdk_dir
+    elif config.compiler_type == CompilerType.CHERI_ALLIANCE_LLVM:
+        return config.cheri_alliance_sdk_dir
     elif config.compiler_type == CompilerType.UPSTREAM_LLVM:
         return config.workspace / "upstream-llvm-sdk"
     else:
@@ -113,7 +115,12 @@ class JenkinsConfig(CheriConfig):
             "compiler-type",
             type=CompilerType,
             default=CompilerType.CHERI_LLVM,
-            enum_choices=[CompilerType.CHERI_LLVM, CompilerType.MORELLO_LLVM, CompilerType.UPSTREAM_LLVM],
+            enum_choices=[
+                CompilerType.CHERI_LLVM,
+                CompilerType.MORELLO_LLVM,
+                CompilerType.CHERI_ALLIANCE_LLVM,
+                CompilerType.UPSTREAM_LLVM,
+            ],
             help="The type of the compiler to extract (used to infer the output  path)",
         )
         self.sysroot_archive_name = loader.add_commandline_only_option(
