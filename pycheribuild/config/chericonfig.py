@@ -207,6 +207,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
     cheribsd_image_root: Path
     cheri_sdk_dir: Path
     morello_sdk_dir: Path
+    rvy_sdk_dir: Path
     cheri_alliance_sdk_dir: Path
     other_tools_dir: Path
     sysroot_output_root: Path
