@@ -903,7 +903,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         xtarget = self.crosscompile_target
         if platform is None:
             platform = self.get_default_kernel_platform()
-        config = CheriBSDConfigTable.get_default(self.config, xtarget, platform, KernelABI.NOCHERI, **filter_kwargs)
+        if xtarget.is_hybrid_or_purecap_cheri():
+            kernel_abi = KernelABI.PURECAP
+        else:
+            kernel_abi = KernelABI.NOCHERI
+        config = CheriBSDConfigTable.get_default(self.config, xtarget, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
     def _stdout_filter(self, line: bytes) -> None:
@@ -1079,6 +1083,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.destdir = self.install_dir
         self._install_prefix = Path("/")
         assert self.real_install_root_dir == self.destdir
+
+        if self.crosscompile_target.is_riscv_y():
+            # Hybrid compat not supported yet
+            self.make_args.set_with_options(LIB64=False)
 
     @cached_property
     def build_toolchain_root_dir(self) -> "Optional[Path]":

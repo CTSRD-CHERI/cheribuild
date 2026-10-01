@@ -756,12 +756,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @property
     def freebsd_target_arch(self):
         base = super().freebsd_target_arch
+        purecap_suffix = ""
         if self.target.is_cheri_purecap():
-            purecap_suffix = "c"
             if self.target.is_mips(include_purecap=True):
                 purecap_suffix += self.config.mips_cheri_bits_str
-        else:
-            purecap_suffix = ""
         return base + purecap_suffix
 
     @classmethod
