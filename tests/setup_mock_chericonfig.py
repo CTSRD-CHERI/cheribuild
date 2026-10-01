@@ -60,6 +60,7 @@ class MockConfig(CheriConfig):
         self.output_root = source_root / "output"
         self.cheri_sdk_dir = self.output_root / "sdk"
         self.morello_sdk_dir = self.output_root / "morello-sdk"
+        self.rvy_sdk_dir = self.output_root / "rvy-sdk"
         self.cheri_alliance_sdk_dir = self.output_root / "cheri-std093-sdk"
         self.sysroot_output_root = self.output_root
         self.other_tools_dir = self.output_root / "other"
