@@ -44,7 +44,6 @@ from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
 from ..project import CheriConfig, CPUArchitecture
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import BoolConfigOption, OptionalStringConfigOption, StringConfigOption
-from ...config.chericonfig import RiscvCheriISA
 
 
 class BuildCheriseL4(CrossCompileProject):
@@ -78,7 +77,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     release_version = "2.0.1-dev"
     dependencies = ("cheri-sel4",)
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
-    is_sdk_target = False
+    is_sdk_target = True
     _needs_sysroot = False
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
@@ -209,7 +208,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
             ]
         elif (
             self.compiling_for_riscv(include_purecap=True)
-            and self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093
+            and self.get_crosscompile_target().is_experimental_cheri093_std()
         ):
             qemu = BuildCheriAllianceQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
             bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self)
@@ -335,10 +334,10 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
         result = tuple()
         result += ("cheri-microkit",)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-llvm",)
-            result += ("cheri-std093-opensbi",)
-            result += ("cheri-std093-gdb-native",)
-            result += ("cheri-std093-qemu",)
+            result += ("cheri-alliance-llvm",)
+            result += ("cheri-alliance-opensbi",)
+            result += ("cheri-alliance-gdb-native",)
+            result += ("cheri-alliance-qemu",)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-llvm-native",)
             result += ("gdb-native",)
