@@ -369,28 +369,43 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
+    _archs_to_build: "tuple[str, ...]" = ("RV64", "RV32")
+    _targets_to_build: "tuple[str, ...]" = ("csim", "osim", "rvfi")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         self.check_required_pkg_config("gmp", freebsd="gmp", apt="libgmp-dev", homebrew="gmp")
 
     def compile(self, **kwargs):
-        for arch in ("RV64", "RV32"):
+        for arch in self._archs_to_build:
             cmd = [
                 self.make_args.command,
                 self.config.make_j_flag,
                 "ARCH=" + arch,
-                "csim",
-                "osim",
-                "rvfi",
+                *self._targets_to_build,
                 *self.make_args.all_commandline_args(self.config),
             ]
             self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
-        self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
+        self.make_args.set(INSTALL_DIR=self.install_dir)
         # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
+
+
+class BuildRVYSailCheriRISCV(BuildSailCheriRISCV):
+    target = "rvy-sail-riscv"
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/sail-cheri-riscv",
+        default_branch="0.9.9-upgrade",
+    )
+    native_install_dir = DefaultInstallDir.RVY_SDK
+    _archs_to_build = ("RV64",)
+    _targets_to_build = ("csim", "rvfi")
+
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_pkg_config("zlib", apt="zlib1g-dev", zypper="zlib-devel")
 
 
 class BuildSailMorello(ProjectUsingOpam):
