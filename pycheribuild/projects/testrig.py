@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Optional
 
 from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
-from .project import CheriConfig, DefaultInstallDir, MakefileProject, Project
+from .project import CheriConfig, ComputedDefaultValue, DefaultInstallDir, MakefileProject, Project
 from .repository import GitRepository
 from .sail import BuildCheriAllianceSailRiscv, BuildRVYSailCheriRISCV, BuildSailCheriRISCV
 from .simple_project import (
@@ -41,6 +41,7 @@ from .simple_project import (
     ListConfigOption,
     OptionalIntConfigOption,
     OptionalPathConfigOption,
+    PathConfigOption,
     SimpleProject,
 )
 from ..config.compilation_targets import CompilationTargets
@@ -309,11 +310,34 @@ class RunTestRIGRegression(RunTestRIGFuzz):
 class _TestRigQEMURV64Base(RunTestRIGBase):
     do_not_add_to_targets = True
     sail_class: "typing.ClassVar[type[Project]]" = BuildSailCheriRISCV
+    sail_binary_name: "typing.ClassVar[str]" = "c_emulator/cheri_riscv_rvfi_RV64"
     qemu_class: "typing.ClassVar[type[BuildQEMU]]" = BuildQEMU
     qemu_xtarget: "typing.ClassVar[CrossCompileTarget]" = CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP
     # NB: can't use GC here since that implicitly enables ihpm in QCVengine and QEMU does not support mcountinhibit
     # util we have updated to b1675eeb3e6e38b042a23a9647559c9c548c733d.
     verification_archstring = "rv64imafdc_s_xcheri_zicsr_zifencei"
+
+    sail_path = PathConfigOption(
+        "sail-path",
+        help="Path to the Sail RVFI simulator binary",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: (
+                typing.cast("_TestRigQEMURV64Base", proj).sail_class.get_build_dir(proj)
+                / typing.cast("_TestRigQEMURV64Base", proj).sail_binary_name
+            ),
+            as_string="default Sail RVFI binary in build directory",
+        ),
+    )
+    qemu_path = PathConfigOption(
+        "qemu-path",
+        help="Path to the QEMU binary to test",
+        default=ComputedDefaultValue(
+            function=lambda config, proj: typing.cast("_TestRigQEMURV64Base", proj).qemu_class.qemu_binary_for_target(
+                typing.cast("_TestRigQEMURV64Base", proj).qemu_xtarget, config
+            ),
+            as_string="default QEMU binary for target",
+        ),
+    )
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -321,7 +345,7 @@ class _TestRigQEMURV64Base(RunTestRIGBase):
 
     def get_reference_implementation_command(self, port: int) -> "list[str]":
         result = [
-            str(self.sail_class.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
+            str(self.sail_path),
             "--disable-writable-misa",
             "--mtval-has-illegal-inst-bits",
             "--rvfi-dii",
@@ -350,7 +374,7 @@ class _TestRigQEMURV64Base(RunTestRIGBase):
         ]
 
     def get_test_implementation_command(self, port: int) -> "list[str]":
-        qemu_binary = self.qemu_class.qemu_binary_for_target(self.qemu_xtarget, self.config)
+        qemu_binary = self.qemu_path
         if not qemu_binary.is_file():
             self.dependency_error("Missing QEMU binary", qemu_binary, cheribuild_target=self.qemu_class.target)
         help_out = self.run_cmd(
@@ -396,12 +420,13 @@ class TestRigSailQemuCheri093RV64(TestRigSailQemuRV64):
     target = "testrig-sail-qemu-cheri-std093-rv64"
     vengine_class = BuildQuickCheckVengine093
     sail_class = BuildCheriAllianceSailRiscv
+    sail_binary_name = "c_emulator/sail_riscv_sim"
     qemu_class = BuildCheriAllianceQEMU
     qemu_xtarget = CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP
 
     def get_reference_implementation_command(self, port: int) -> "list[str]":
         result = [
-            str(self.sail_class.get_build_dir(self) / "c_emulator/sail_riscv_sim"),
+            str(self.sail_path),
             "--rvfi-dii",
             str(port),
         ]
