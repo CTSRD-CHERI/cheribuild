@@ -31,10 +31,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from .build_qemu import BuildQEMU
-from .project import DefaultInstallDir, MakefileProject, Project
+from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
+from .project import CheriConfig, DefaultInstallDir, MakefileProject, Project
 from .repository import GitRepository
-from .sail import BuildSailCheriRISCV
+from .sail import BuildCheriAllianceSailRiscv, BuildRVYSailCheriRISCV, BuildSailCheriRISCV
 from .simple_project import (
     BoolConfigOption,
     IntConfigOption,
@@ -43,6 +43,8 @@ from .simple_project import (
     OptionalPathConfigOption,
     SimpleProject,
 )
+from ..config.compilation_targets import CompilationTargets
+from ..config.target_info import CrossCompileTarget
 from ..processutils import FakePopen, commandline_to_str, popen
 from ..utils import find_free_port
 
@@ -108,6 +110,13 @@ class BuildQuickCheckVengine093(BuildQuickCheckVengine):
     )
 
 
+class BuildRVYQuickCheckVengine(BuildQuickCheckVengine):
+    target = "rvy-quickcheckvengine"
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/QuickCheckVEngine", force_branch=True, default_branch="0.9.8.2-upgrade"
+    )
+
+
 class TestRigTraces(Project):
     target = "testrig-traces-repository"
     default_directory_basename = "TestRIG-traces"
@@ -120,8 +129,13 @@ class TestRigTraces(Project):
 
 class RunTestRIGBase(SimpleProject):
     do_not_add_to_targets = True
-    dependencies = ("quickcheckvengine", "testrig-traces-repository")
+    vengine_class: "typing.ClassVar[type[BuildQuickCheckVengine]]" = BuildQuickCheckVengine
     verification_archstring: "typing.ClassVar[str]"
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return (cls.vengine_class.target, "testrig-traces-repository")
+
     existing_test_impl_port = OptionalIntConfigOption(
         "test-implementation-port",
         help="Use a running test implementation instead.",
@@ -204,7 +218,7 @@ class RunTestRIGBase(SimpleProject):
                         commandline_to_str(self.get_test_implementation_command(test_impl_port)),
                     )
                     return
-                vengine_instance = BuildQuickCheckVengine.get_instance(self)
+                vengine_instance = self.vengine_class.get_instance(self)
                 vengine_args = [
                     "-a",
                     str(reference_impl_port),
@@ -292,17 +306,22 @@ class RunTestRIGRegression(RunTestRIGFuzz):
         return trace_dir
 
 
-class _TestRigQEMURV64Base:
-    target = "testrig-sail-qemu-cheri-rv64"
-    dependencies = (*RunTestRIGBase.dependencies, "sail-cheri-riscv", "qemu")
+class _TestRigQEMURV64Base(RunTestRIGBase):
+    do_not_add_to_targets = True
+    sail_class: "typing.ClassVar[type[Project]]" = BuildSailCheriRISCV
+    qemu_class: "typing.ClassVar[type[BuildQEMU]]" = BuildQEMU
+    qemu_xtarget: "typing.ClassVar[CrossCompileTarget]" = CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP
     # NB: can't use GC here since that implicitly enables ihpm in QCVengine and QEMU does not support mcountinhibit
     # util we have updated to b1675eeb3e6e38b042a23a9647559c9c548c733d.
     verification_archstring = "rv64imafdc_s_xcheri_zicsr_zifencei"
 
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return (*super().dependencies(config), cls.sail_class.target, cls.qemu_class.target)
+
     def get_reference_implementation_command(self, port: int) -> "list[str]":
-        assert isinstance(self, RunTestRIGBase)
         result = [
-            str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
+            str(self.sail_class.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
             "--disable-writable-misa",
             "--mtval-has-illegal-inst-bits",
             "--rvfi-dii",
@@ -315,9 +334,9 @@ class _TestRigQEMURV64Base:
             result.append("--no-trace")
         return result
 
-    def get_test_implementation_command(self, port: int) -> "list[str]":
-        assert isinstance(self, RunTestRIGBase)
-        qemu_cpu_options = [
+    @property
+    def qemu_cpu_options(self) -> "list[str]":
+        return [
             "rv64",
             "g=true",
             "c=true",
@@ -329,12 +348,29 @@ class _TestRigQEMURV64Base:
             "Xcheri=true",
             "Xcheri_v9=true",  # Needs https://github.com/CTSRD-CHERI/qemu/pull/226 to enable ISAv9 semantics
         ]
+
+    def get_test_implementation_command(self, port: int) -> "list[str]":
+        qemu_binary = self.qemu_class.qemu_binary_for_target(self.qemu_xtarget, self.config)
+        if not qemu_binary.is_file():
+            self.dependency_error("Missing QEMU binary", qemu_binary, cheribuild_target=self.qemu_class.target)
+        help_out = self.run_cmd(
+            [str(qemu_binary), "--help"],
+            capture_output=True,
+            run_in_pretend_mode=qemu_binary.is_file(),
+            print_verbose_only=True,
+        )
+        if qemu_binary.is_file() and b"-rvfi-dii-port" not in help_out.stdout:
+            self.fatal(
+                f"{qemu_binary} was built without RVFI-DII support",
+                fixit_hint=f"Run `cheribuild.py {self.qemu_class.target} --{self.qemu_class.target}/rvfi-dii "
+                "--reconfigure` to enable it (note: this will slow down normal QEMU execution)",
+            )
         result = [
-            str(BuildQEMU.get_build_dir(self) / "qemu-system-riscv64cheri"),
+            str(qemu_binary),
             "--rvfi-dii-port",
             str(port),
             "-cpu",
-            ",".join(qemu_cpu_options),
+            ",".join(self.qemu_cpu_options),
             "-bios",
             "none",
         ]
@@ -354,6 +390,73 @@ class TestRigSailQemuRV64(_TestRigQEMURV64Base, RunTestRIGFuzz):
         else:
             # CClear/FPClear are not implemented in QEMU
             return ["--test-exclude-regex=cclear|fpclear", *super().extra_vengine_args]
+
+
+class TestRigSailQemuCheri093RV64(TestRigSailQemuRV64):
+    target = "testrig-sail-qemu-cheri-std093-rv64"
+    vengine_class = BuildQuickCheckVengine093
+    sail_class = BuildCheriAllianceSailRiscv
+    qemu_class = BuildCheriAllianceQEMU
+    qemu_xtarget = CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP
+
+    def get_reference_implementation_command(self, port: int) -> "list[str]":
+        result = [
+            str(self.sail_class.get_build_dir(self) / "c_emulator/sail_riscv_sim"),
+            "--rvfi-dii",
+            str(port),
+        ]
+        if self.run_implementations_with_tracing:
+            result.extend(["--trace", "--no-trace=rvfi"])
+        else:
+            result.append("--no-trace")
+        return result
+
+    @property
+    def qemu_cpu_options(self) -> "list[str]":
+        return [
+            "rv64",
+            "g=true",
+            "c=true",
+            "pmu-num=0",
+            "Zifencei=true",
+            "s=true",
+            "u=true",
+            "h=false",
+            "Zicsr=true",
+            "y=true",
+            "Zyhybrid=true",
+            "Zylevels1=true",
+            "cheri_pte=true",
+        ]
+
+
+class TestRigSailQemuRVYRV64(TestRigSailQemuRV64):
+    target = "testrig-sail-qemu-rvy-rv64"
+    vengine_class = BuildRVYQuickCheckVengine
+    sail_class = BuildRVYSailCheriRISCV
+    qemu_class = BuildRVYQEMU
+    qemu_xtarget = CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP
+
+    def get_reference_implementation_command(self, port: int) -> "list[str]":
+        return [*super().get_reference_implementation_command(port), "--disable-vector-ext"]
+
+    @property
+    def qemu_cpu_options(self) -> "list[str]":
+        return [
+            "rv64",
+            "g=true",
+            "c=true",
+            "pmu-num=0",
+            "Zifencei=true",
+            "s=true",
+            "u=true",
+            "h=false",
+            "Zicsr=true",
+            "y=true",
+            "Zyhybrid=true",
+            "Zylevels1=true",
+            "Svyrg=true",
+        ]
 
 
 # Run traces that were gathered for previous divergences.
