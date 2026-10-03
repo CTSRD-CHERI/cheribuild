@@ -512,6 +512,12 @@ class BuildCheriQEMUBase(BuildQEMUBase):
         show_help=True,
         help="Collect statistics on out-of-bounds capability creation.",
     )
+    enable_rvfi_dii = BoolConfigOption(
+        "rvfi-dii",
+        show_help=True,
+        default=False,
+        help="Enable RVFI-DII tracing support in QEMU (note: this slows down normal TCG execution).",
+    )
     _supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
     _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
@@ -523,6 +529,8 @@ class BuildCheriQEMUBase(BuildQEMUBase):
         super().setup()
         if self.statistics:
             self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
+        if self.enable_rvfi_dii:
+            self.configure_args.append("--enable-rvfi-dii")
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
         # the capstone disassembler doesn't support CHERI instructions:
@@ -640,7 +648,7 @@ class BuildQEMU(BuildCheriQEMUBase):
 
 class BuildCheriAllianceQEMU(BuildQEMU):
     target = "cheri-std093-qemu"
-    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
+    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="user/qwattash/rvfi-fixes")
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     default_targets = (
         "arm-softmmu,aarch64-softmmu,morello-softmmu,"
