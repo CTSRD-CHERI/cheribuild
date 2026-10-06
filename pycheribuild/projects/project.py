@@ -571,6 +571,14 @@ class Project(SimpleProject):
     __can_use_lld_map: "dict[str, bool]" = dict()
 
     def can_use_lld(self, compiler: Path) -> bool:
+        # Homebrew has started shipping LLD for macOS. Whilst we could carefully handle such a
+        # possibility in the couple of callers that assume LLD means ELF (and, specifically, that
+        # --gdb-index is a thing that's supported), we don't really want to be dealing with users
+        # hitting bugs in the unofficial Mach-O LLD, so force-disable it for any compiler when
+        # compiling for macOS.
+        if self.target_info.is_macos():
+            return False
+
         command = [
             str(compiler),
             *self.essential_compiler_and_linker_flags,
