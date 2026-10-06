@@ -388,9 +388,19 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
             self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
-        self.make_args.set(INSTALL_DIR=self.install_dir)
-        # self.run_make_install()
-        self.info("NO INSTALL TARGET YET")
+        for arch in self._archs_to_build:
+            for target in self._targets_to_build:
+                if target == "csim":
+                    file = f"c_emulator/cheri_riscv_sim_{arch}"
+                elif target == "osim":
+                    file = f"ocaml_emulator/cheri_riscv_ocaml_sim_{arch}"
+                elif target == "rvfi":
+                    file = f"c_emulator/cheri_riscv_rvfi_{arch}"
+                else:
+                    assert False, f"Unexpected Sail target {target}"
+                # The OCaml emulator binaries end up 555, which seems unnecessary, but preserve this
+                # and use force=True to ensure we can overwrite any existing ones.
+                self.install_file(self.build_dir / file, self.install_dir / "bin" / Path(file).name, force=True)
 
 
 class BuildSailMorello(ProjectUsingOpam):
