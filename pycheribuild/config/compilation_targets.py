@@ -1906,7 +1906,6 @@ class CompilationTargets(BasicCompilationTargets):
         *NON_CHERI_FREEBSD_TARGETS,
         FREEBSD_MORELLO_PURECAP,
         FREEBSD_RISCV_Y_PURECAP,
-        FREEBSD_RISCV_ZCHERI093_PURECAP,
     )
 
     # FreeBSD with default options targets
