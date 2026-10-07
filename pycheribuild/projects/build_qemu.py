@@ -392,10 +392,20 @@ class BuildQEMUBase(AutotoolsProject):
 
     def configure(self, **kwargs):
         # We call this here instead of inside setup to make sure the repository has been cloned
-        if self.repository.contains_commit(self, "5890258aeeba303704ec1adca415e46067800777", src_dir=self.source_dir):
+        gitmodules = self.source_dir / ".gitmodules"
+        version_file = self.source_dir / "VERSION"
+        if gitmodules.is_file():
+            has_slirp_submodule = '[submodule "slirp"]' in self.read_file(gitmodules).splitlines()
+        elif version_file.is_file():
+            qemu_version = tuple(int(x.split("-")[0]) for x in self.read_file(version_file).strip().split("."))
+            has_slirp_submodule = qemu_version < (7, 2)
+        else:
+            has_slirp_submodule = False
+        if not has_slirp_submodule:
+            # QEMU 7.2+ (since commit 5890258aeeba303704ec1adca415e46067800777) removed the slirp submodule
+            # and requires a system installation of libslirp.
             # TODO: do we want to check for a minimum version here?
             self.check_required_pkg_config("slirp", apt="libslirp-dev", freebsd="libslirp")
-            # QEMU now requires a system installation of slirp.
             self.configure_args.append("--enable-slirp")
         else:
             self.configure_args.append("--enable-slirp=git")
