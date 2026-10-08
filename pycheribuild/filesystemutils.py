@@ -238,11 +238,20 @@ class FileSystemUtils:
     # whether to create a new file called src.basename() inside dest, whether
     # to use dest.parent or dest, etc.
     def create_symlink(
-        self, to: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None, print_verbose_only=True
+        self,
+        to: Path,
+        dest: Path,
+        *,
+        relative=True,
+        cwd: "Optional[Path]" = None,
+        create_dirs=True,
+        print_verbose_only=True,
     ):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
+        if create_dirs:
+            self.makedirs(cwd / dest.parent)
         if relative:
             if to.is_absolute():
                 to = self.relative_path(to, dest.parent if dest.is_absolute() else cwd)
@@ -259,11 +268,14 @@ class FileSystemUtils:
         *,
         relative=True,
         cwd: "Optional[Path]" = None,
+        create_dirs=True,
         print_verbose_only=True,
     ):
         assert destdir.is_absolute() or cwd is not None
         if not cwd:
             cwd = destdir
+        if create_dirs:
+            self.makedirs(cwd / destdir)
         if relative:
             relstart = destdir if destdir.is_absolute() else cwd
             srcs = map(lambda src: self.relative_path(src, relstart) if src.is_absolute() else src, srcs)
