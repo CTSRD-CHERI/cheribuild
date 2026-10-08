@@ -323,6 +323,25 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
         self.make_args.set(FW_TEXT_START="0xC0000000")
 
 
+class BuildAIVHAIOpenSBI(BuildAllianceOpenSBI):
+    target = "aivhai-opensbi"
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/aivhai-opensbi.git",
+        default_branch="aivhai-firmware-poc",
+        force_branch=True,
+    )
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,)
+
+
+class BuildAIVHAIOpenSBISail(BuildAIVHAIOpenSBI):
+    target = "aivhai-opensbi-sail"
+    repository = ReuseOtherProjectRepository(BuildAIVHAIOpenSBI, do_update=True)
+
+    def setup(self):
+        super().setup()
+        self.make_args.set(PLATFORM_DEFCONFIG="aivhai_sail_defconfig")
+
+
 class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
     target = "cheri-std093-opensbi-u-boot"
     _supported_architectures = (
