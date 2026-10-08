@@ -407,7 +407,7 @@ class BuildRVYSailCheriRISCV(BuildSailCheriRISCV):
     target = "rvy-sail-riscv"
     repository = GitRepository(
         "https://github.com/Capabilities-Limited/sail-cheri-riscv",
-        default_branch="0.9.9-upgrade",
+        default_branch="0.9.9-undo-branch-restriction",
     )
     native_install_dir = DefaultInstallDir.RVY_SDK
     _archs_to_build = ("RV64",)
