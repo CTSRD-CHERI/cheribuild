@@ -333,6 +333,12 @@ class BuildAIVHAIOpenSBI(BuildAllianceOpenSBI):
     _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,)
 
     fw_compartment_path = OptionalStringConfigOption("fw-compartment-path", help="OpenSBI FW_COMPARTMENT_PATH")
+    vulnerabilities = OptionalStringConfigOption(
+        "vulnerabilities",
+        show_help=True,
+        help="Build a vulnerable firmware, specify comma-separted vulnerabilities to inject;"
+        "choose from (ASR, BOUNDS, REGS_TEMP, DDC)",
+    )
 
     def setup(self):
         super().setup()
@@ -341,6 +347,14 @@ class BuildAIVHAIOpenSBI(BuildAllianceOpenSBI):
                 "Compartment path does not exist: {self.fw_compartment_path}"
             )
             self.make_args.set(FW_COMPARTMENT_PATH=self.fw_compartment_path)
+
+        if self.vulnerabilities:
+            compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
+
+            for vulnerablity in self.vulnerabilities.split(","):
+                compflags += " -DAIVHAI_VULN_" + vulnerablity
+
+            self.make_args.set(CC=str(self.CC) + compflags)
 
 
 class BuildAIVHAIOpenSBISail(BuildAIVHAIOpenSBI):
