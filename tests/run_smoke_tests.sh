@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+trap 'exit 130' INT TERM HUP QUIT
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 srcdir="$SCRIPT_DIR/.."
 
