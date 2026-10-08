@@ -332,6 +332,16 @@ class BuildAIVHAIOpenSBI(BuildAllianceOpenSBI):
     )
     _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,)
 
+    fw_compartment_path = OptionalStringConfigOption("fw-compartment-path", help="OpenSBI FW_COMPARTMENT_PATH")
+
+    def setup(self):
+        super().setup()
+        if self.fw_compartment_path:
+            assert Path(self.fw_compartment_path).exists(), (
+                "Compartment path does not exist: {self.fw_compartment_path}"
+            )
+            self.make_args.set(FW_COMPARTMENT_PATH=self.fw_compartment_path)
+
 
 class BuildAIVHAIOpenSBISail(BuildAIVHAIOpenSBI):
     target = "aivhai-opensbi-sail"
