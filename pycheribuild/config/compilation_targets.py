@@ -404,7 +404,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     shortname: str = "FreeBSD"
-    FREEBSD_VERSION: int = 13
+    FREEBSD_VERSION: int = 16
     uses_upstream_llvm = True
 
     @property
@@ -480,7 +480,13 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             CPUArchitecture.RISCV64: "riscv64",
             CPUArchitecture.X86_64: "amd64",
         }
-        return mapping[self.target.cpu_architecture]
+        base = mapping[self.target.cpu_architecture]
+
+        if self.target.is_cheri_purecap():
+            purecap_suffix = "c"
+        else:
+            purecap_suffix = ""
+        return base + purecap_suffix
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
@@ -714,10 +720,29 @@ class FreeBSDWithDefaultOptionsTargetInfo(FreeBSDTargetInfo):
         return typing.cast(LaunchFreeBSDInterface, result)
 
 
+class FreeBSDCheriTargetInfo(FreeBSDTargetInfo):
+    shortname: str = "FreeBSD-CHERI"
+    uses_upstream_llvm: bool = False
+    os_prefix: str = "freebsd-"
+
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, instance: "FreeBSDCheriTargetInfo", *args, xtarget, **kwargs):
+        result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
+        # Treat FreeBSD for CHERI the same as the latest CheriBSD
+        if xtarget.is_cheri_purecap():
+            result.extend(cheribsd_version_dependent_flags(None, xtarget))
+        return result
+
+
+class FreeBSDMorelloTargetInfo(FreeBSDCheriTargetInfo):
+    shortname: str = "FreeBSD-Morello"
+    uses_morello_llvm: bool = True
+
+
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname: str = "CheriBSD"
     os_prefix: Optional[str] = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
-    FREEBSD_VERSION: int = 13
+    FREEBSD_VERSION: int = 15
     uses_upstream_llvm = False
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: AbstractProject) -> LaunchFreeBSDInterface:
@@ -731,12 +756,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @property
     def freebsd_target_arch(self):
         base = super().freebsd_target_arch
+        purecap_suffix = ""
         if self.target.is_cheri_purecap():
-            purecap_suffix = "c"
             if self.target.is_mips(include_purecap=True):
                 purecap_suffix += self.config.mips_cheri_bits_str
-        else:
-            purecap_suffix = ""
         return base + purecap_suffix
 
     @classmethod
@@ -1796,7 +1819,58 @@ class CompilationTargets(BasicCompilationTargets):
     FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
     FREEBSD_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
     FREEBSD_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
-    ALL_SUPPORTED_FREEBSD_TARGETS = (FREEBSD_AARCH64, FREEBSD_AMD64, FREEBSD_I386, FREEBSD_RISCV64)
+
+    _FREEBSD_RISCV_Y_HYBRID = CrossCompileTarget(  # Unsupported by toolchain
+        "riscv64y-hybrid",
+        CPUArchitecture.RISCV64,
+        FreeBSDCheriTargetInfo,
+        is_cheri_hybrid=True,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    _FREEBSD_RISCV_ZCHERI093_HYBRID = CrossCompileTarget(  # Unsupported by toolchain
+        "riscv64zcheri093-hybrid",
+        CPUArchitecture.RISCV64,
+        FreeBSDCheriTargetInfo,
+        is_cheri_hybrid=True,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+    FREEBSD_RISCV_Y_PURECAP = CrossCompileTarget(
+        "riscv64y-purecap",
+        CPUArchitecture.RISCV64,
+        FreeBSDCheriTargetInfo,
+        is_cheri_purecap=True,
+        non_cheri_target=FREEBSD_RISCV64,
+        hybrid_target=_FREEBSD_RISCV_Y_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.RVY,
+    )
+    FREEBSD_RISCV_ZCHERI093_PURECAP = CrossCompileTarget(
+        "riscv64zcheri093-purecap",
+        CPUArchitecture.RISCV64,
+        FreeBSDCheriTargetInfo,
+        is_cheri_purecap=True,
+        hybrid_target=_FREEBSD_RISCV_ZCHERI093_HYBRID,
+        riscv_cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
+
+    FREEBSD_MORELLO_PURECAP = CrossCompileTarget(
+        "morello-purecap",
+        CPUArchitecture.AARCH64,
+        FreeBSDMorelloTargetInfo,
+        is_cheri_purecap=True,
+        non_cheri_target=FREEBSD_AARCH64,
+        hybrid_target=FREEBSD_AARCH64,  # HACK: there is no hybrid
+    )
+    NON_CHERI_FREEBSD_TARGETS = (
+        FREEBSD_AARCH64,
+        FREEBSD_AMD64,
+        FREEBSD_I386,
+        FREEBSD_RISCV64,
+    )
+    ALL_SUPPORTED_FREEBSD_TARGETS = (
+        *NON_CHERI_FREEBSD_TARGETS,
+        FREEBSD_MORELLO_PURECAP,
+        FREEBSD_RISCV_Y_PURECAP,
+    )
 
     # FreeBSD with default options targets
     FREEBSD_WITH_DEFAULT_OPTIONS_AARCH64 = CrossCompileTarget(
