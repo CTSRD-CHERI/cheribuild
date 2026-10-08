@@ -356,6 +356,18 @@ class BuildAIVHAIOpenSBI(BuildAllianceOpenSBI):
 
             self.make_args.set(CC=str(self.CC) + compflags)
 
+    def run_tests(self):
+        options = QemuOptions(self.crosscompile_target, config=self.config)
+        abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        self.run_cmd(
+            options.get_commandline(
+                qemu_command=BuildRVYQEMU.qemu_binary(self),
+                add_network_device=False,
+                bios_args=["-bios", "none"],
+                kernel_file=self.install_dir / f"share/opensbi/{abi}/generic/firmware//fw_compartment.elf",
+            ),
+        )
+
 
 class BuildAIVHAIOpenSBISail(BuildAIVHAIOpenSBI):
     target = "aivhai-opensbi-sail"
