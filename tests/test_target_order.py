@@ -844,7 +844,7 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
     ("xtarget", "expected"),
     [
         pytest.param(CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP, ["llvm-native"]),
-        pytest.param(CompilationTargets.CHERIBSD_RISCV_ZCHERI093_PURECAP, ["cheri-std093-llvm"]),
+        pytest.param(CompilationTargets.CHERIBSD_RISCV_ZCHERI093_PURECAP, ["cheri-alliance-llvm"]),
         pytest.param(CompilationTargets.CHERIBSD_RISCV_Y_PURECAP, ["rvy-llvm"]),
         pytest.param(CompilationTargets.CHERIBSD_X86_64, ["llvm-native"]),
         pytest.param(CompilationTargets.CHERIBSD_MORELLO_PURECAP, ["morello-llvm-native"]),
@@ -852,7 +852,7 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
         pytest.param(CompilationTargets.BAREMETAL_NEWLIB_RISCV64_XCHERI_PURECAP, ["llvm-native"]),
         pytest.param(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, ["llvm-native"]),
         pytest.param(CompilationTargets.FREESTANDING_RISCV64_XCHERI_PURECAP, ["llvm-native"]),
-        pytest.param(CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP, ["cheri-std093-llvm"]),
+        pytest.param(CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP, ["cheri-alliance-llvm"]),
         pytest.param(CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP, ["rvy-llvm"]),
         pytest.param(CompilationTargets.FREESTANDING_MORELLO_NO_CHERI, ["morello-llvm-native"]),
         pytest.param(CompilationTargets.RTEMS_RISCV64_XCHERI_PURECAP, ["llvm-native"]),
