@@ -85,11 +85,7 @@ class BuildGnuBinutils(AutotoolsProject):
         )
         self.configure_args.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
-        cflags = "-std=gnu89 -O2"
-        info = self.get_compiler_info(self.CC)
-        if info.compiler == "clang" or (info.is_gcc() and info.version >= (4, 6, 0)):
-            cflags += " -Wno-unused"
-        self.configure_environment["CFLAGS"] = cflags
+        self.configure_environment["CFLAGS"] = "-std=gnu89 -O2 -Wno-unused"
 
     def compile(self, **kwargs):
         self.run_make("all-ld", logfile_name="build")

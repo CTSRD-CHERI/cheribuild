@@ -612,9 +612,7 @@ class Project(SimpleProject):
     def can_use_lto(self, ccinfo: CompilerInfo) -> bool:
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and (
-            not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))
-        ):
+        elif ccinfo.compiler == "clang" and (not self.compiling_for_host() or self.can_use_lld(ccinfo.path)):
             return True
         return self.compiling_for_host() and ccinfo.is_gcc()
 
@@ -822,7 +820,6 @@ class Project(SimpleProject):
         if cbt == BuildType.DEFAULT:
             return []
         elif cbt == BuildType.DEBUG:
-            # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
             if self.get_compiler_info(self.CC).is_gcc() or self.use_asan:
                 return ["-Og"]
             return ["-O0"]
