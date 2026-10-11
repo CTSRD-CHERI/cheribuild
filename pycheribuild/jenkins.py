@@ -42,16 +42,13 @@ from .config.jenkinsconfig import JenkinsAction, JenkinsConfig
 from .config.loader import CommandLineConfigLoader
 from .jenkins_utils import jenkins_override_install_dirs_hack
 from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
-
-# make sure all projects are loaded so that target_manager gets populated
-# noinspection PyUnresolvedReferences
-from .projects import *  # noqa: F401, F403, RUF100
-
-# noinspection PyUnresolvedReferences
-from .projects.cross import *  # noqa: F401, F403, RUF100
+from .projects import load_all_projects
 from .projects.simple_project import SimpleProject
 from .targets import Target, target_manager
 from .utils import OSInfo, ThreadJoiner, fatal_error, init_global_config, status_update, warning_message
+
+# make sure all projects are loaded so that target_manager gets populated
+load_all_projects()
 
 EXTRACT_SDK_TARGET: str = "extract-sdk"
 RUN_EVERYTHING_TARGET: str = "__run_everything__"
