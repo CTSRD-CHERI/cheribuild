@@ -46,7 +46,6 @@ from .config.defaultconfig import CheribuildAction, DefaultCheribuildConfigLoade
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
 from .config.loader import ConfigOptionHandle, MyJsonEncoder
 from .processutils import (
-    get_program_version,
     is_debugger_attached,
     print_command,
     run_and_kill_children_on_exit,
@@ -113,11 +112,7 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
             output = output[behind_index:msg_end]
         status_update("Current", d.name, "checkout can be updated:", output.decode("utf-8"))
         if query_yes_no(config, "Would you like to update before continuing?", force_result=False):
-            git_version = get_program_version(Path(shutil.which("git") or "git"), config=config)
-            # Use the autostash flag for Git >= 2.14
-            # https://stackoverflow.com/a/30209750/894271
-            autostash_flag = ["--autostash"] if git_version >= (2, 14) else []
-            run_command(["git", "pull", "--rebase", *autostash_flag], cwd=project_dir, config=config)
+            run_command(["git", "pull", "--rebase", "--autostash"], cwd=project_dir, config=config)
             os.execv(sys.argv[0], sys.argv)
 
 
