@@ -35,7 +35,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Optional
 
-from .project import MakeCommandKind, Project, _CMakeAndMesonSharedLogic
+from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
 from .simple_project import ListConfigOption, _default_stdout_filter
 from ..config.chericonfig import BuildType
 from ..processutils import commandline_to_str
@@ -367,51 +367,3 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             return self.run_cmd(cmd).returncode == 0
         except subprocess.CalledProcessError:
             return False
-
-
-class MakefileProject(Project):
-    """A very simple project that just set some defualt variables such as CC/CXX, etc"""
-
-    do_not_add_to_targets: bool = True
-    build_in_source_dir: bool = True  # Most makefile projects don't support out-of-source builds
-    # Default to GNU make since that's what most makefile projects require.
-    make_kind: MakeCommandKind = MakeCommandKind.GnuMake
-    _define_ld: bool = False
-    set_commands_on_cmdline: bool = False  # Set variables such as CC/CXX on the command line instead of the environment
-
-    def setup(self) -> None:
-        super().setup()
-        # Most projects expect that a plain $CC foo.c will work, so we include the -target, etc. flags in CC
-        essential_flags = self.essential_compiler_and_linker_flags
-        self.set_make_cmd_with_args("CC", self.CC, essential_flags)
-        self.set_make_cmd_with_args("CPP", self.CPP, essential_flags)
-        self.set_make_cmd_with_args("CXX", self.CXX, essential_flags)
-        self.set_make_cmd_with_args("CCLD", self.CC, essential_flags)
-        self.set_make_cmd_with_args("CXXLD", self.CXX, essential_flags)
-        self.make_args.set_env(AR=self.target_info.ar)
-
-        # Some projects expect LD to be CCLD others really mean the raw linker
-        if self._define_ld:
-            self.make_args.set_env(LD=self.target_info.linker)
-
-        # Set values in the environment so that projects can override them
-        cflags = self.default_compiler_flags()
-        cxxflags = self.default_compiler_flags("c++")
-        self.make_args.set_env(
-            CFLAGS=commandline_to_str(cflags + self.CFLAGS),
-            CXXFLAGS=commandline_to_str(cxxflags + self.CXXFLAGS),
-            CPPFLAGS=commandline_to_str(cflags + self.CFLAGS),
-            LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
-        )
-
-    def set_make_cmd_with_args(self, var, cmd: Path, args: "list[str]") -> None:
-        value = str(cmd)
-        if args:
-            value += " " + self.commandline_to_str(args)
-        if self.set_commands_on_cmdline:
-            self.make_args.set(**{var: value})
-        else:
-            self.make_args.set_env(**{var: value})
-
-    def _do_generate_cmakelists(self) -> None:
-        raise ValueError(f"Should not be called for CMake project {self.target}")
