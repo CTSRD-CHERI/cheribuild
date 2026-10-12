@@ -950,23 +950,6 @@ class CrossCompileTarget:
         if self.is_riscv(include_purecap=True) and self.is_hybrid_or_purecap_cheri():
             assert self._riscv_cheri_isa is not None, f"Missing CHERI ISA for target {arch_suffix}"
 
-    def _set_from(self, other_target: "CrossCompileTarget") -> None:
-        if self is other_target:
-            return
-        for attr in (
-            "_hybrid_target",
-            "_non_cheri_target",
-            "_purecap_target",
-            "_non_cheri_for_hybrid_rootfs_target",
-            "_non_cheri_for_purecap_rootfs_target",
-            "_hybrid_for_purecap_rootfs_target",
-            "_purecap_for_hybrid_rootfs_target",
-        ):
-            if getattr(self, attr) is None and getattr(other_target, attr) is not None:
-                setattr(self, attr, getattr(other_target, attr))
-                # noinspection PyProtectedMember
-                getattr(other_target, attr)._set_from(self)
-
     # Set the related targets:
     def _set_for(self, other_target: "Optional[CrossCompileTarget]", also_set_other=True) -> None:
         if other_target is not None and self is not other_target:
@@ -1005,7 +988,6 @@ class CrossCompileTarget:
                     self._non_cheri_target.add(self)
             if also_set_other:
                 other_target._set_for(self, also_set_other=False)
-            other_target._set_from(self)
 
     def create_target_info(self, project: AbstractProject) -> TargetInfo:
         return self.target_info_cls(self, project)
@@ -1253,24 +1235,6 @@ class CrossCompileTarget:
             result += repr(self._rootfs_target)
             result += " rootfs"
         return result
-
-    def _dump_target_relations(self) -> None:
-        self_repr = repr(self)
-        for n in (
-            "non_cheri",
-            "hybrid",
-            "purecap",
-            "non_cheri_for_hybrid_rootfs",
-            "non_cheri_for_purecap_rootfs",
-            "hybrid_for_purecap_rootfs",
-            "purecap_for_hybrid_rootfs",
-        ):
-            k = "_" + n + "_target"
-            v = self.__dict__[k]
-            print(self_repr + "." + n + ": " + repr(v))
-
-    # def __eq__(self, other):
-    #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
 
 
 @functools.lru_cache(maxsize=1)
