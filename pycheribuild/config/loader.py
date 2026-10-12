@@ -417,12 +417,6 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
                     if result is not None:
                         warning_message("Old JSON key", json_key, "used, please use", full_option_name, "instead")
                         break
-        # FIXME: it's about time I removed this code
-        if result is None:
-            # also check action.dest (as a fallback so I don't have to update all my config files right now)
-            result = self._loader._json.get(self.action.dest, None)
-            if result is not None:
-                warning_message("Old JSON key", result.used_key, "used, please use", full_option_name, "instead")
         return result
 
 
