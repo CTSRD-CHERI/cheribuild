@@ -153,7 +153,7 @@ class CheribuildActionEnum(Enum):
     option_name: str
     help_message: str
     altname: Optional[str]
-    actions: "list[typing.Any]"  # actually list[CheribuildActionEnum] but pytype errors on that
+    actions: "list[typing.Any]"
 
 
 class AppendConstListAction(argparse.Action):
@@ -877,7 +877,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         v = object.__getattribute__(self, item)
         if hasattr(v, "__get__"):
             # noinspection PyCallingNonCallable
-            return v.__get__(self, self.__class__)  # pytype: disable=attribute-error
+            return v.__get__(self, self.__class__)
         return v
 
     @classmethod

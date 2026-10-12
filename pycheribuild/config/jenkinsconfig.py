@@ -404,6 +404,6 @@ class JenkinsConfig(CheriConfig):
             for k, v in self.__dict__.items():
                 if hasattr(v, "__get__"):
                     # noinspection PyCallingNonCallable
-                    setattr(self, k, v.__get__(self, self.__class__))  # pytype: disable=attribute-error
+                    setattr(self, k, v.__get__(self, self.__class__))
 
             pprint.pprint(vars(self))

@@ -219,7 +219,7 @@ class ConfigLoaderBase(typing.Generic[_ConfigType], ABC):
         **kwargs,
     ) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
-        return self.add_option(name, shortname, type=Path, default=default, **kwargs)  # pytype: disable=bad-return-type
+        return self.add_option(name, shortname, type=Path, default=default, **kwargs)
 
     def add_optional_path_option(
         self, name: str, *, default: "Optional[Path]" = None, shortname=None, **kwargs

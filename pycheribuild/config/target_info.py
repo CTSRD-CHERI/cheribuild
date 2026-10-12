@@ -464,7 +464,7 @@ class TargetInfo(ABC):
             return _DO_NOT_INSTALL_PATH
         elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
             # noinspection PyUnresolvedReferences
-            build_dir = self.project.build_dir  # pyrefly: ignore[missing-attribute] pytype: disable=attribute-error
+            build_dir = self.project.build_dir  # pyrefly: ignore[missing-attribute]
             return build_dir / "test-install-prefix"
         elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
             return _INVALID_INSTALL_DIR
@@ -935,10 +935,6 @@ class CrossCompileTarget:
         self._purecap_for_hybrid_rootfs_target = (
             {purecap_for_hybrid_rootfs_target} if purecap_for_hybrid_rootfs_target else set()
         )
-        if typing.TYPE_CHECKING:
-            # Inferring what these function calls do takes a very long time in pytype, and since they don't add any
-            # instance variables (or change the type of them) we can skip over these calls.
-            return
         self._set_for(non_cheri_target)
         self._set_for(hybrid_target)
         self._set_for(purecap_target)

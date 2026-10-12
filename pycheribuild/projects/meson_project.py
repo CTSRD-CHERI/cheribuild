@@ -183,7 +183,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             host_target_info = NativeTargetInfo(
                 BasicCompilationTargets.NATIVE,
                 FakeProject(self.config, crosscompile_target=BasicCompilationTargets.NATIVE),
-            )  # pytype: disable=wrong-arg-types
+            )
             host_prefixes = self.host_dependency_prefixes
             assert self.config.other_tools_dir in host_prefixes
             host_pkg_config_dirs = list(
