@@ -963,7 +963,7 @@ def is_debugger_attached() -> bool:
         return True
     # Version 3.12 adds sys.monitoring.get_tool
     try:
-        if sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None:  # pytype: disable=module-attr
+        if sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None:
             return True
     except AttributeError:
         pass

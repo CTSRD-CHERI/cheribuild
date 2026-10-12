@@ -2416,7 +2416,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     @property
     def cross_sysroot_path(self) -> Path:
         if self.install_dir_override is not None:
-            return self.install_dir_override  # pytype: disable=bad-return-type
+            return self.install_dir_override
         return super().cross_sysroot_path
 
     @property

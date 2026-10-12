@@ -421,7 +421,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         # We don't want to call setup() yet on the FreeBSD instance (not needed to get the compiler)
         # noinspection PyProtectedMember
         fbsd = self._get_sdk_root_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
-        configured_path = fbsd.build_toolchain_root_dir  # pytype: disable=attribute-error
+        configured_path = fbsd.build_toolchain_root_dir
         if configured_path is None:
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
             assert fbsd.build_toolchain == CompilerType.DEFAULT_COMPILER
@@ -666,10 +666,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if mount_installdir:
             if not has_test_extra_arg_override("--install-destdir"):
                 # noinspection PyUnresolvedReferences
-                cmd.extend(["--install-destdir", self.project.destdir])  # pytype: disable=attribute-error
+                cmd.extend(["--install-destdir", self.project.destdir])
             if not has_test_extra_arg_override("--install-prefix"):
                 # noinspection PyUnresolvedReferences
-                cmd.extend(["--install-prefix", self.project.install_prefix])  # pytype: disable=attribute-error
+                cmd.extend(["--install-prefix", self.project.install_prefix])
         if disk_image_path and not has_test_extra_arg_override("--disk-image"):
             cmd.extend(["--disk-image", disk_image_path])
             if not disk_image_path.exists():

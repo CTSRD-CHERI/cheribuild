@@ -427,8 +427,8 @@ class FileSystemUtils:
         with file.open("rb", buffering=0) as f:
             # PyCharm thinks .readinto is not supported.
             # noinspection PyUnresolvedReferences
-            for n in iter(lambda: f.readinto(mv), 0):  # pytype: disable=wrong-arg-types
-                h.update(mv[:n])  # pytype: disable=wrong-arg-types
+            for n in iter(lambda: f.readinto(mv), 0):
+                h.update(mv[:n])
         return h.hexdigest()
 
     def sha256sum(self, file: Path) -> str:
