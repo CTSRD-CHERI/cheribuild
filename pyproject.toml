@@ -23,7 +23,6 @@ exclude = [
     ".git",
     ".idea",
     ".run",
-    ".pytype/",
     ".venv",
     "3rdparty",
     "venv",
@@ -54,7 +53,7 @@ target-version = ['py39']
 # 'extend-exclude' excludes files or directories in addition to the defaults
 # Currently reformatting pycheribuild/ results in lots of weird formatting, so
 # let's restrict this to the other files for now.
-extend-exclude = '''3rdparty|\.pytype|pycheribuild'''
+extend-exclude = '''3rdparty|pycheribuild'''
 preview = true
 required-version = '23'
 

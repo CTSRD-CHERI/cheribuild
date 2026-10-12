@@ -5,7 +5,6 @@ extend-exclude =
   venv/
   venv310/
   .venv/
-  .pytype/
 show-source = true
 statistics = true
 # E203 is incompatible with black
