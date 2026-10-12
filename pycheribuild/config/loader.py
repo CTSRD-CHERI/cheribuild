@@ -561,11 +561,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                     print_suppressed=True,  # also include target-specific options
                 )
         # Handle cases such as cheribuild.py target1 --arg target2
-        # Ideally we would use parse_intermixed_args() but that requires python3.7
-        # so we work around it using parse_known_args().
-        self._parsed_args, trailing = self._parser.parse_known_args()
-        # TODO: python 3.7 self._parsed_args = self._parser.parse_intermixed_args()
-        # print(self._parsed_args, trailingTargets, file=sys.stderr)
+        self._parsed_args, trailing = self._parser.parse_known_intermixed_args()
         for x in trailing:
             # filter out unknown options (like -b)
             # exit with error
@@ -587,7 +583,8 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                 if suggestions:
                     errmsg += ". Did you mean " + " or ".join(suggestions) + "?"
                 self._parser.error(errmsg)
-        self._parsed_args.targets += trailing
+            else:
+                self._parser.error(f"unknown argument '{x}'")
 
     def targets(self) -> "list[str]":
         return self._parsed_args.targets
