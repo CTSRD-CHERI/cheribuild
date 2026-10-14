@@ -45,7 +45,7 @@ from .processutils import get_program_version, run_and_kill_children_on_exit, ru
 from .projects import load_all_projects
 from .projects.simple_project import SimpleProject
 from .targets import Target, target_manager
-from .utils import OSInfo, ThreadJoiner, fatal_error, init_global_config, status_update, warning_message
+from .utils import OSInfo, ThreadJoiner, fatal_error, status_update, warning_message
 
 # make sure all projects are loaded so that target_manager gets populated
 load_all_projects()
@@ -256,7 +256,6 @@ def _jenkins_main() -> None:
     SimpleProject._config_loader = config_loader
     target_manager.register_command_line_options()
     cheri_config.load()
-    init_global_config(cheri_config, test_mode=False)
 
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheri_config.action or (

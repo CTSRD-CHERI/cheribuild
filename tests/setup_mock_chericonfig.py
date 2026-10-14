@@ -4,7 +4,6 @@ from pycheribuild.config.chericonfig import CheribuildActionEnum, CheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
 from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.targets import Target
-from pycheribuild.utils import init_global_config
 
 
 class MockArgs:
@@ -71,8 +70,7 @@ class MockConfig(CheriConfig):
 
 def setup_mock_chericonfig(source_root: Path = Path("/this/path/does/not/exist"), pretend=True) -> MockConfig:
     config = MockConfig(source_root, pretend)
-    # noinspection PyTypeChecker
-    init_global_config(config, test_mode=True)
+    config.TEST_MODE = True
     ConfigLoaderBase._cheri_config = config
     SimpleProject._config_loader = config.loader
     config.loader.is_running_unit_tests = True
