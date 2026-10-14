@@ -39,10 +39,10 @@ from functools import cached_property
 from pathlib import Path, PurePath
 from typing import Optional, Union
 
+from .autotools_project import AutotoolsProject
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildKGDB, get_build_gdb_class, get_gdb_xtarget
 from .project import (
-    AutotoolsProject,
     CheriConfig,
     ComputedDefaultValue,
     CPUArchitecture,

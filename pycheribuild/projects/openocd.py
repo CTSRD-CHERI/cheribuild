@@ -24,7 +24,8 @@
 # SUCH DAMAGE.
 #
 
-from .project import AutotoolsProject, ComputedDefaultValue, GitRepository
+from .autotools_project import AutotoolsProject
+from .project import ComputedDefaultValue, GitRepository
 
 
 class BuildOpenOCDBase(AutotoolsProject):

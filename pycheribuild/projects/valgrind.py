@@ -28,7 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .project import AutotoolsProject, DefaultInstallDir, GitRepository
+from .autotools_project import AutotoolsProject
+from .project import DefaultInstallDir, GitRepository
 from ..utils import OSInfo
 
 

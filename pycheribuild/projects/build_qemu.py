@@ -34,8 +34,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
 
+from .autotools_project import AutotoolsProject
 from .project import (
-    AutotoolsProject,
     BuildType,
     CheriConfig,
     ComputedDefaultValue,

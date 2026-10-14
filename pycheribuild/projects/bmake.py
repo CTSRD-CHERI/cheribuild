@@ -27,7 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import AutotoolsProject, DefaultInstallDir, GitRepository
+from .autotools_project import AutotoolsProject
+from .project import DefaultInstallDir, GitRepository
 from ..utils import OSInfo
 
 

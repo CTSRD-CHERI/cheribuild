@@ -33,11 +33,11 @@ from pathlib import Path
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
+from .makefile_project import MakefileProject
 from .project import (
     ComputedDefaultValue,
     DefaultInstallDir,
     GitRepository,
-    MakefileProject,
     Project,
     ReuseOtherProjectDefaultTargetRepository,
 )

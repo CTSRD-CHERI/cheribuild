@@ -32,7 +32,8 @@ from pathlib import Path
 from typing import Optional
 
 from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
-from .project import CheriConfig, ComputedDefaultValue, DefaultInstallDir, MakefileProject, Project
+from .makefile_project import MakefileProject
+from .project import CheriConfig, ComputedDefaultValue, DefaultInstallDir, Project
 from .repository import GitRepository
 from .sail import BuildCheriAllianceSailRiscv, BuildRVYSailCheriRISCV, BuildSailCheriRISCV
 from .simple_project import (
