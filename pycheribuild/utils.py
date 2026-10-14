@@ -61,7 +61,6 @@ __all__ = [
     "error_message",
     "fatal_error",
     "find_free_port",
-    "get_global_config",
     "have_working_internet_connection",
     "include_file",
     "include_local_file",
@@ -119,20 +118,9 @@ class ConfigBase:
         self.internet_connection_last_check_result = False
 
 
-GlobalConfig: ConfigBase = ConfigBase(
-    pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(), force=DoNotUseInIfStmt()
-)
-
-
 def init_global_config(config: ConfigBase, *, test_mode: bool = False) -> None:
-    global GlobalConfig  # noqa: PLW0603
-    GlobalConfig = config
-    GlobalConfig.TEST_MODE = test_mode
-    assert not (GlobalConfig.verbose and GlobalConfig.quiet), "mutually exclusive"
-
-
-def get_global_config() -> ConfigBase:
-    return GlobalConfig
+    config.TEST_MODE = test_mode
+    assert not (config.verbose and config.quiet), "mutually exclusive"
 
 
 def is_jenkins_build() -> bool:
