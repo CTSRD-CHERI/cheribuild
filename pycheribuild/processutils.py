@@ -908,7 +908,7 @@ def latest_system_clang_tool(config: ConfigBase, basename: str, fallback_basenam
                 continue
             # print("Checking compiler candidate", candidate)
             candidate = search_dir / candidate_name
-            info = get_compiler_info(candidate, config=config)  # Global config not initialized yet
+            info = get_compiler_info(candidate, config=config)
             if OSInfo.IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue

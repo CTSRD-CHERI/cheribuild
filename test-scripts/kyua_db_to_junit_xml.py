@@ -34,8 +34,6 @@ from typing import Optional
 
 from run_tests_common import boot_cheribsd, junitparser
 
-from pycheribuild.utils import get_global_config
-
 
 def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: "Optional[str]" = None):
     assert output_file.resolve() != db_file.resolve()
@@ -43,7 +41,7 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: "Opti
         command = ["kyua", "report-junit", "--results-file=" + str(db_file)]
         boot_cheribsd.run_host_command(command, stdout=output_stream)
         # TODO: xml escape the file?
-        if not get_global_config().pretend:
+        if not boot_cheribsd.PRETEND_MODE:
             fixup_kyua_generated_junit_xml(output_file, prefix)
 
 
