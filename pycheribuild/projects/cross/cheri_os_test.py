@@ -78,10 +78,18 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
                 MACHINE_ARCH=self.target_info.get_riscv_arch_string(
                     self.crosscompile_target, self.config, softfloat=False
                 ),
+                MACHINE="riscv",
             )
         else:
             target = self.target_info.target
             self.fatal(f"Unsupported architecture: {target.cpu_architecture} {target._riscv_cheri_isa}")
+
+        if self.target_info.is_freebsd():
+            self.make_args.set(TARGET_OS="FreeBSD")
+        elif self.target_info.is_linux():
+            self.make_args.set(TARGET_OS="Linux")
+        else:
+            self.fatal(f"Unsupported target OS: {self.target_info.shortname}")
 
         self.make_args.set_env(
             DESTDIR=str(self.destdir),
