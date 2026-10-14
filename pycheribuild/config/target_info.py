@@ -946,46 +946,35 @@ class CrossCompileTarget:
         self._set_for(non_cheri_for_purecap_rootfs_target)
         self._set_for(hybrid_for_purecap_rootfs_target)
         self._set_for(purecap_for_hybrid_rootfs_target)
+        self._relation_target_set(self).add(self)
 
         if self.is_riscv(include_purecap=True) and self.is_hybrid_or_purecap_cheri():
             assert self._riscv_cheri_isa is not None, f"Missing CHERI ISA for target {arch_suffix}"
 
+    def _relation_target_set(self, owner: "CrossCompileTarget") -> "set[CrossCompileTarget]":
+        """Return the set attribute on `owner` that stores targets with `self`'s ABI and rootfs kind."""
+        if self._is_cheri_hybrid:
+            if self._rootfs_target is not None:
+                assert self._rootfs_target._is_cheri_purecap, "Only support purecap separate rootfs for hybrid targets"
+                return owner._hybrid_for_purecap_rootfs_target
+            return owner._hybrid_target
+        if self._is_cheri_purecap:
+            if self._rootfs_target is not None:
+                assert self._rootfs_target._is_cheri_hybrid, "Only support hybrid separate rootfs for purecap targets"
+                return owner._purecap_for_hybrid_rootfs_target
+            return owner._purecap_target
+        # Otherwise `self` is a non-CHERI target (either standalone or for a hybrid/purecap rootfs).
+        if self._rootfs_target is not None:
+            if self._rootfs_target._is_cheri_hybrid:
+                return owner._non_cheri_for_hybrid_rootfs_target
+            assert self._rootfs_target._is_cheri_purecap, "Separate non-CHERI rootfs for non-CHERI target?"
+            return owner._non_cheri_for_purecap_rootfs_target
+        return owner._non_cheri_target
+
     # Set the related targets:
-    def _set_for(self, other_target: "Optional[CrossCompileTarget]", also_set_other=True) -> None:
+    def _set_for(self, other_target: "Optional[CrossCompileTarget]", also_set_other: bool = True) -> None:
         if other_target is not None and self is not other_target:
-            if self._is_cheri_hybrid:
-                if self._rootfs_target is not None:
-                    assert self._rootfs_target._is_cheri_purecap, (
-                        "Only support purecap separate rootfs for hybrid targets"
-                    )
-                    other_target._hybrid_for_purecap_rootfs_target.add(self)
-                    self._hybrid_for_purecap_rootfs_target.add(self)
-                else:
-                    other_target._hybrid_target.add(self)
-                    self._hybrid_target.add(self)
-            elif self._is_cheri_purecap:
-                if self._rootfs_target is not None:
-                    assert self._rootfs_target._is_cheri_hybrid, (
-                        "Only support hybrid separate rootfs for purecap targets"
-                    )
-                    other_target._purecap_for_hybrid_rootfs_target.add(self)
-                    self._purecap_for_hybrid_rootfs_target.add(self)
-                else:
-                    other_target._purecap_target.add(self)
-                    self._purecap_target.add(self)
-            else:
-                if self._rootfs_target is not None:
-                    if self._rootfs_target._is_cheri_hybrid:
-                        other_target._non_cheri_for_hybrid_rootfs_target.add(self)
-                        self._non_cheri_for_hybrid_rootfs_target.add(self)
-                    else:
-                        assert self._rootfs_target._is_cheri_purecap, "Separate non-CHERI rootfs for non-CHERI target?"
-                        other_target._non_cheri_for_purecap_rootfs_target.add(self)
-                        self._non_cheri_for_purecap_rootfs_target.add(self)
-                else:
-                    assert self._rootfs_target is None, "Separate rootfs targets only supported for CHERI targets"
-                    other_target._non_cheri_target.add(self)
-                    self._non_cheri_target.add(self)
+            self._relation_target_set(other_target).add(self)
             if also_set_other:
                 other_target._set_for(self, also_set_other=False)
 
