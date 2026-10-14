@@ -1,6 +1,7 @@
 import copy
 import inspect
 import itertools
+import typing
 
 # noinspection PyUnresolvedReferences
 import pytest
@@ -869,3 +870,146 @@ def test_toolchain_dependencies(xtarget: CrossCompileTarget, expected: "list[str
         assert len(expected) == 1
         compiler_target = target_manager.get_target_raw(expected[0])
         assert compiler_target.get_real_target(CompilationTargets.NATIVE, config) == compiler_target
+
+
+class _TargetRelationCase(typing.NamedTuple):
+    non_cheri: CrossCompileTarget
+    hybrid: CrossCompileTarget
+    purecap: CrossCompileTarget
+    non_cheri_for_purecap_rootfs: CrossCompileTarget
+    hybrid_for_purecap_rootfs: CrossCompileTarget
+    non_cheri_for_hybrid_rootfs: "CrossCompileTarget | None" = None
+    purecap_for_hybrid_rootfs: "CrossCompileTarget | None" = None
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(
+            _TargetRelationCase(
+                non_cheri=CompilationTargets.CHERIBSD_MORELLO_NO_CHERI,
+                hybrid=CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                purecap=CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+                non_cheri_for_hybrid_rootfs=CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS,
+                non_cheri_for_purecap_rootfs=CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS,
+                hybrid_for_purecap_rootfs=CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
+                purecap_for_hybrid_rootfs=CompilationTargets.CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS,
+            ),
+            id="cheribsd-morello",
+        ),
+        pytest.param(
+            _TargetRelationCase(
+                non_cheri=CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                hybrid=CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID,
+                purecap=CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP,
+                non_cheri_for_hybrid_rootfs=CompilationTargets.CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS,
+                non_cheri_for_purecap_rootfs=CompilationTargets.CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ROOTFS,
+                hybrid_for_purecap_rootfs=CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
+                purecap_for_hybrid_rootfs=CompilationTargets.CHERIBSD_RISCV_XCHERI_PURECAP_FOR_HYBRID_ROOTFS,
+            ),
+            id="cheribsd-riscv-xcheri",
+        ),
+        pytest.param(
+            _TargetRelationCase(
+                non_cheri=CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                hybrid=CompilationTargets._CHERIBSD_RISCV_ZCHERI093_HYBRID,
+                purecap=CompilationTargets.CHERIBSD_RISCV_ZCHERI093_PURECAP,
+                non_cheri_for_purecap_rootfs=CompilationTargets.CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ZCHERI093_ROOTFS,
+                hybrid_for_purecap_rootfs=CompilationTargets._CHERIBSD_RISCV_ZCHERI093_HYBRID_FOR_PURECAP_ROOTFS,
+            ),
+            id="cheribsd-riscv-zcheri093",
+        ),
+        pytest.param(
+            _TargetRelationCase(
+                non_cheri=CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                hybrid=CompilationTargets._CHERIBSD_RISCV_Y_HYBRID,
+                purecap=CompilationTargets.CHERIBSD_RISCV_Y_PURECAP,
+                non_cheri_for_purecap_rootfs=CompilationTargets.CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_RVY_ROOTFS,
+                hybrid_for_purecap_rootfs=CompilationTargets._CHERIBSD_RISCV_Y_HYBRID_FOR_PURECAP_ROOTFS,
+            ),
+            id="cheribsd-riscv-y",
+        ),
+    ],
+)
+def test_cross_compile_target_relations(case: _TargetRelationCase):
+    assert case.non_cheri.get_rootfs_target() == case.non_cheri
+    assert case.hybrid.get_rootfs_target() == case.hybrid
+    assert case.purecap.get_rootfs_target() == case.purecap
+    assert case.non_cheri_for_purecap_rootfs.get_rootfs_target() == case.purecap
+    assert case.hybrid_for_purecap_rootfs.get_rootfs_target() == case.purecap
+    if case.non_cheri_for_hybrid_rootfs is not None:
+        assert case.non_cheri_for_hybrid_rootfs.get_rootfs_target() == case.hybrid
+    if case.purecap_for_hybrid_rootfs is not None:
+        assert case.purecap_for_hybrid_rootfs.get_rootfs_target() == case.hybrid
+
+    # Base non-CHERI, hybrid, and purecap relations:
+    for target in (case.non_cheri, case.hybrid, case.purecap, case.non_cheri_for_purecap_rootfs):
+        assert target.get_non_cheri_target() == case.non_cheri
+    for target in (case.hybrid, case.purecap):
+        assert target.get_cheri_hybrid_target() == case.hybrid
+        assert target.get_cheri_purecap_target() == case.purecap
+
+    if not case.non_cheri.is_riscv(include_purecap=True):
+        assert case.non_cheri.get_cheri_hybrid_target() == case.hybrid
+        assert case.non_cheri.get_cheri_purecap_target() == case.purecap
+        assert case.non_cheri.get_non_cheri_for_purecap_rootfs_target() == case.non_cheri_for_purecap_rootfs
+        assert case.non_cheri_for_hybrid_rootfs is not None
+        assert case.non_cheri.get_non_cheri_for_hybrid_rootfs_target() == case.non_cheri_for_hybrid_rootfs
+    else:
+        # Non-CHERI RISC-V targets have multiple CHERI ISA variants (XCheri, Zcheri093, RVY) so looking up a CHERI
+        # target from the non-CHERI target is ambiguous and raises ValueError.
+        with pytest.raises(ValueError, match="Don't know CHERI hybrid version"):
+            case.non_cheri.get_cheri_hybrid_target()
+        with pytest.raises(ValueError, match="Don't know CHERI purecap version"):
+            case.non_cheri.get_cheri_purecap_target()
+        with pytest.raises(ValueError, match="Don't know non-CHERI for hybrid rootfs version"):
+            case.non_cheri.get_non_cheri_for_hybrid_rootfs_target()
+        with pytest.raises(ValueError, match="Don't know non-CHERI for purecap rootfs version"):
+            case.non_cheri.get_non_cheri_for_purecap_rootfs_target()
+        with pytest.raises(ValueError, match="Don't know CHERI hybrid for purecap rootfs version"):
+            case.non_cheri.get_cheri_hybrid_for_purecap_rootfs_target()
+        with pytest.raises(ValueError, match="Don't know CHERI purecap for hybrid rootfs version"):
+            case.non_cheri.get_cheri_purecap_for_hybrid_rootfs_target()
+        assert case.purecap.get_non_cheri_for_purecap_rootfs_target() == case.non_cheri_for_purecap_rootfs
+        assert case.non_cheri_for_purecap_rootfs.get_cheri_purecap_target() == case.purecap
+        if case.non_cheri_for_hybrid_rootfs is not None:
+            assert case.hybrid.get_non_cheri_for_hybrid_rootfs_target() == case.non_cheri_for_hybrid_rootfs
+            assert case.non_cheri_for_hybrid_rootfs.get_cheri_hybrid_target() == case.hybrid
+
+    # Rootfs-qualified target relations:
+    assert case.purecap.get_cheri_hybrid_for_purecap_rootfs_target() == case.hybrid_for_purecap_rootfs
+    assert case.hybrid_for_purecap_rootfs.get_cheri_purecap_target() == case.purecap
+    assert case.hybrid_for_purecap_rootfs.get_cheri_hybrid_for_purecap_rootfs_target() == case.hybrid_for_purecap_rootfs
+    assert (
+        case.non_cheri_for_purecap_rootfs.get_non_cheri_for_purecap_rootfs_target() == case.non_cheri_for_purecap_rootfs
+    )
+
+    if case.non_cheri_for_hybrid_rootfs is not None:
+        assert case.non_cheri_for_hybrid_rootfs.get_non_cheri_target() == case.non_cheri
+        assert (
+            case.non_cheri_for_hybrid_rootfs.get_non_cheri_for_hybrid_rootfs_target()
+            == case.non_cheri_for_hybrid_rootfs
+        )
+        assert (
+            case.hybrid_for_purecap_rootfs.get_non_cheri_for_hybrid_rootfs_target() == case.non_cheri_for_hybrid_rootfs
+        )
+    else:
+        with pytest.raises(ValueError, match="Don't know non-CHERI for hybrid rootfs version"):
+            case.hybrid_for_purecap_rootfs.get_non_cheri_for_hybrid_rootfs_target()
+
+    if case.purecap_for_hybrid_rootfs is not None:
+        assert (
+            case.purecap_for_hybrid_rootfs.get_cheri_purecap_for_hybrid_rootfs_target()
+            == case.purecap_for_hybrid_rootfs
+        )
+        assert (
+            case.purecap_for_hybrid_rootfs.get_cheri_hybrid_for_purecap_rootfs_target()
+            == case.hybrid_for_purecap_rootfs
+        )
+        assert (
+            case.hybrid_for_purecap_rootfs.get_cheri_purecap_for_hybrid_rootfs_target()
+            == case.purecap_for_hybrid_rootfs
+        )
+    else:
+        with pytest.raises(ValueError, match="Don't know CHERI purecap for hybrid rootfs version"):
+            case.hybrid_for_purecap_rootfs.get_cheri_purecap_for_hybrid_rootfs_target()
