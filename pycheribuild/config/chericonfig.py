@@ -201,7 +201,6 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
     # These properties need to be set in the derived class
     output_root: Path
     source_root: Path
-    output_root: Path
     build_root: Path
     # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
     cheribsd_image_root: Path
@@ -839,13 +838,13 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         return default_test_ssh_key_path
 
     def _ensure_required_properties_set(self) -> bool:
-        if sys.version_info >= (3, 10):
-            # inspect.get_annotations() is the modern way to get annotations and handles inheritance.
-            # It was added in Python 3.10.
-            all_annotations = inspect.get_annotations(type(self))
-        else:
-            # For older Python versions, just use the class's annotations. Note: this field was removed in 3.14
-            all_annotations = type(self).__annotations__
+        all_annotations = {}
+        for cls in reversed(type(self).__mro__):
+            if sys.version_info >= (3, 10):
+                all_annotations.update(inspect.get_annotations(cls))
+            else:
+                # For older Python versions, use __annotations__. Note: this field was removed in 3.14
+                all_annotations.update(getattr(cls, "__annotations__", {}))
         for key in itertools.chain(self.__dict__.keys(), all_annotations.keys()):
             try:
                 # don't do the descriptor stuff:
@@ -872,7 +871,8 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
                 return True
         return False
 
-    # FIXME: not sure why this is needed
+    # ConfigOptionBase descriptors are stored on the instance (self.__dict__) rather than the class, so
+    # object.__getattribute__ does not automatically invoke their __get__() method.
     def __getattribute__(self, item) -> "typing.Any":
         v = object.__getattribute__(self, item)
         if hasattr(v, "__get__"):
