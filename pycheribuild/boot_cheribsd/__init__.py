@@ -57,7 +57,7 @@ from ..colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs
-from ..utils import ConfigBase, find_free_port, get_global_config, init_global_config
+from ..utils import ConfigBase, find_free_port
 
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -122,6 +122,7 @@ PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP_MIPS, CHERI_TRAP_RISCV]
 
+PRETEND_MODE = False
 INTERACT_ON_KERNEL_PANIC = False
 MESSAGE_PREFIX: str = ""
 QEMU_LOGFILE: Optional[Path] = None
@@ -136,6 +137,7 @@ class PretendSpawn(pexpect.spawn):
         kwargs["timeout"] = 1
         super().__init__("cat", use_poll=True, **kwargs)
         self.cmd = [command, *args]
+        self.config = ConfigBase(pretend=True, verbose=True, quiet=False, force=False)
         info("Spawning (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
     def expect(self, *args, pretend_result=None, **kwargs):
@@ -239,6 +241,11 @@ PatternListType = Sequence[Union[str, typing.Pattern, type[pexpect.ExceptionPexp
 
 class CheriBSDSpawnMixin(MixinBase):
     EXIT_ON_KERNEL_PANIC = True
+    config: ConfigBase
+
+    @property
+    def pretend(self) -> bool:
+        return self.config.pretend
 
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
@@ -341,9 +348,12 @@ class CheriBSDSpawnMixin(MixinBase):
 
 
 class CheriBSDInstance(CheriBSDSpawnMixin, pexpect.spawn):
-    def __init__(self, xtarget: CrossCompileTarget, *args, **kwargs):
+    def __init__(self, xtarget: CrossCompileTarget, *args, config: Optional[ConfigBase] = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.xtarget = xtarget
+        self.config = (
+            config if config is not None else ConfigBase(pretend=PRETEND_MODE, verbose=True, quiet=False, force=False)
+        )
         self.sendchunksize = 100  # sleep after 100 sent chars
 
 
@@ -352,8 +362,16 @@ class QemuCheriBSDInstance(CheriBSDInstance):
     shared_dirs: "list[SharedMount]"
     flush_interval = None
 
-    def __init__(self, qemu_config: QemuOptions, *args, ssh_port: Optional[int], ssh_pubkey: Optional[Path], **kwargs):
-        super().__init__(qemu_config.xtarget, *args, **kwargs)
+    def __init__(
+        self,
+        qemu_config: QemuOptions,
+        *args,
+        ssh_port: Optional[int],
+        ssh_pubkey: Optional[Path],
+        config: Optional[ConfigBase] = None,
+        **kwargs,
+    ):
+        super().__init__(qemu_config.xtarget, *args, config=config, **kwargs)
         self.qemu_config = qemu_config
         self.should_quit = False
         self.ssh_port = ssh_port
@@ -494,7 +512,7 @@ def print_cmd(cmd: "list[str]", **kwargs):
 def failure(*args, exit: bool, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
-        if get_global_config().pretend:
+        if PRETEND_MODE:
             print("\033[0;37mIgnored fatal error in --pretend mode\033[0m", sep="", file=sys.stderr, flush=True)
         else:
             with contextlib.suppress(Exception):
@@ -506,7 +524,7 @@ def failure(*args, exit: bool, **kwargs):
 
 def run_host_command(cmd: "list[str]", **kwargs):
     print_cmd(cmd, **kwargs)
-    if get_global_config().pretend:
+    if PRETEND_MODE:
         return
     subprocess.check_call(cmd, **kwargs)
 
@@ -588,7 +606,7 @@ def maybe_decompress(
     def unxz(archive):
         return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive)
 
-    if args and getattr(args, "internal_shard", None) and not get_global_config().pretend:
+    if args and getattr(args, "internal_shard", None) and not PRETEND_MODE:
         assert path.exists()
 
     if path.suffix == ".bz2":
@@ -615,7 +633,7 @@ def maybe_decompress(
 
     if not path.exists():
         failure("Could not find " + what + " " + str(path), exit=True)
-    assert get_global_config().pretend or path.exists(), path
+    assert PRETEND_MODE or path.exists(), path
     return path
 
 
@@ -781,7 +799,7 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     assert isinstance(pubkey, Path)
     # Ensure that we have permissions set up in a way so that ssh doesn't complain
     qemu.run("mkdir -p /root/.ssh && chmod 700 /root /root/.ssh")
-    if get_global_config() and not pubkey.exists():
+    if qemu.pretend and not pubkey.exists():
         ssh_pubkey_contents = "ssh-ed25519 AAAA Test SSH key for cheribuild"
     else:
         ssh_pubkey_contents = pubkey.read_text(encoding="utf-8").strip()
@@ -803,7 +821,7 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys", exit=True)
     qemu.expect_prompt(timeout=120)
-    if not get_global_config().pretend:
+    if not qemu.pretend:
         time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
 
@@ -826,6 +844,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         # Just start cat for --pretend mode
         kwargs["timeout"] = 1
+        kwargs.setdefault("config", ConfigBase(pretend=True, verbose=True, quiet=False, force=False))
         super().__init__(qemu_config, "cat", use_poll=True, **kwargs)
 
     def expect(self, *args, pretend_result=None, **kwargs):
@@ -909,7 +928,10 @@ def boot_cheribsd(
     skip_ssh_setup=False,
     bios_path: "Optional[Path]" = None,
     boot_alternate_kernel_dir: "Optional[Path]" = None,
+    config: Optional[ConfigBase] = None,
 ) -> QemuCheriBSDInstance:
+    if config is None:
+        config = ConfigBase(pretend=PRETEND_MODE, verbose=True, quiet=False, force=False)
     user_network_args = ""
     extra_qemu_args = []
     if shared_dirs is None:
@@ -918,7 +940,7 @@ def boot_cheribsd(
         for idx, d in enumerate(shared_dirs):
             if not Path(d.hostdir).exists():
                 failure("Shared directory ", d.hostdir, " doesn't exist!", exit=True)
-            if qemu_supports_9pfs(qemu_command, config=get_global_config()):
+            if qemu_supports_9pfs(qemu_command, config=config):
                 virtfs_arg = (
                     f"local,id=virtfs{idx + 1},mount_tag=qemu{idx + 1},path={d.hostdir},security_model=mapped-xattr"
                 )
@@ -972,7 +994,7 @@ def boot_cheribsd(
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
     qemu_cls = QemuCheriBSDInstance
-    if get_global_config().pretend:
+    if config.pretend:
         qemu_cls = FakeQemuSpawn
     child = qemu_cls(
         qemu_options,
@@ -980,6 +1002,7 @@ def boot_cheribsd(
         qemu_args[1:],
         ssh_port=ssh_port,
         ssh_pubkey=ssh_pubkey,
+        config=config,
         encoding="utf-8",
         echo=False,
         timeout=60,
@@ -1074,7 +1097,7 @@ def boot_and_login(
 
         # Check that we are booting the expected kind of CheriBSD kernel (hybrid/purecap)
         if expected_kernel_abi_msg is not None:
-            if get_global_config().pretend:
+            if child.pretend:
                 i = boot_messages.index(expected_kernel_abi_msg)
             if i == boot_messages.index(expected_kernel_abi_msg):
                 success(f"Booting correct kernel ABI: {expected_kernel_abi_msg}")
@@ -1270,7 +1293,7 @@ def _do_test_setup(
             qemu.shared_mount_failed = True
             failure(f"Failed to mount host directory {d.hostdir}.", exit=False)
 
-    if test_archives and not get_global_config().pretend:
+    if test_archives and not qemu.pretend:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
     qemu.run("df -h")
@@ -1333,7 +1356,7 @@ def mount_via_p9fs(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) 
 
 
 def mount_via_smb(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -> bool:
-    for trial in range(MAX_SMBFS_RETRY if not get_global_config().pretend else 1):  # maximum of 3 trials
+    for trial in range(MAX_SMBFS_RETRY if not qemu.pretend else 1):  # maximum of 3 trials
         try:
             checked_run_cheribsd_command(
                 qemu,
@@ -1358,7 +1381,7 @@ def mount_via_smb(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -
                 exit=False,
             )
             info("Waiting for 2-10 seconds before retrying mount...")
-            if not get_global_config().pretend:
+            if not qemu.pretend:
                 time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
     return False
 
@@ -1566,7 +1589,9 @@ def _main(
         pass
 
     args = parser.parse_args()
-    init_global_config(ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False))
+    global PRETEND_MODE  # noqa: PLW0603
+    PRETEND_MODE = args.pretend
+    config = ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False)
     if args.ssh_port is None:
         temp_ssh_port = find_free_port()
         args.ssh_port = temp_ssh_port.port
@@ -1702,6 +1727,7 @@ def _main(
         write_disk_image_changes=args.write_disk_image_changes,
         boot_alternate_kernel_dir=args.alternate_kernel_rootfs_path,
         expected_kernel_abi=args.expected_kernel_abi,
+        config=config,
     )
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 

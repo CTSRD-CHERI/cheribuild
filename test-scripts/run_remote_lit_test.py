@@ -44,7 +44,6 @@ from typing import Optional
 from run_tests_common import boot_cheribsd, commandline_to_str, pexpect
 
 from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible_uncached
-from pycheribuild.utils import get_global_config
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
@@ -133,7 +132,7 @@ def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event:
         crlf = qemu.crlf.decode("utf-8") if isinstance(qemu.crlf, bytes) else qemu.crlf
         patterns: boot_cheribsd.PatternListType = [pexpect.TIMEOUT, "KDB: enter:", pexpect.EOF, crlf]
         i = qemu.expect(patterns, timeout=qemu.flush_interval, log_patterns=False)
-        if get_global_config().pretend:
+        if qemu.pretend:
             time.sleep(1)
         elif i == 1:
             boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)
@@ -207,13 +206,13 @@ def run_remote_lit_tests_impl(
     qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
-    if get_global_config().pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
+    if qemu.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
         time.sleep(10)
     if mp_q:
         assert barrier is not None
     assert CURRENT_STAGE == MultiprocessStages.BOOTING_CHERIBSD
     notify_main_process(args, MultiprocessStages.TESTING_SSH_CONNECTION, mp_q, barrier=barrier)
-    if get_global_config().pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
+    if qemu.pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
         raise RuntimeError("SOMETHING WENT WRONG!")
     qemu.checked_run("cat /root/.ssh/authorized_keys", timeout=20)
     port = args.ssh_port
@@ -222,7 +221,7 @@ def run_remote_lit_tests_impl(
     config_contents = generate_ssh_config_file_for_qemu(
         ssh_port=args.ssh_port,
         ssh_key=Path(args.ssh_key).with_suffix(""),
-        config=get_global_config(),
+        config=qemu.config,
     )
     with Path(tempdir, "config").open("w", encoding="utf-8") as c:
         c.write(config_contents)
@@ -235,7 +234,7 @@ def run_remote_lit_tests_impl(
         if ssh_host_accessible_uncached(
             "cheribsd-test-instance",
             ssh_args=("-F", str(Path(tempdir, "config"))),
-            config=get_global_config(),
+            config=qemu.config,
             run_in_pretend_mode=False,
         ):
             connection_time = (datetime.datetime.now(datetime.timezone.utc) - connection_test_start).total_seconds()
@@ -263,7 +262,7 @@ def run_remote_lit_tests_impl(
             c.write(config_contents.format(control_persist="no"))
         check_ssh_connection("Second SSH connection (without controlmaster)")
 
-    if get_global_config().pretend:
+    if qemu.pretend:
         time.sleep(2.5)
 
     extra_ssh_args = commandline_to_str(("-n", "-4", "-F", f"{tempdir}/config"))

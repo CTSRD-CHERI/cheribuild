@@ -35,7 +35,7 @@ module_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(module_dir))
 # noinspection PyProtectedMember
 from pycheribuild.processutils import run_command  # noqa: E402
-from pycheribuild.utils import GlobalConfig, default_make_jobs_count, warning_message  # noqa: E402
+from pycheribuild.utils import ConfigBase, default_make_jobs_count, warning_message  # noqa: E402
 
 
 def fixme(tag):
@@ -79,9 +79,9 @@ parser.add_argument("--skip-build", action="store_true")
 cmdline, remaining = parser.parse_known_args()
 
 args = []
+config = ConfigBase(pretend=cmdline.pretend, verbose=True, quiet=False, force=False)
 
 if cmdline.pretend:
-    GlobalConfig.pretend = True
     print("Pretend mode enabled")
     args.append("--pretend")
 
@@ -104,16 +104,16 @@ with tempfile.NamedTemporaryFile() as tf:
     Path(tf.name).write_text("{}", encoding="utf-8")
     command.append("--config-file=" + tf.name)  # default values please
     if not cmdline.skip_build:
-        run_command([sys.executable, "-u", *command], give_tty_control=True, config=GlobalConfig)
+        run_command([sys.executable, "-u", *command], give_tty_control=True, config=config)
 
 # Add missing files to tarball
 cheribuild_dir = Path(output_root, "sources/cheribuild")
 if not Path(cheribuild_dir, ".git").exists():
-    run_command(["git", "clone", "https://github.com/CTSRD-CHERI/cheribuild", str(cheribuild_dir)], config=GlobalConfig)
-run_command(["git", "-C", str(cheribuild_dir), "pull", "--rebase"], config=GlobalConfig)
-run_command(["git", "-C", str(cheribuild_dir), "reset", "--hard", "morello-20.10.1"], config=GlobalConfig)
+    run_command(["git", "clone", "https://github.com/CTSRD-CHERI/cheribuild", str(cheribuild_dir)], config=config)
+run_command(["git", "-C", str(cheribuild_dir), "pull", "--rebase"], config=config)
+run_command(["git", "-C", str(cheribuild_dir), "reset", "--hard", "morello-20.10.1"], config=config)
 
-run_command("ln", "-sfn", "sources/cheribuild/cheribuild.py", "cheribuild.py", cwd=output_root, config=GlobalConfig)
+run_command("ln", "-sfn", "sources/cheribuild/cheribuild.py", "cheribuild.py", cwd=output_root, config=config)
 # TODO: download the fvp installer first?
 install_script = Path(output_root, "install_and_run_fvp.sh")
 install_script.write_text(
@@ -151,9 +151,9 @@ run_command(
     "cheribuild.py",
     install_script.relative_to(output_root),
     cwd="/",
-    config=GlobalConfig,
+    config=config,
 )
 
-run_command("sha256sum", output_root / "release.tar.xz", config=GlobalConfig)
+run_command("sha256sum", output_root / "release.tar.xz", config=config)
 
 print("DONE!")

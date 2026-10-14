@@ -49,6 +49,7 @@ sys.path.insert(1, str(_cheribuild_root))
 from serial.tools.list_ports import comports  # noqa: E402
 from serial.tools.list_ports_common import ListPortInfo  # noqa: E402
 
+from pycheribuild import boot_cheribsd  # noqa: E402
 from pycheribuild.boot_cheribsd import (  # noqa: E402
     CheriBSDInstance,
     CheriBSDSpawnMixin,
@@ -63,7 +64,7 @@ from pycheribuild.colour import AnsiColour, coloured  # noqa: E402
 from pycheribuild.config.compilation_targets import CompilationTargets  # noqa: E402
 from pycheribuild.filesystemutils import FileSystemUtils  # noqa: E402
 from pycheribuild.processutils import print_command  # noqa: E402
-from pycheribuild.utils import ConfigBase, fatal_error, get_global_config, init_global_config  # noqa: E402
+from pycheribuild.utils import ConfigBase, fatal_error  # noqa: E402
 
 VIVADO_SCRIPT = b"""
 # Setup some variables
@@ -169,8 +170,8 @@ def load_bitfile(bitfile: Path, ltxfile: Path, fu: FileSystemUtils):
             str(bitfile),
             str(ltxfile),
         ]
-        print_command(args, config=get_global_config())
-        if get_global_config().pretend:
+        print_command(args, config=fu.config)
+        if fu.config.pretend:
             vivado = PretendSpawn(args[0], args[1:])
         else:
             vivado = pexpect.spawn(args[0], args[1:], logfile=sys.stdout, encoding="utf-8")
@@ -189,7 +190,7 @@ def load_bitfile(bitfile: Path, ltxfile: Path, fu: FileSystemUtils):
         vivado.wait()
         fu.delete_file(Path("webtalk.log"), print_verbose_only=True)
         fu.delete_file(Path("webtalk.jou"), print_verbose_only=True)
-        if not get_global_config().pretend:
+        if not fu.config.pretend:
             # wait for 3 seconds to avoid 'Error: libusb_claim_interface() failed with LIBUSB_ERROR_BUSY'
             time.sleep(3)
 
@@ -203,15 +204,16 @@ class FakeSerialSpawn(CheriBSDSpawnMixin, PretendSpawn):
 
 
 class SerialConnection:
-    def __init__(self, executable, args):
-        if get_global_config().pretend:
+    def __init__(self, executable, args, *, config: ConfigBase):
+        if config.pretend:
             self.cheribsd = FakeSerialSpawn(executable, args)
         else:
-            print_command([executable, *args], config=get_global_config())
+            print_command([executable, *args], config=config)
             self.cheribsd = CheriBSDInstance(
                 CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID,
                 executable,
                 args,
+                config=config,
                 logfile=sys.stdout,
                 encoding="utf-8",
                 timeout=60,
@@ -231,10 +233,10 @@ class SerialConnection:
 
 
 class PicoComConnection(SerialConnection):
-    def __init__(self, tty_info: ListPortInfo):
+    def __init__(self, tty_info: ListPortInfo, *, config: ConfigBase):
         # We need --nolock so that openocd can access the device
         # TODO: should probably
-        super().__init__("picocom", ["--baud", "115200", tty_info.device])
+        super().__init__("picocom", ["--baud", "115200", tty_info.device], config=config)
         self.cheribsd.expect(["Terminal ready"])
 
     def show_help_message(self):
@@ -246,9 +248,13 @@ class PicoComConnection(SerialConnection):
 
 
 class PySerialConnection(SerialConnection):
-    def __init__(self, tty_info: ListPortInfo):
+    def __init__(self, tty_info: ListPortInfo, *, config: ConfigBase):
         # Note: use --eol LF to avoid two prompts being printed on <Enter> (default seems to be CRLF)
-        super().__init__(sys.executable, ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--eol", "LF"])
+        super().__init__(
+            sys.executable,
+            ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--eol", "LF"],
+            config=config,
+        )
         self.cheribsd.expect(["--- Miniterm on "])
 
     def show_help_message(self):
@@ -287,13 +293,13 @@ def reset_soc(conn: FpgaConnection):
     conn.gdb.sendintr()
 
 
-def start_openocd(openocd_cmd: Path, num_cores: int) -> tuple[pexpect.spawn, int]:
+def start_openocd(openocd_cmd: Path, num_cores: int, config: ConfigBase) -> tuple[pexpect.spawn, int]:
     with tempfile.NamedTemporaryFile() as t:
         t.write(generate_openocd_script(num_cores))
         t.flush()
         cmdline = [str(openocd_cmd), "-f", t.name]
-        print_command(cmdline, config=get_global_config())
-        if get_global_config().pretend:
+        print_command(cmdline, config=config)
+        if config.pretend:
             openocd = PretendSpawn(cmdline[0], cmdline[1:])
         else:
             openocd = pexpect.spawn(cmdline[0], cmdline[1:], logfile=sys.stdout, encoding="utf-8")
@@ -308,13 +314,13 @@ def start_openocd(openocd_cmd: Path, num_cores: int) -> tuple[pexpect.spawn, int
         return openocd, gdb_port
 
 
-def get_console(tty_info: ListPortInfo) -> SerialConnection:
+def get_console(tty_info: ListPortInfo, config: ConfigBase) -> SerialConnection:
     # We fall back to using the miniterm command bundled with PySerial as the interactive prompt.
     # This means that we don't depend on minicom/picocom being installed.
     success("Connecting to TTY...")
     if shutil.which("picocom"):
-        return PicoComConnection(tty_info)
-    return PySerialConnection(tty_info)
+        return PicoComConnection(tty_info, config=config)
+    return PySerialConnection(tty_info, config=config)
 
 
 def load_and_start_kernel(
@@ -327,15 +333,16 @@ def load_and_start_kernel(
     tty_info: ListPortInfo,
     num_cores: int,
     extra_gdb_commands: "Optional[list[str]]" = None,
+    config: ConfigBase,
 ) -> FpgaConnection:
     # Open the serial connection first to check that it's available:
-    serial_conn = get_console(tty_info)
+    serial_conn = get_console(tty_info, config)
     success("Connected to TTY")
     if bios_image is None or not bios_image.exists():
         failure("Missing bios image: ", bios_image, exit=True)
     # First start openocd
     gdb_start_time = datetime.datetime.now(datetime.timezone.utc)
-    openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores)
+    openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores, config)
     # openocd is running, now start GDB
     # NB: Cannot set the actual file since GDB will then expect OpenOCD's
     # gdbserver to provide capabilities and fail to read the PC (PCC).
@@ -382,8 +389,8 @@ def load_and_start_kernel(
         for arg in extra_gdb_commands:
             args += ["-ex", arg]
     args += ["-ex", "echo ready to continue\n"]
-    print_command(str(gdb_cmd), *args, config=get_global_config())
-    if get_global_config().pretend:
+    print_command(str(gdb_cmd), *args, config=config)
+    if config.pretend:
         gdb = PretendSpawn(str(gdb_cmd), args, timeout=60)
     else:
         gdb = pexpect.spawn(str(gdb_cmd), args, timeout=60, logfile=sys.stdout, encoding="utf-8")
@@ -504,11 +511,12 @@ def main():
         pass
     args = parser.parse_args()
     print(args)
-    init_global_config(ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False))
+    boot_cheribsd.PRETEND_MODE = args.pretend
+    config = ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False)
     if (args.action == "all" and args.bitfile is not None) or args.action == "bitfile":
         if args.ltxfile is None:
             args.ltxfile = Path(args.bitfile).with_suffix(".ltx")
-        load_bitfile(args.bitfile, args.ltxfile, FileSystemUtils(get_global_config()))
+        load_bitfile(args.bitfile, args.ltxfile, FileSystemUtils(config))
         if args.action == "bitfile":
             sys.exit(0)
 
@@ -516,7 +524,7 @@ def main():
     success("Found TTY:", tty_info)
     info(tty_info.usb_info())
     if args.action == "console":
-        console = get_console(tty_info)
+        console = get_console(tty_info, config)
         console.interact()
         return
     else:
@@ -529,6 +537,7 @@ def main():
             tty_info=tty_info,
             num_cores=args.num_cores,
             extra_gdb_commands=args.extra_gdb_command,
+            config=config,
         )
         console = conn.serial
         if args.action == "boot":
