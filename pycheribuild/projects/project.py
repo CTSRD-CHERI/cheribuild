@@ -88,7 +88,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "AutotoolsProject",
     "BasicCompilationTargets",
     "BuildType",
     "CPUArchitecture",
@@ -102,7 +101,6 @@ __all__ = [
     "Linkage",
     "MakeCommandKind",
     "MakeOptions",
-    "MakefileProject",
     "MercurialRepository",
     "Project",
     "ReuseOtherProjectAnyTargetRepository",
@@ -1801,8 +1799,3 @@ class ReuseOtherProjectBuildDir:
         if base_project_build_dir is not None:
             return base_project_build_dir
         return self.build_project.get_build_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
-
-
-from .autotools_project import AutotoolsProject  # noqa: E402
-from .cmake_project import _CMakeAndMesonSharedLogic  # noqa: E402, F401
-from .makefile_project import MakefileProject  # noqa: E402

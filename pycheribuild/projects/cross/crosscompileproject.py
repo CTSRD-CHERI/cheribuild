@@ -34,10 +34,11 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Union
 
+from ..autotools_project import AutotoolsProject
 from ..cmake_project import CMakeProject
+from ..makefile_project import MakefileProject
 from ..meson_project import MesonProject
 from ..project import (
-    AutotoolsProject,
     BuildType,
     CheriConfig,
     CrossCompileTarget,
@@ -45,7 +46,6 @@ from ..project import (
     GitRepository,
     Linkage,
     MakeCommandKind,
-    MakefileProject,
     Project,
     SubversionRepository,
     commandline_to_str,

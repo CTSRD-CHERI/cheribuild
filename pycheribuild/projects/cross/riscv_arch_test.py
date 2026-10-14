@@ -28,7 +28,8 @@
 import shutil
 from pathlib import Path
 
-from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, MakefileProject
+from ..makefile_project import MakefileProject
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
 from ..sail import BuildSailRISCV
 from ...config.compilation_targets import CompilationTargets
 

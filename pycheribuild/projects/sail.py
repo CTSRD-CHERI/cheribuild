@@ -36,8 +36,9 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Union
 
+from .autotools_project import AutotoolsProject
 from .cmake_project import CMakeProject
-from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from .simple_project import BoolConfigOption, SimpleProject
 from ..config.computed_default_value import ComputedDefaultValue
 from ..processutils import get_program_version

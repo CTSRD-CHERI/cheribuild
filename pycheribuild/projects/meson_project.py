@@ -35,7 +35,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Union
 
-from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
+from .cmake_project import _CMakeAndMesonSharedLogic
+from .project import MakeCommandKind
 from .simple_project import FakeProject, ListConfigOption
 from ..config.chericonfig import BuildType
 from ..config.target_info import BasicCompilationTargets, NativeTargetInfo

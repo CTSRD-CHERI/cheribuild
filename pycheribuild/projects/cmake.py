@@ -30,10 +30,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+from .autotools_project import AutotoolsProject
 from .cmake_project import CMakeProject
 from .cross.crosscompileproject import CrossCompileCMakeProject
 from .project import (
-    AutotoolsProject,
     CheriConfig,
     DefaultInstallDir,
     GitRepository,
