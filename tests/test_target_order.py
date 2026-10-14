@@ -970,13 +970,10 @@ def test_cross_compile_target_relations(case: _TargetRelationCase):
             case.non_cheri.get_cheri_hybrid_for_purecap_rootfs_target()
         with pytest.raises(ValueError, match="Don't know CHERI purecap for hybrid rootfs version"):
             case.non_cheri.get_cheri_purecap_for_hybrid_rootfs_target()
-        assert case.purecap.get_non_cheri_for_purecap_rootfs_target() == case.non_cheri_for_purecap_rootfs
-        assert case.non_cheri_for_purecap_rootfs.get_cheri_purecap_target() == case.purecap
-        if case.non_cheri_for_hybrid_rootfs is not None:
-            assert case.hybrid.get_non_cheri_for_hybrid_rootfs_target() == case.non_cheri_for_hybrid_rootfs
-            assert case.non_cheri_for_hybrid_rootfs.get_cheri_hybrid_target() == case.hybrid
 
     # Rootfs-qualified target relations:
+    assert case.purecap.get_non_cheri_for_purecap_rootfs_target() == case.non_cheri_for_purecap_rootfs
+    assert case.non_cheri_for_purecap_rootfs.get_cheri_purecap_target() == case.purecap
     assert case.purecap.get_cheri_hybrid_for_purecap_rootfs_target() == case.hybrid_for_purecap_rootfs
     assert case.hybrid_for_purecap_rootfs.get_cheri_purecap_target() == case.purecap
     assert case.hybrid_for_purecap_rootfs.get_cheri_hybrid_for_purecap_rootfs_target() == case.hybrid_for_purecap_rootfs
@@ -985,6 +982,8 @@ def test_cross_compile_target_relations(case: _TargetRelationCase):
     )
 
     if case.non_cheri_for_hybrid_rootfs is not None:
+        assert case.hybrid.get_non_cheri_for_hybrid_rootfs_target() == case.non_cheri_for_hybrid_rootfs
+        assert case.non_cheri_for_hybrid_rootfs.get_cheri_hybrid_target() == case.hybrid
         assert case.non_cheri_for_hybrid_rootfs.get_non_cheri_target() == case.non_cheri
         assert (
             case.non_cheri_for_hybrid_rootfs.get_non_cheri_for_hybrid_rootfs_target()
@@ -998,6 +997,8 @@ def test_cross_compile_target_relations(case: _TargetRelationCase):
             case.hybrid_for_purecap_rootfs.get_non_cheri_for_hybrid_rootfs_target()
 
     if case.purecap_for_hybrid_rootfs is not None:
+        assert case.hybrid.get_cheri_purecap_for_hybrid_rootfs_target() == case.purecap_for_hybrid_rootfs
+        assert case.purecap_for_hybrid_rootfs.get_cheri_hybrid_target() == case.hybrid
         assert (
             case.purecap_for_hybrid_rootfs.get_cheri_purecap_for_hybrid_rootfs_target()
             == case.purecap_for_hybrid_rootfs
