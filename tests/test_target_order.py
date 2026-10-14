@@ -8,11 +8,8 @@ import pytest
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 from pycheribuild.config.compilation_targets import CompilationTargets, enable_hybrid_for_purecap_rootfs_targets
 from pycheribuild.config.target_info import CrossCompileTarget
-
-# Make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.projects import *  # noqa: F401, F403, RUF100
+from pycheribuild.projects import load_all_projects
 from pycheribuild.projects.cmake import BuildCrossCompiledCMake
-from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cross.benchmarks import BenchmarkMixin
 from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,
@@ -33,6 +30,9 @@ from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.projects.syzkaller import BuildSyzkaller, RunSyzkaller
 from pycheribuild.targets import Target, target_manager
+
+# Make sure all projects are loaded so that target_manager gets populated
+load_all_projects()
 
 
 # noinspection PyProtectedMember

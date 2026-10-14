@@ -18,11 +18,8 @@ from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDT
 from pycheribuild.config.defaultconfig import CheribuildAction, DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionHandle, JsonAndCommandLineConfigOption
 from pycheribuild.jenkins_utils import jenkins_override_install_dirs_hack
-
-# noinspection PyUnresolvedReferences
-from pycheribuild.projects import *  # noqa: F401, F403, RUF100
+from pycheribuild.projects import load_all_projects
 from pycheribuild.projects.build_qemu import BuildQEMU
-from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,
     BuildCheriBsdMfsKernel,
@@ -41,6 +38,7 @@ from pycheribuild.projects.run_qemu import LaunchCheriBSD
 from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
 
+load_all_projects()
 Target.instantiating_targets_should_warn = False
 
 T = typing.TypeVar("T", bound=SimpleProject)

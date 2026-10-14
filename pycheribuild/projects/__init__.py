@@ -28,9 +28,17 @@
 # SUCH DAMAGE.
 #
 
-# based on https://stackoverflow.com/questions/1057431/loading-all-modules-in-a-folder-in-python
+import functools
+import importlib
 from pathlib import Path
 
-files = sorted(Path(__file__).parent.glob("*.py"))
-# pyrefly: ignore [unresolvable-dunder-all]
-__all__ = [f.name[:-3] for f in files if f.is_file() and f.name != "__init__.py"]
+__all__ = ["load_all_projects"]
+
+
+@functools.lru_cache(maxsize=1)
+def load_all_projects() -> None:
+    projects_dir = Path(__file__).parent
+    for f in sorted(projects_dir.rglob("*.py")):
+        if f.name != "__init__.py":
+            rel_module = ".".join(f.relative_to(projects_dir).with_suffix("").parts)
+            importlib.import_module(f".{rel_module}", package=__name__)

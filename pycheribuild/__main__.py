@@ -51,13 +51,7 @@ from .processutils import (
     run_and_kill_children_on_exit,
     run_command,
 )
-
-# make sure all projects are loaded so that target_manager gets populated
-# noinspection PyUnresolvedReferences
-from .projects import *  # noqa: F401, F403, RUF100
-
-# noinspection PyUnresolvedReferences
-from .projects.cross import *  # noqa: F401, F403, RUF100
+from .projects import load_all_projects
 from .projects.repository import GitRepository
 from .projects.simple_project import SimpleProject
 from .targets import Target, target_manager
@@ -70,6 +64,9 @@ from .utils import (
     query_yes_no,
     status_update,
 )
+
+# make sure all projects are loaded so that target_manager gets populated
+load_all_projects()  # no-combine
 
 DIRS_TO_CHECK_FOR_UPDATES: "list[Path]" = [Path(__file__).parent.parent]
 

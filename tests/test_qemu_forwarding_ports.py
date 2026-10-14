@@ -3,10 +3,11 @@ import typing
 import pytest
 
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
-from pycheribuild.projects import *  # noqa: F401, F403, RUF100
-from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
+from pycheribuild.projects import load_all_projects
 from pycheribuild.projects.run_qemu import LaunchQEMUBase
 from pycheribuild.targets import target_manager
+
+load_all_projects()
 
 
 def test_qemu_launch_ports_no_conflict():
