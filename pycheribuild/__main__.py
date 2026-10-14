@@ -60,7 +60,6 @@ from .utils import (
     coloured,
     fatal_error,
     have_working_internet_connection,
-    init_global_config,
     query_yes_no,
     status_update,
 )
@@ -178,7 +177,6 @@ def real_main() -> None:
         and not Path("/run/.containerenv").exists()
     ):
         check_not_root()
-    init_global_config(cheri_config)
     if config_loader.get_config_prefix() in ("docker-", "docker-portable-"):
         cheri_config.docker = True
 

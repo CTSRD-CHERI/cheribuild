@@ -64,7 +64,6 @@ __all__ = [
     "have_working_internet_connection",
     "include_file",
     "include_local_file",
-    "init_global_config",
     "is_case_sensitive_dir",
     "is_jenkins_build",
     "query_yes_no",
@@ -116,11 +115,6 @@ class ConfigBase:
         self.presume_connectivity = False
         self.internet_connection_last_checked_at: Optional[float] = None
         self.internet_connection_last_check_result = False
-
-
-def init_global_config(config: ConfigBase, *, test_mode: bool = False) -> None:
-    config.TEST_MODE = test_mode
-    assert not (config.verbose and config.quiet), "mutually exclusive"
 
 
 def is_jenkins_build() -> bool:
