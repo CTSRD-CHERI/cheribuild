@@ -499,10 +499,6 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
             deps.extend(["dbus", "fontconfig"])
         return tuple(deps)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_minimum_cmake_version(3, 18)
-
     def process(self):
         moc_path = self.host_install_dir() / "libexec/moc"
         if not self.compiling_for_host() and not moc_path.exists():

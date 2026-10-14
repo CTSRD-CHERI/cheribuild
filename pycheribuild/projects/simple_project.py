@@ -852,7 +852,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         root_class = getattr(cls, "synthetic_base", cls)
         return typing.cast(
             "typing.Self", cls.get_instance_for_target_name(root_class.target, cross_target, config, caller)
-        )  # pytype: disable=invalid-annotation
+        )
 
     def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
@@ -990,7 +990,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def get_class_for_target(cls, arch: CrossCompileTarget) -> "type[typing.Self]":
-        base_class: type[typing.Self] = getattr(cls, "synthetic_base", cls)  # pytype: disable=invalid-annotation
+        base_class: type[typing.Self] = getattr(cls, "synthetic_base", cls)
         result = cls.get_class_for_target_name(base_class.target, arch)
         assert issubclass(result, base_class)
         return result
@@ -1014,7 +1014,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             # single architecture target
             result = target.project_class
             if arch is None or result._xtarget is arch:
-                return typing.cast("type[typing.Self]", result)  # pytype: disable=invalid-annotation
+                return typing.cast("type[typing.Self]", result)
         raise LookupError(f"Invalid arch {arch} for target {name}")
 
     @property
@@ -1190,7 +1190,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], Optional[T]], T, None]" = None,
         **kwargs,
     ) -> Optional[T]:
-        return cls.add_config_option(name, kind=kind, default=default, **kwargs)  # pytype: disable=bad-return-type
+        return cls.add_config_option(name, kind=kind, default=default, **kwargs)
 
     @classmethod
     def add_bool_option(
@@ -1204,7 +1204,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     ) -> bool:
         return cls.add_config_option(
             name, kind=bool, default=default, altname=altname, only_add_for_targets=only_add_for_targets, **kwargs
-        )  # pytype: disable=bad-return-type
+        )
 
     @classmethod
     def add_list_option(
@@ -1234,7 +1234,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]",
         **kwargs,
     ) -> Path:
-        return cls.add_config_option(name, kind=Path, default=default, **kwargs)  # pytype: disable=bad-return-type
+        return cls.add_config_option(name, kind=Path, default=default, **kwargs)
 
     with_clean = BoolConfigOption(
         "clean",
@@ -1886,7 +1886,6 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             namespace["_local_config_options"] = {**merged_opts, **namespace.get("_local_config_options", {})}
         return super().__new__(cls, name, bases, namespace, **kwargs)
 
-    # pytype: disable=invalid-annotation
     def __init__(cls, name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs) -> None:
         # Retrieve the modifiable dict of local config options.
         local_opts: dict[str, PerProjectConfigOption] = getattr(cls, "_local_config_options", {})
@@ -1897,7 +1896,6 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 if not isinstance(current_val, PerProjectConfigOption):
                     del local_opts[key]
         super().__init__(name, bases, clsdict, **kwargs)
-        # pytype: enable=invalid-annotation
         assert issubclass(cls, SimpleProjectBase)
         if clsdict.get("do_not_add_to_targets") is not None:
             if clsdict.get("do_not_add_to_targets") is True:

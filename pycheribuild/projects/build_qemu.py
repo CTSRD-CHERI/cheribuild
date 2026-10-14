@@ -259,7 +259,7 @@ class BuildQEMUBase(AutotoolsProject):
                 "-Wno-missing-field-initializers",
             ]
         )
-        if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
+        if ccinfo.is_clang:
             self.common_warning_flags.extend(
                 [
                     # Also make discarding const an error:

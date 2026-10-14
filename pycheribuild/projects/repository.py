@@ -37,7 +37,7 @@ from typing import Optional
 
 from .simple_project import SimpleProject
 from ..config.target_info import CrossCompileTarget
-from ..processutils import get_program_version, run_command
+from ..processutils import run_command
 from ..utils import AnsiColour, ConfigBase, coloured, remove_prefix, status_update
 
 if typing.TYPE_CHECKING:  # no-combine
@@ -280,32 +280,7 @@ class GitRepository(SourceRepository):
         except subprocess.CalledProcessError as e:
             if isinstance(e.__cause__, FileNotFoundError):
                 return None  # git not installed
-            # Fall back to v1 output on error (v2 requires git 2.11 -- which should be available everywhere)
-            # TODO: can we drop this support? I believe all systems should have support for git 2.11
-            status = run_command(
-                "git",
-                "status",
-                "-b",
-                "-s",
-                "--porcelain",
-                "-u",
-                "no",
-                capture_output=True,
-                print_verbose_only=True,
-                cwd=src_dir,
-                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
-                config=config,
-            )
-            if not status.stdout.startswith(b"## "):
-                return None  # unexpected output format
-            branch_info = status.stdout.splitlines()[0].decode("utf-8")
-            local_end_idx = branch_info.find("...")
-            if local_end_idx == -1:
-                return GitBranchInfo(local_branch=branch_info[3:])  # no upstream configured
-            local_branch = branch_info[3:local_end_idx]
-            upstream = branch_info[local_end_idx + 3 :].split()[0].rstrip()
-            remote_name, remote_branch = upstream.split("/", maxsplit=1)
-            return GitBranchInfo(local_branch=local_branch, remote_name=remote_name, upstream_branch=remote_branch)
+            raise
 
     @staticmethod
     def contains_commit(
@@ -393,19 +368,7 @@ class GitRepository(SourceRepository):
                 current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             shallow = current_project.config.shallow_clone and not current_project.needs_full_history
             clone_cmd = ["git", "clone"]
-            # Negative refspecs were only added in git 2.29, so on older versions we have to fall back to
-            # fetching all branches instead.
-            use_negative_refspecs = bool(self.negative_fetch_refspecs)
-            if use_negative_refspecs:
-                git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
-                if git_version < (2, 29):
-                    current_project.warning(
-                        "Git version",
-                        ".".join(map(str, git_version)),
-                        "is too old to support negative refspecs (need >= 2.29), fetching all branches instead.",
-                    )
-                    use_negative_refspecs = False
-            if use_negative_refspecs:
+            if self.negative_fetch_refspecs:
                 # We can't just pass a custom remote.origin.fetch refspec via `git clone -c ...` since git
                 # clone always appends its own default "+refs/heads/*:refs/remotes/origin/*" refspec after
                 # any values set with -c, and a negative refspec only excludes refs matched by a *preceding*
@@ -432,7 +395,7 @@ class GitRepository(SourceRepository):
             # If we have a negative refspec, we initially only clone the default branch and
             # then fetch the rest after adding the negative refspec (since you can't add the
             # negtive refspec as part of clone).
-            if use_negative_refspecs:
+            if self.negative_fetch_refspecs:
                 # Reset the refspec to the default (non-single-branch) refspec
                 current_project.run_cmd(
                     ["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"],
@@ -820,7 +783,7 @@ class GitRepository(SourceRepository):
         current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
         return False
 
-    def _handle_local_changes(self, current_project: "Project", src_dir: Path, has_autostash: bool) -> "Optional[bool]":
+    def _handle_local_changes(self, current_project: "Project", src_dir: Path) -> "Optional[bool]":
         has_changes = (
             len(
                 current_project.run_cmd(
@@ -846,19 +809,6 @@ class GitRepository(SourceRepository):
         ):
             status_update("Skipping update of", src_dir)
             return None  # Abort
-
-        if not has_autostash:
-            # TODO: ask if we should continue?
-            stash_result = current_project.run_cmd(
-                ["git", "stash", "save", "Automatic stash by cheribuild.py"],
-                capture_output=True,
-                cwd=src_dir,
-                print_verbose_only=True,
-            ).stdout
-            # print("stash_result =", stash_result)
-            if "No local changes to save" in stash_result.decode("utf-8"):
-                # print("NO REAL CHANGES")
-                return False  # probably git diff showed something from a submodule
         return True
 
     def _update_submodules(self, current_project: "Project", src_dir: Path) -> None:
@@ -874,16 +824,11 @@ class GitRepository(SourceRepository):
         src_dir: Path,
         *,
         skip_submodules: bool,
-        has_autostash: bool,
-        git_version: tuple,
     ) -> None:
-        pull_cmd = ["git", "pull"]
-        if has_autostash:
-            pull_cmd.append("--autostash")
+        pull_cmd = ["git", "pull", "--autostash", "--rebase=merges"]
         if not skip_submodules:
             pull_cmd.append("--recurse-submodules")
-        rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
-        current_project.run_cmd([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
+        current_project.run_cmd(pull_cmd, cwd=src_dir, print_verbose_only=True)
 
     @staticmethod
     def is_target_tag(current_project: "Project", src_dir: Path, tag: str):
@@ -955,11 +900,7 @@ class GitRepository(SourceRepository):
         if self._check_if_up_to_date(current_project, src_dir):
             return
 
-        git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
-        # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
-        has_autostash = git_version >= (2, 14)
-
-        has_changes = self._handle_local_changes(current_project, src_dir, has_autostash)
+        has_changes = self._handle_local_changes(current_project, src_dir)
         if has_changes is None:
             return  # Aborted
 
@@ -967,14 +908,10 @@ class GitRepository(SourceRepository):
             current_project,
             src_dir,
             skip_submodules=skip_submodules,
-            has_autostash=has_autostash,
-            git_version=git_version,
         )
 
         if not skip_submodules:
             self._update_submodules(current_project, src_dir)
-        if has_changes is True and not has_autostash:
-            current_project.run_cmd(["git", "stash", "pop"], cwd=src_dir, print_verbose_only=True)
 
 
 class MercurialRepository(SourceRepository):

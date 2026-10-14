@@ -555,42 +555,24 @@ class CompilerInfo:
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:
-        # assert self.is_clang, self.compiler
         if not self._resource_dir:
             if not self.path.exists():
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
-            # Clang 5.0 added the -print-resource-dir flag
-            if self.is_clang and self.version >= (5, 0):
-                resource_dir = (
-                    run_command(
-                        self.path,
-                        "-print-resource-dir",
-                        config=self.config,
-                        print_verbose_only=True,
-                        capture_output=True,
-                        run_in_pretend_mode=True,
-                    )
-                    .stdout.decode("utf-8")
-                    .strip()
-                )
-                assert resource_dir, "-print-resource-dir no longer works?"
-                self._resource_dir = Path(resource_dir)
-            else:
-                # pretend to compile an existing source file and capture the -resource-dir output
-                cc1_cmd = run_command(
+            assert self.is_clang, self.compiler
+            resource_dir = (
+                run_command(
                     self.path,
-                    "-###",
-                    "-xc",
-                    "-c",
-                    "/dev/null",
+                    "-print-resource-dir",
                     config=self.config,
-                    capture_error=True,
                     print_verbose_only=True,
+                    capture_output=True,
                     run_in_pretend_mode=True,
                 )
-                match = re.compile(rb'"-cc1".+"-resource-dir" "([^"]+)"').search(cc1_cmd.stderr)
-                assert match is not None, f"Could not find -resource dir in {cc1_cmd.stderr}"
-                self._resource_dir = Path(match.group(1).decode("utf-8"))
+                .stdout.decode("utf-8")
+                .strip()
+            )
+            assert resource_dir, "-print-resource-dir no longer works?"
+            self._resource_dir = Path(resource_dir)
         return self._resource_dir
 
     def get_include_dirs(self, basic_flags: "list[str]") -> "list[Path]":
@@ -666,16 +648,6 @@ class CompilerInfo:
             result = self._supports_flag(flag, ["-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option"])
             self._supported_warning_flags[flag] = result
         return result
-
-    # noinspection PyPep8Naming
-    def supports_Og_flag(self) -> bool:  # noqa: N802
-        if self.is_gcc() and self.version > (4, 8, 0):
-            return True
-        if self.compiler == "clang" and self.version > (4, 0, 0):
-            return True
-        if self.is_apple_clang:
-            return True  # assume version is new enough to be based on clang 4
-        return False
 
     def linker_override_flags(self, linker: Path, linker_type: "Optional[str]" = None, for_cflags=False) -> "list[str]":
         if not self.is_clang:
@@ -940,10 +912,6 @@ def latest_system_clang_tool(config: ConfigBase, basename: str, fallback_basenam
             if OSInfo.IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue
-            # Minimum version is 4.0
-            if info.version < (4, 0, 0) and not info.is_apple_clang:
-                # print("Ignoring", basename, "candidate", candidate, "since it is too old:", info.version)
-                continue
             results.append((candidate, info.is_apple_clang, info.version, candidate_name == basename))
     if not results:
         if fallback_basename is None:
@@ -963,7 +931,7 @@ def is_debugger_attached() -> bool:
         return True
     # Version 3.12 adds sys.monitoring.get_tool
     try:
-        if sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None:  # pytype: disable=module-attr
+        if sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None:
             return True
     except AttributeError:
         pass

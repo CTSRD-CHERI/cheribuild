@@ -285,34 +285,19 @@ class MakeOptions:
         # TODO: this code is rather ugly. It would probably be a lot simpler to use inheritance.
         if self.kind == MakeCommandKind.CMake:
             assert self.subkind is not None
-            # For CMake we pass target, jobs, and verbose directly to cmake, all other options are fowarded to the real
+            # For CMake we pass target and verbose directly to cmake, all other options are forwarded to the real
             # build tool. Ideally we wouldn't care about the underlying build tool, but we want to be able to pass the
             # -k flag.
             actual_build_tool = self.subkind
             result.extend(["--build", "."])
-            cmake_version = get_program_version(Path(shutil.which(self.command) or "cmake"), config=config)
-            if jobs:
-                # -j added in 3.12: https://cmake.org/cmake/help/latest/release/3.12.html#command-line
-                if cmake_version < (3, 12, 0):
-                    result.extend(["-j", str(jobs)])
-                    jobs = None  # don't pass the flag to the build tool again
             if verbose:
-                # --verbose added in 3.14: https://cmake.org/cmake/help/latest/release/3.14.html#command-line
-                if cmake_version >= (3, 14, 0):
-                    result.append("--verbose")
-                    verbose = None  # don't pass the flag to the build tool again
+                result.append("--verbose")
+                verbose = None  # don't pass the flag to the build tool again
             if targets:
-                # CMake 3.15 allows multiple targets to be passed to --target. For older versions we pass the
-                # targets as arguments to the build tool. This will work for make and ninja (and other generators are
-                # not really supported anyway).
                 result.append("--target")
                 assert all(isinstance(t, str) for t in targets), "Invalid empty/non-string target name"
-                if cmake_version >= (3, 15, 0):
-                    result.extend(targets)
-                    targets = []  # don't pass the targets to the build tool again
-                else:
-                    result.append(targets[0])
-                    targets = targets[1:]  # pass remaining targets to the build tool directly
+                result.extend(targets)
+                targets = []  # don't pass the targets to the build tool again
             # Forward all remaining arguments to make/ninja
             result.append("--")
 
@@ -627,9 +612,7 @@ class Project(SimpleProject):
     def can_use_lto(self, ccinfo: CompilerInfo) -> bool:
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and (
-            not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))
-        ):
+        elif ccinfo.compiler == "clang" and (not self.compiling_for_host() or self.can_use_lld(ccinfo.path)):
             return True
         return self.compiling_for_host() and ccinfo.is_gcc()
 
@@ -837,7 +820,6 @@ class Project(SimpleProject):
         if cbt == BuildType.DEFAULT:
             return []
         elif cbt == BuildType.DEBUG:
-            # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
             if self.get_compiler_info(self.CC).is_gcc() or self.use_asan:
                 return ["-Og"]
             return ["-O0"]

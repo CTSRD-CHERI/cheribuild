@@ -62,8 +62,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
     root_cmakelists_subdirectory: Optional[Path] = None
     ctest_script_extra_args: Sequence[str] = tuple()
-    # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
-    _minimum_cmake_or_meson_version: "tuple[int, ...]" = (3, 13, 4)
+    # Ubuntu 22.04 ships 3.22.1, which allows us to use -S/-B, --toolchain=, and Ninja RPATH support unconditionally.
+    _minimum_cmake_or_meson_version: "tuple[int, ...]" = (3, 22, 0)
     cmake_options = ListConfigOption(
         "cmake-options", metavar="OPTIONS", help="Additional command line options to pass to CMake"
     )
@@ -116,15 +116,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def setup(self) -> None:
         super().setup()
-        # CMake 3.13+ supports explicit source+build dir arguments
         cmakelists_dir = self.source_dir
         if self.root_cmakelists_subdirectory is not None:
             assert not self.root_cmakelists_subdirectory.is_absolute()
             cmakelists_dir = self.source_dir / self.root_cmakelists_subdirectory
-        if self._get_configure_tool_version() >= (3, 13):
-            self.configure_args.extend(["-S", str(cmakelists_dir), "-B", str(self.build_dir)])
-        else:
-            self.configure_args.append(str(cmakelists_dir))
+        self.configure_args.extend(["-S", str(cmakelists_dir), "-B", str(self.build_dir)])
         if self.build_type != BuildType.DEFAULT:
             if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
                 # no CMake equivalent for MinSizeRelWithDebInfo -> set MinSizeRel and force debug info
@@ -142,10 +138,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # This makes it a lot easier to reproduce the builds outside cheribuild.
             self.add_cmake_options(CMAKE_PREFIX_PATH=self._toolchain_file_list_to_str(self.cmake_prefix_paths))
         else:
-            if self._get_configure_tool_version() >= (3, 21):
-                self.configure_args.append(f"--toolchain={self._toolchain_file}")
-            else:
-                self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
+            self.configure_args.append(f"--toolchain={self._toolchain_file}")
 
         if self.install_prefix != self.install_dir:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
@@ -183,12 +176,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 self.add_cmake_options(CMAKE_INSTALL_RPATH="@loader_path/../lib")
             else:
                 self.add_cmake_options(CMAKE_INSTALL_RPATH="$ORIGIN/../lib")
-            if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
-                # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-                # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
-                self.add_cmake_options(
-                    CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625)
-                )
         # NB: Don't add the user provided options here, we append add them in setup_late() so that they are put last.
 
     def setup_late(self):
@@ -247,11 +234,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             _include_empty_vars=_include_empty_vars,
             **kwargs,
         )
-
-    def set_minimum_cmake_version(self, major: int, minor: int, patch: int = 0) -> None:
-        new_version = (major, minor, patch)
-        assert self._minimum_cmake_or_meson_version is None or new_version >= self._minimum_cmake_or_meson_version
-        self._minimum_cmake_or_meson_version = new_version
 
     def _cmake_install_stdout_filter(self, line: bytes) -> None:
         # don't show the up-to date install lines

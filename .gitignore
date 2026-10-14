@@ -2,7 +2,6 @@ Pipfile.lock
 /.pytest_cache/
 /tests/.cache/
 /.mypy_cache/
-/.pytype/
 __pycache__
 /venv/
 /.ruff_cache/

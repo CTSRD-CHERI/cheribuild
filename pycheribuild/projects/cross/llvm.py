@@ -394,29 +394,8 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        # make sure we have at least version 3.8
-        self.check_compiler_version(3, 8)
         # NB: macOS includes it in the SDK, FreeBSD includes it in base
         self.check_required_pkg_config("zlib", apt="zlib1g-dev", zypper="zlib-devel")
-
-    def check_compiler_version(self, major: int, minor: int, patch=0):
-        info = self.get_compiler_info(self.CC)
-        version_str = ".".join(str(x) for x in info.version)
-        if info.compiler == "apple-clang":
-            self.info(
-                f"Compiler is apple clang {version_str} -- assuming it matches required version {major}.{minor}",
-            )
-        elif info.is_gcc():
-            if info.version < (5, 0, 0):
-                self.warning("GCC older than 5.0.0 will probably not work for compiling clang!")
-        elif info.compiler != "clang" or info.version < (major, minor, patch):
-            self.dependency_error(
-                self.CC,
-                "version",
-                version_str,
-                f"is not supported. Clang version {major}.{minor} or newer is required.",
-                install_instructions=self.clang_install_hint(),
-            )
 
     def compile(self, **kwargs):
         if self.build_minimal_toolchain:
@@ -625,7 +604,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
 
         prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:
-        tgt_info = target.target_info_cls(target, MockProject(self.config, target))  # pytype: disable=not-instantiable
+        tgt_info = target.target_info_cls(target, MockProject(self.config, target))
         assert isinstance(tgt_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
         flags = tgt_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False, default_flags_only=True)
