@@ -50,7 +50,7 @@ class BuildCheriseL4(CrossCompileProject):
     target = "cheri-sel4"
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/CHERI-seL4.git",
-        default_branch="cheri-microkit",
+        default_branch="cheri",
         force_branch=True,
     )
     _supported_architectures = (
