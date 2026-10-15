@@ -1256,7 +1256,6 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libcrypt.so.5",
             "libm.so.5",
             "libthr.so.3",
-            "libutil.so.9",
             "libz.so.6",
             # Commonly used (and tiny)
             "libdl.so.1",
@@ -1285,6 +1284,11 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libcrypto.so.30",
             "libssl.so.111",
             "libssl.so.30",
+        ]
+        # required, but version bumped in FreeBSD to add symbol versioning
+        optional_libs += [
+            "libutil.so.9",
+            "libutil.so.10",
         ]
         # additional cheribsdbox dependencies (PAM+SSL+BSM)
         # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
