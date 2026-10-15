@@ -83,6 +83,8 @@ def finish_and_write_junit_xml_report(
     all_tests_starttime: datetime.datetime,
     xml: junitparser.JUnitXml,
     output_file: Path,
+    *,
+    pretend: bool = False,
 ) -> bool:
     """
     :param output_file: the host path where to the JUnit XML should be written
@@ -129,6 +131,7 @@ def finish_and_write_junit_xml_report(
             " tests failed:\n\t",
             "\n\t".join(failed_test_info(x) for x in failed_test_suites),
             exit=False,
+            pretend=pretend,
         )
     else:
         boot_cheribsd.success(
@@ -140,7 +143,7 @@ def finish_and_write_junit_xml_report(
             (datetime.datetime.now(datetime.timezone.utc) - all_tests_starttime),
         )
     # Finally, write the Junit XML file:
-    if not boot_cheribsd.PRETEND_MODE:
+    if not pretend:
         xml.write(output_file, pretty=True)
     boot_cheribsd.info("Wrote Junit results to ", output_file)
     return not failed_test_suites

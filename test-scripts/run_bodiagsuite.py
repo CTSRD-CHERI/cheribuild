@@ -36,6 +36,8 @@ from pathlib import Path
 
 from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
+from pycheribuild.utils import ConfigBase
+
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
 
 
@@ -195,14 +197,14 @@ def _create_junit_xml(builddir: Path, name, tools):
     xml.write(str(builddir / "test-results.xml"), pretty=True)
 
 
-def create_junit_xml(builddir, name, tools):
+def create_junit_xml(builddir, name, tools, *, config: ConfigBase):
     _create_junit_xml(builddir, name, tools)
     test_output = Path(builddir, "test-results.xml")
     if not test_output.exists():
-        boot_cheribsd.failure("Failed to create the JUnit XML file", exit=False)
+        boot_cheribsd.failure("Failed to create the JUnit XML file", exit=False, pretend=config.pretend)
         return False
-    # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
-    boot_cheribsd.run_host_command(["grep", "<testsuite", str(test_output)])
+    # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)], config=config)
+    boot_cheribsd.run_host_command(["grep", "<testsuite", str(test_output)], config=config)
     return True
 
 
@@ -223,7 +225,7 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         # restore old behaviour
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || true")
 
-    if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools):
+    if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools, config=qemu.config):
         return False
     return True
 
@@ -244,14 +246,15 @@ def main():
         parser.add_argument("--test-native", action="store_true")
         parser.add_argument("--build-dir")
         args, _ = parser.parse_known_args()
+        config = ConfigBase(pretend=False, verbose=True, quiet=False, force=False)
         if args.test_native and not args.junit_xml_only:
             cmd = [args.bmake_path, "-r", "-f", args.build_dir + "/Makefile.bsd-run", "all"]
             if args.jobs > 1:
                 cmd += ["-j", str(args.jobs)]
             if args.use_valgrind:
                 cmd.append("-DUSE_VALGRIND")
-            boot_cheribsd.run_host_command(cmd, cwd=args.build_dir)
-        if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools):
+            boot_cheribsd.run_host_command(cmd, cwd=args.build_dir, config=config)
+        if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools, config=config):
             sys.exit("Failed to create JUnit xml")
         sys.exit()
 

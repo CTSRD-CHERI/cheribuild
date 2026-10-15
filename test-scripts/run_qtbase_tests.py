@@ -69,7 +69,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
         try:
             copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args)
         except boot_cheribsd.CheriBSDCommandTimeout as e:
-            boot_cheribsd.failure("Timeout copying Qt libraries, will try to use smbfs instead: ", e, exit=False)
+            qemu.failure("Timeout copying Qt libraries, will try to use smbfs instead: ", e, exit=False)
             # Send CTRL+C in case the process timed out.
             qemu.sendintr()
             qemu.sendintr()
@@ -91,7 +91,7 @@ def copy_qt_libs_to_tmpfs_and_set_libpath(qemu: boot_cheribsd.QemuCheriBSDInstan
             # don't use cp to copy a symlink from smbfs, this takes many seconds
             linkpath = os.readlink(str(lib))
             if os.path.pathsep in linkpath:
-                boot_cheribsd.failure("Unexpected link path for ", lib.absolute(), ": ", linkpath, exit=False)
+                qemu.failure("Unexpected link path for ", lib.absolute(), ": ", linkpath, exit=False)
                 continue
             qemu.checked_run(f"ln -sfn {linkpath} /tmp/qt-libs/{lib.name}")
         else:
@@ -126,7 +126,7 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
                 timeout=10 * 60,
             )
         except boot_cheribsd.CheriBSDCommandFailed as e:
-            boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
+            qemu.failure("Failed to run ", f.name, ": ", str(e), exit=False)
             # Send CTRL+C in case the process timed out.
             qemu.sendintr()
             qemu.sendintr()
@@ -145,7 +145,7 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
             qt_test.add_property("test_executable", str(f))
             xml.add_testsuite(qt_test)
         except Exception as e:
-            boot_cheribsd.failure("Error loading JUnit result for ", f.name, ": ", str(e), exit=False)
+            qemu.failure("Error loading JUnit result for ", f.name, ": ", str(e), exit=False)
             add_junit_failure(xml, f, str(e), starttime, test_xml)
 
 
@@ -193,7 +193,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         assert isinstance(test_subset, Path)
         boot_cheribsd.info("Running qtbase tests for ", test_subset)
         run_subdir(qemu, test_subset, xml, build_dir=build_dir)
-    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)
+    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml, pretend=qemu.pretend)
 
 
 def adjust_args(args: argparse.Namespace):
@@ -205,7 +205,7 @@ def adjust_args(args: argparse.Namespace):
         for subdir in args.test_subset:
             path = Path(tests_root, subdir)
             if not path.is_dir():
-                boot_cheribsd.failure("Invalid --test-subset: ", path, exit=True)
+                boot_cheribsd.failure("Invalid --test-subset: ", path, exit=True, pretend=args.pretend)
             relpath = os.path.relpath(str(path), str(tests_root))
             assert not relpath.startswith(os.path.pardir), "Invalid --test-subset " + str(tests_root / subdir)
             test_dirs.append(path)

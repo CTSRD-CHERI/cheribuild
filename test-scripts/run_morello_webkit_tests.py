@@ -87,7 +87,7 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
                 timeout=300,
             )
         except boot_cheribsd.CheriBSDCommandFailed as e:
-            boot_cheribsd.failure("Failed to run ", test, ": ", str(e), exit=False)
+            qemu.failure("Failed to run ", test, ": ", str(e), exit=False)
             if isinstance(e, boot_cheribsd.CheriBSDCommandTimeout):
                 t.result = junitparser.Failure(message="Command timed out")
                 # Send CTRL+C if the process timed out.
@@ -99,7 +99,7 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         t.time = (datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()
         suite.add_testcase(t)
         xml.add_testsuite(suite)
-    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)
+    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml, pretend=qemu.pretend)
 
 
 def adjust_args(args: argparse.Namespace):

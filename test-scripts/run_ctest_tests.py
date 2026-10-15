@@ -67,7 +67,7 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
         num_host_paths = ctest_contents.count(host_cmake_path)
         if num_host_paths > 0:
             if not host_cmake_path:
-                boot_cheribsd.failure("Cannot update host CMake path in ", ctest_file, exit=True)
+                qemu.failure("Cannot update host CMake path in ", ctest_file, exit=True)
                 continue
             new_contents = ctest_contents.replace(host_cmake_path, b"/cmake/bin/cmake")
             if not qemu.pretend:
@@ -94,7 +94,7 @@ def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
             ignore_cheri_trap=args.ignore_cheri_trap,
         )
     except boot_cheribsd.CheriBSDCommandFailed as e:
-        boot_cheribsd.failure("Failed to run some tests: " + str(e), exit=False)
+        qemu.failure("Failed to run some tests: " + str(e), exit=False)
         return False
     return True
 

@@ -68,18 +68,18 @@ set_board_info ssh_opts "-i {qemu.ssh_private_key} {ssh_options}"
 """,
         encoding="utf-8",
     )
-    boot_cheribsd.run_host_command(["runtest", "--version"])
+    qemu.run_host_command(["runtest", "--version"])
     tests_okay = False
     try:
         # Note: we have to use dict(os.environ, **dict(...)) to update env, since env=... overrides it.
-        boot_cheribsd.run_host_command(
+        qemu.run_host_command(
             ["make", "check", "RUNTESTFLAGS=-a --target-board remote-cheribsd --xml"],
             env=dict(os.environ, **dict(BOARDSDIR=str(args.build_dir), DEJAGNU=str(Path(args.build_dir, "site.exp")))),
             cwd=str(args.build_dir),
         )
         tests_okay = True
     except subprocess.CalledProcessError:
-        boot_cheribsd.failure("Some tests failed", exit=False)
+        qemu.failure("Some tests failed", exit=False)
 
     # TODO: parse the XML output/.sum file to generate a JUnit XML file
     test_summary = Path(args.build_dir, "testsuite/libffi.sum")

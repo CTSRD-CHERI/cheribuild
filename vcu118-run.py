@@ -49,7 +49,6 @@ sys.path.insert(1, str(_cheribuild_root))
 from serial.tools.list_ports import comports  # noqa: E402
 from serial.tools.list_ports_common import ListPortInfo  # noqa: E402
 
-from pycheribuild import boot_cheribsd  # noqa: E402
 from pycheribuild.boot_cheribsd import (  # noqa: E402
     CheriBSDInstance,
     CheriBSDSpawnMixin,
@@ -177,14 +176,14 @@ def load_bitfile(bitfile: Path, ltxfile: Path, fu: FileSystemUtils):
             vivado = pexpect.spawn(args[0], args[1:], logfile=sys.stdout, encoding="utf-8")
         vivado_exit_str = "Exiting Vivado at"
         if vivado.expect_exact(["****** Vivado", vivado_exit_str]) != 0:
-            failure("Vivado failed to start", exit=True)
+            failure("Vivado failed to start", exit=True, pretend=fu.config.pretend)
         success("Vivado started")
         if vivado.expect_exact(["Programming...", vivado_exit_str]) != 0:
-            failure("Vivado failed to start programming", exit=True)
+            failure("Vivado failed to start programming", exit=True, pretend=fu.config.pretend)
         success("Vivado started programming FPGA")
         # 5 minutes should be enough time to programt the FPGA
         if vivado.expect_exact(["Done!", vivado_exit_str], timeout=5 * 60) != 0:
-            failure("Vivado failed to program FPGA", exit=True)
+            failure("Vivado failed to program FPGA", exit=True, pretend=fu.config.pretend)
         success("Vivado finished programming FPGA")
         vivado.expect_exact([vivado_exit_str])
         vivado.wait()
@@ -339,7 +338,7 @@ def load_and_start_kernel(
     serial_conn = get_console(tty_info, config)
     success("Connected to TTY")
     if bios_image is None or not bios_image.exists():
-        failure("Missing bios image: ", bios_image, exit=True)
+        serial_conn.cheribsd.failure("Missing bios image: ", bios_image, exit=True)
     # First start openocd
     gdb_start_time = datetime.datetime.now(datetime.timezone.utc)
     openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores, config)
@@ -437,7 +436,7 @@ def load_and_start_kernel(
     elif i == 1:
         success("FreeBSD boot started")
     else:
-        failure("Did not get expected boot output", exit=True)
+        serial_conn.cheribsd.failure("Did not get expected boot output", exit=True)
     # TODO: network_iface="xae0", but DHCP doesn't work
     boot_and_login(serial_conn.cheribsd, starttime=gdb_finish_time, network_iface=None)
     return FpgaConnection(gdb, openocd, serial_conn)
@@ -511,7 +510,6 @@ def main():
         pass
     args = parser.parse_args()
     print(args)
-    boot_cheribsd.PRETEND_MODE = args.pretend
     config = ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False)
     if (args.action == "all" and args.bitfile is not None) or args.action == "bitfile":
         if args.ltxfile is None:
