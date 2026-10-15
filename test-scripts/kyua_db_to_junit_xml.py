@@ -34,18 +34,22 @@ from typing import Optional
 
 from run_tests_common import boot_cheribsd, junitparser
 
+from pycheribuild.utils import ConfigBase
 
-def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: "Optional[str]" = None):
+
+def convert_kyua_db_to_junit_xml(
+    db_file: Path, output_file: Path, prefix: "Optional[str]" = None, *, config: ConfigBase
+):
     assert output_file.resolve() != db_file.resolve()
     with output_file.open("w", encoding="utf-8") as output_stream:
         command = ["kyua", "report-junit", "--results-file=" + str(db_file)]
-        boot_cheribsd.run_host_command(command, stdout=output_stream)
+        boot_cheribsd.run_host_command(command, stdout=output_stream, config=config)
         # TODO: xml escape the file?
-        if not boot_cheribsd.PRETEND_MODE:
-            fixup_kyua_generated_junit_xml(output_file, prefix)
+        if not config.pretend:
+            fixup_kyua_generated_junit_xml(output_file, prefix, config=config)
 
 
-def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: "Optional[str]" = None):
+def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: "Optional[str]" = None, *, config: ConfigBase):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
     orig_xml_str = xml_file.read_text("utf-8", errors="backslashreplace")
@@ -75,7 +79,7 @@ def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: "Optional[str]" = Non
                     suite.name = prefix if suite.name is None else prefix + "/" + suite.name
         # Now we can overwrite the input file
         xml.write(str(xml_file))
-        boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml_file)])
+        boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml_file)], config=config)
 
 
 if __name__ == "__main__":
@@ -97,7 +101,8 @@ if __name__ == "__main__":
         output = Path("/dev/stdout")
     else:
         output = Path(args.xml)
+    default_config = ConfigBase(pretend=False, verbose=True, quiet=False, force=False)
     if args.update_stats:
-        fixup_kyua_generated_junit_xml(Path(args.db), args.add_prefix)
+        fixup_kyua_generated_junit_xml(Path(args.db), args.add_prefix, config=default_config)
     else:
-        convert_kyua_db_to_junit_xml(Path(args.db), output, args.add_prefix)
+        convert_kyua_db_to_junit_xml(Path(args.db), output, args.add_prefix, config=default_config)

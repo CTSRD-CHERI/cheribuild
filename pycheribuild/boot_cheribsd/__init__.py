@@ -122,7 +122,6 @@ PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP_MIPS, CHERI_TRAP_RISCV]
 
-PRETEND_MODE = False
 INTERACT_ON_KERNEL_PANIC = False
 MESSAGE_PREFIX: str = ""
 QEMU_LOGFILE: Optional[Path] = None
@@ -247,6 +246,13 @@ class CheriBSDSpawnMixin(MixinBase):
     def pretend(self) -> bool:
         return self.config.pretend
 
+    # noinspection PyShadowingBuiltins
+    def failure(self, *args, exit: bool, **kwargs) -> bool:
+        return failure(*args, exit=exit, pretend=self.pretend, **kwargs)
+
+    def run_host_command(self, cmd: "list[str]", **kwargs):
+        run_host_command(cmd, config=self.config, **kwargs)
+
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
 
@@ -309,10 +315,10 @@ class CheriBSDSpawnMixin(MixinBase):
                 if INTERACT_ON_KERNEL_PANIC:
                     info("Interating with QEMU due to --interact-on-kernel-panic")
                     self.interact()
-                failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
+                self.failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i
         except pexpect.TIMEOUT as e:
-            failure(timeout_msg, " after ", timeout if timeout > 0 else self.timeout, " seconds", exit=False)
+            self.failure(timeout_msg, " after ", timeout if timeout > 0 else self.timeout, " seconds", exit=False)
             if ignore_timeout:
                 info(str(e))
                 return -1
@@ -348,12 +354,10 @@ class CheriBSDSpawnMixin(MixinBase):
 
 
 class CheriBSDInstance(CheriBSDSpawnMixin, pexpect.spawn):
-    def __init__(self, xtarget: CrossCompileTarget, *args, config: Optional[ConfigBase] = None, **kwargs):
+    def __init__(self, xtarget: CrossCompileTarget, *args, config: ConfigBase, **kwargs):
         super().__init__(*args, **kwargs)
         self.xtarget = xtarget
-        self.config = (
-            config if config is not None else ConfigBase(pretend=PRETEND_MODE, verbose=True, quiet=False, force=False)
-        )
+        self.config = config
         self.sendchunksize = 100  # sleep after 100 sent chars
 
 
@@ -368,7 +372,7 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         *args,
         ssh_port: Optional[int],
         ssh_pubkey: Optional[Path],
-        config: Optional[ConfigBase] = None,
+        config: ConfigBase,
         **kwargs,
     ):
         super().__init__(qemu_config.xtarget, *args, config=config, **kwargs)
@@ -390,7 +394,7 @@ class QemuCheriBSDInstance(CheriBSDInstance):
     @property
     def ssh_private_key(self):
         if self._ssh_private_key is None:
-            failure(
+            self.failure(
                 "Attempted to use SSH without specifying a key, please pass --test-ssh-key=/path/to/id_foo.pub to "
                 "cheribuild.",
                 exit=True,
@@ -461,7 +465,9 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         connection_time = (datetime.datetime.now(datetime.timezone.utc) - connection_test_start).total_seconds()
         info(prefix, result.stdout)
         if result.stdout != b"connection successful\n":
-            failure(prefix, " unexepected output ", result.stdout, " after ", connection_time, " seconds", exit=False)
+            self.failure(
+                prefix, " unexepected output ", result.stdout, " after ", connection_time, " seconds", exit=False
+            )
             return False
         else:
             success(prefix, " successful after ", connection_time, " seconds")
@@ -473,9 +479,9 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         command.extend(self._ssh_options(use_controlmaster=False))
         command.append("{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_dir))
         if not local_dir.parent.exists():
-            failure("Parent dir does't exist: ", local_dir, exit=False)
+            self.failure("Parent dir does't exist: ", local_dir, exit=False)
         command.append(str(local_dir))
-        run_host_command(command)
+        self.run_host_command(command)
 
     def scp_to_guest(self, local_path: Path, qemu_path: str):
         assert self.ssh_port is not None
@@ -483,9 +489,9 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         command.extend(self._ssh_options(use_controlmaster=False))
         command.append(str(local_path))
         if not local_path.exists():
-            failure("Path does't exist: ", local_path, exit=False)
+            self.failure("Path does't exist: ", local_path, exit=False)
         command.append("{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_path))
-        run_host_command(command)
+        self.run_host_command(command)
 
 
 def info(*args, **kwargs):
@@ -509,10 +515,10 @@ def print_cmd(cmd: "list[str]", **kwargs):
 
 
 # noinspection PyShadowingBuiltins
-def failure(*args, exit: bool, **kwargs):
+def failure(*args, exit: bool, pretend: bool = False, **kwargs) -> bool:
     print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
-        if PRETEND_MODE:
+        if pretend:
             print("\033[0;37mIgnored fatal error in --pretend mode\033[0m", sep="", file=sys.stderr, flush=True)
         else:
             with contextlib.suppress(Exception):
@@ -522,21 +528,28 @@ def failure(*args, exit: bool, **kwargs):
     return False
 
 
-def run_host_command(cmd: "list[str]", **kwargs):
+def run_host_command(cmd: "list[str]", *, config: ConfigBase, **kwargs):
     print_cmd(cmd, **kwargs)
-    if PRETEND_MODE:
+    if config.pretend:
         return
     subprocess.check_call(cmd, **kwargs)
 
 
-def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd: "list[str]") -> Path:
+def decompress(
+    archive: Path,
+    force_decompression: bool,
+    *,
+    keep_archive=True,
+    cmd: "list[str]",
+    config: ConfigBase,
+) -> Path:
     result = archive.with_suffix("")
     if result.exists() and not force_decompression:
         return result
     info("Extracting ", archive)
     if keep_archive:
         cmd += ["-k"]
-    run_host_command([*cmd, str(archive)])
+    run_host_command([*cmd, str(archive)], config=config)
     return result
 
 
@@ -597,16 +610,26 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
 
 
 def maybe_decompress(
-    path: Path, force_decompression: bool, keep_archive=True, args: "Optional[argparse.Namespace]" = None, *, what: str
+    path: Path,
+    force_decompression: bool,
+    keep_archive=True,
+    args: "Optional[argparse.Namespace]" = None,
+    *,
+    what: str,
+    config: ConfigBase,
 ) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
-        return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
+        return decompress(
+            archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive, config=config
+        )
 
     def unxz(archive):
-        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive)
+        return decompress(
+            archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive, config=config
+        )
 
-    if args and getattr(args, "internal_shard", None) and not PRETEND_MODE:
+    if args and getattr(args, "internal_shard", None) and not config.pretend:
         assert path.exists()
 
     if path.suffix == ".bz2":
@@ -632,13 +655,13 @@ def maybe_decompress(
         return unxz(xz_guess)
 
     if not path.exists():
-        failure("Could not find " + what + " " + str(path), exit=True)
-    assert PRETEND_MODE or path.exists(), path
+        failure("Could not find " + what + " " + str(path), exit=True, pretend=config.pretend)
+    assert config.pretend or path.exists(), path
     return path
 
 
 def debug_kernel_panic(qemu: CheriBSDSpawnMixin):
-    failure("Trying to get a stack trace for kernel panic: ", qemu.match, exit=False)
+    qemu.failure("Trying to get a stack trace for kernel panic: ", qemu.match, exit=False)
     # wait up to 10 seconds for a db prompt
     # Note: this uses expect_exact_ignore_panic() to avoid infinite recursion if FreeBSD is stuck in a panic loop
     # (as is currently happening when running the test suite on RISC-V).
@@ -659,8 +682,8 @@ def debug_kernel_panic(qemu: CheriBSDSpawnMixin):
             # Print the first one (since it may be different), but then stop,
             i = qemu.expect_exact_ignore_panic(patterns, timeout=5)
             if i == stack_backtrace_start_idx:
-                failure("Unexpected output (infinite backtrace loop?): ", qemu.match, exit=False)
-    failure("GOT KERNEL PANIC!", exit=False)
+                qemu.failure("Unexpected output (infinite backtrace loop?): ", qemu.match, exit=False)
+    qemu.failure("GOT KERNEL PANIC!", exit=False)
     # print("\n\npexpect info = ", qemu)
 
 
@@ -723,7 +746,7 @@ def run_cheribsd_command(
         if cheri_trap_fatal:
             raise CheriBSDCommandFailed("Got CHERI TRAP!", execution_time=runtime)
         else:
-            failure("Got CHERI TRAP!", exit=False)
+            qemu.failure("Got CHERI TRAP!", exit=False)
 
 
 def checked_run_cheribsd_command(
@@ -819,7 +842,7 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     try:
         qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=240)
     except pexpect.TIMEOUT:
-        failure("Timed out setting up SSH keys", exit=True)
+        qemu.failure("Timed out setting up SSH keys", exit=True)
     qemu.expect_prompt(timeout=120)
     if not qemu.pretend:
         time.sleep(2)  # sleep for two seconds to avoid a rejection
@@ -844,7 +867,6 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         # Just start cat for --pretend mode
         kwargs["timeout"] = 1
-        kwargs.setdefault("config", ConfigBase(pretend=True, verbose=True, quiet=False, force=False))
         super().__init__(qemu_config, "cat", use_poll=True, **kwargs)
 
     def expect(self, *args, pretend_result=None, **kwargs):
@@ -896,16 +918,16 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
         timeout=120,
     )
     if i == 0:  # Timeout
-        failure("timeout awaiting dhclient ", str(qemu), exit=True)
+        qemu.failure("timeout awaiting dhclient ", str(qemu), exit=True)
     if i == 1:
         i = qemu.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
         if i == 0:  # Timeout
-            failure("timeout awaiting dhclient ", str(qemu), exit=True)
+            qemu.failure("timeout awaiting dhclient ", str(qemu), exit=True)
     if i == 3:
         bad_iface = qemu.match.group(1)
         qemu.expect_prompt(timeout=30)
         qemu.run("ifconfig -a")
-        failure("Expected network interface ", bad_iface, " does not exist ", str(qemu), exit=True)
+        qemu.failure("Expected network interface ", bad_iface, " does not exist ", str(qemu), exit=True)
 
     success(f"===> {network_iface} bound to QEMU networking")
     qemu.expect_prompt(timeout=30)
@@ -928,10 +950,8 @@ def boot_cheribsd(
     skip_ssh_setup=False,
     bios_path: "Optional[Path]" = None,
     boot_alternate_kernel_dir: "Optional[Path]" = None,
-    config: Optional[ConfigBase] = None,
+    config: ConfigBase,
 ) -> QemuCheriBSDInstance:
-    if config is None:
-        config = ConfigBase(pretend=PRETEND_MODE, verbose=True, quiet=False, force=False)
     user_network_args = ""
     extra_qemu_args = []
     if shared_dirs is None:
@@ -939,7 +959,7 @@ def boot_cheribsd(
     if shared_dirs:
         for idx, d in enumerate(shared_dirs):
             if not Path(d.hostdir).exists():
-                failure("Shared directory ", d.hostdir, " doesn't exist!", exit=True)
+                failure("Shared directory ", d.hostdir, " doesn't exist!", exit=True, pretend=config.pretend)
             if qemu_supports_9pfs(qemu_command, config=config):
                 virtfs_arg = (
                     f"local,id=virtfs{idx + 1},mount_tag=qemu{idx + 1},path={d.hostdir},security_model=mapped-xattr"
@@ -953,7 +973,7 @@ def boot_cheribsd(
 
     if not qemu_options.can_boot_kernel_directly:
         if not disk_image:
-            failure("Cannot boot kernel directly and no disk image passed!", exit=True)
+            failure("Cannot boot kernel directly and no disk image passed!", exit=True, pretend=config.pretend)
     if bios_path is not None:
         bios_args = ["-bios", str(bios_path)]
     else:
@@ -1049,7 +1069,7 @@ def boot_and_login(
         child.expect_exact(["Uptime: "], timeout=60)
         i = child.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
         if i == 0:
-            failure("QEMU didn't exit after shutdown!", exit=False)
+            child.failure("QEMU didn't exit after shutdown!", exit=False)
         return
     try:
         # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
@@ -1082,7 +1102,7 @@ def boot_and_login(
                         loader_boot_prompt_messages, timeout=60, timeout_msg="timeout before loader prompt"
                     )
                     if i != loader_boot_prompt_messages.index(BOOT_LOADER_PROMPT):
-                        failure("failed to enter boot loader prompt after stopping autoboot", exit=True)
+                        child.failure("failed to enter boot loader prompt after stopping autoboot", exit=True)
                         # Fall through to BOOT_LOADER_PROMPT
                 else:
                     child.sendline("\r")
@@ -1093,7 +1113,7 @@ def boot_and_login(
                 ran_manual_boot = True
             i = child.expect(boot_messages, timeout=20 * 60, timeout_msg="timeout before kernel")
         if loader_kernel_dir and not ran_manual_boot:
-            failure("failed to enter boot loader prompt", exit=True)
+            child.failure("failed to enter boot loader prompt", exit=True)
 
         # Check that we are booting the expected kind of CheriBSD kernel (hybrid/purecap)
         if expected_kernel_abi_msg is not None:
@@ -1102,7 +1122,7 @@ def boot_and_login(
             if i == boot_messages.index(expected_kernel_abi_msg):
                 success(f"Booting correct kernel ABI: {expected_kernel_abi_msg}")
             else:
-                failure(
+                child.failure(
                     f"Did not find expected kernel ABI message '{expected_kernel_abi_msg}',"
                     f" got '{child.match.group(0)}' instead.",
                     exit=True,
@@ -1114,7 +1134,7 @@ def boot_and_login(
             if bootverbose:
                 i = child.expect(init_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
                 if i != 0:  # start up scripts failed
-                    failure("failed to start init", exit=True)
+                    child.failure("failed to start init", exit=True)
                 userspace_starttime = datetime.datetime.now()
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
@@ -1177,7 +1197,7 @@ def boot_and_login(
             # If this was a CHEIR trap, wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init, we should get a debugger backtrace
-            failure("Error during boot login prompt: ", str(child), " match index=", i, exit=True)
+            child.failure("Error during boot login prompt: ", str(child), " match index=", i, exit=True)
         # set up network in case dhclient wasn't started yet
         if not have_dhclient:
             if network_iface is None:
@@ -1187,7 +1207,7 @@ def boot_and_login(
                 start_dhclient(child, network_iface=network_iface)
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
-        failure("Keyboard interrupt during boot", exit=True)
+        child.failure("Keyboard interrupt during boot", exit=True)
     return
 
 
@@ -1250,23 +1270,23 @@ def _do_test_setup(
         # use script for a fake tty to get progress output from scp
         if sys.platform.startswith("linux"):
             scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
-        run_host_command(scp_cmd, cwd=str(src))
+        qemu.run_host_command(scp_cmd, cwd=str(src))
 
     for archive in test_archives:
         if shared_dirs:
-            run_host_command(["tar", "xf", str(archive), "-C", str(shared_dirs[0].hostdir)])
+            qemu.run_host_command(["tar", "xf", str(archive), "-C", str(shared_dirs[0].hostdir)])
         else:
             # Extract to temporary directory and scp over
             with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
-                run_host_command(["tar", "xf", str(archive), "-C", tmp])
-                run_host_command(["ls", "-la"], cwd=tmp)
+                qemu.run_host_command(["tar", "xf", str(archive), "-C", tmp])
+                qemu.run_host_command(["ls", "-la"], cwd=tmp)
                 do_scp(tmp)
     ld_preload_target_paths = []
     for lib in test_ld_preload_files:
         assert isinstance(lib, Path)
         if shared_dirs:
-            run_host_command(["mkdir", "-p", str(shared_dirs[0].hostdir) + "/preload"])
-            run_host_command(["cp", "-v", str(lib.absolute()), str(shared_dirs[0].hostdir) + "/preload"])
+            qemu.run_host_command(["mkdir", "-p", str(shared_dirs[0].hostdir) + "/preload"])
+            qemu.run_host_command(["cp", "-v", str(lib.absolute()), str(shared_dirs[0].hostdir) + "/preload"])
             ld_preload_target_paths.append(str(Path(shared_dirs[0].in_target, "preload", lib.name)))
         else:
             qemu.run("mkdir -p /tmp/preload")
@@ -1291,7 +1311,7 @@ def _do_test_setup(
                 qemu.can_use_smb = False
         if not d.mounted:
             qemu.shared_mount_failed = True
-            failure(f"Failed to mount host directory {d.hostdir}.", exit=False)
+            qemu.failure(f"Failed to mount host directory {d.hostdir}.", exit=False)
 
     if test_archives and not qemu.pretend:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
@@ -1370,7 +1390,7 @@ def mount_via_smb(d: SharedMount, qemu: QemuCheriBSDInstance, share_name: str) -
             # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
             # running on the same jenkins slaves so one of them might time out
             d.mounted = False
-            failure(
+            qemu.failure(
                 "QEMU SMBD failed to mount ",
                 d.in_target,
                 " after ",
@@ -1400,7 +1420,7 @@ def runtests(
         raise
     except Exception as e:
         traceback.print_exc(file=sys.stderr)
-        failure("Got exception while preparing test environment:", e, exit=True)
+        qemu.failure("Got exception while preparing test environment:", e, exit=True)
         return False
 
     if args.test_environment_only:
@@ -1415,15 +1435,17 @@ def runtests(
             result = test_function(qemu, args)
         except KeyboardInterrupt:
             result = False
-            failure("Got CTRL+C while running tests", exit=False)
+            qemu.failure("Got CTRL+C while running tests", exit=False)
         except CheriBSDCommandFailed as e:
             testtime = datetime.datetime.now() - run_tests_starttime
-            failure("Command failed after ", testtime, " while running tests: ", str(e), "\n", str(qemu), exit=False)
+            qemu.failure(
+                "Command failed after ", testtime, " while running tests: ", str(e), "\n", str(qemu), exit=False
+            )
         testtime = datetime.datetime.now() - run_tests_starttime
         if result is True:
             success("Running tests took ", testtime)
         else:
-            failure("Tests failed after ", testtime, exit=False)
+            qemu.failure("Tests failed after ", testtime, exit=False)
         return result
 
     test_command = args.test_command
@@ -1432,7 +1454,7 @@ def runtests(
     i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED"], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
-        return failure(
+        return qemu.failure(
             "timeout after ", testtime, "waiting for tests (command='", test_command, "'): ", str(qemu), exit=False
         )
     elif i == 1 or i == 2:
@@ -1444,7 +1466,7 @@ def runtests(
         qemu.run("df -h", expected_output="/opt")  # see how much space we have now
         return True
     else:
-        return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
+        return qemu.failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
 def default_ssh_key():
@@ -1589,9 +1611,8 @@ def _main(
         pass
 
     args = parser.parse_args()
-    global PRETEND_MODE  # noqa: PLW0603
-    PRETEND_MODE = args.pretend
     config = ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False)
+    args.config = config
     if args.ssh_port is None:
         temp_ssh_port = find_free_port()
         args.ssh_port = temp_ssh_port.port
@@ -1611,7 +1632,7 @@ def _main(
         args.interact = True
     xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)
     if xtarget is None:
-        failure("Invalid architecture", args.architecture, exit=True)
+        failure("Invalid architecture", args.architecture, exit=True, pretend=config.pretend)
     assert isinstance(xtarget, CrossCompileTarget)
     args.xtarget = xtarget
     if argparse_adjust_args_callback:
@@ -1619,12 +1640,16 @@ def _main(
     qemu_options = QemuOptions(xtarget)
     if args.qemu_cmd is not None:
         if not Path(args.qemu_cmd).exists():
-            failure("ERROR: Cannot find QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True)
+            failure(
+                "ERROR: Cannot find QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True, pretend=config.pretend
+            )
         args.qemu_cmd = Path(args.qemu_cmd).absolute()
     else:
         args.qemu_cmd = qemu_options.get_qemu_binary()
         if args.qemu_cmd is None:
-            failure("ERROR: Cannot find QEMU binary for target ", qemu_options.xtarget, exit=True)
+            failure(
+                "ERROR: Cannot find QEMU binary for target ", qemu_options.xtarget, exit=True, pretend=config.pretend
+            )
 
     global INTERACT_ON_KERNEL_PANIC  # noqa: PLW0603
     if args.interact_on_kernel_panic:
@@ -1643,15 +1668,18 @@ def _main(
             failure(
                 "No SSH key specified, but test script needs SSH. Please pass --test-ssh-key=/path/to/id_foo.pub",
                 exit=True,
+                pretend=config.pretend,
             )
         ssh_key_path = Path(typing.cast(str, args.ssh_key))
         if not ssh_key_path.exists():
-            failure("Specified SSH key do not exist: ", args.ssh_key, exit=True)
+            failure("Specified SSH key do not exist: ", args.ssh_key, exit=True, pretend=config.pretend)
         if ssh_key_path.suffix != ".pub":
-            failure("--ssh-key should point to the public key and not ", args.ssh_key, exit=True)
+            failure(
+                "--ssh-key should point to the public key and not ", args.ssh_key, exit=True, pretend=config.pretend
+            )
     if args.test_archive or args.test_ld_preload:
         if args.use_smb_instead_of_ssh and not args.shared_mount_directories:
-            failure("--shared-mount-directory is required if ssh is disabled", exit=True)
+            failure("--shared-mount-directory is required if ssh is disabled", exit=True, pretend=config.pretend)
 
         if args.test_archive:
             info("Using the following test archives: ", args.test_archive)
@@ -1659,20 +1687,24 @@ def _main(
                 if isinstance(test_archive, list):
                     test_archive = test_archive[0]
                 if not Path(test_archive).exists():
-                    failure("Test archive is missing: ", test_archive, exit=True)
+                    failure("Test archive is missing: ", test_archive, exit=True, pretend=config.pretend)
                 if not test_archive.endswith(".tar.xz"):
-                    failure("Currently only .tar.xz archives are supported", exit=True)
+                    failure("Currently only .tar.xz archives are supported", exit=True, pretend=config.pretend)
                 test_archives.append(Path(test_archive))
         elif args.test_ld_preload:
             info("Preloading the following libraries: ", args.test_ld_preload)
             if not args.test_ld_preload_variable:
-                failure("--test-ld-preload-variable must be set of --test-ld-preload is set!", exit=True)
+                failure(
+                    "--test-ld-preload-variable must be set of --test-ld-preload is set!",
+                    exit=True,
+                    pretend=config.pretend,
+                )
 
             for lib in args.test_ld_preload:
                 if isinstance(lib, list):
                     lib = lib[0]
                 if not Path(lib).exists():
-                    failure("PRELOAD library is missing: ", lib, exit=True)
+                    failure("PRELOAD library is missing: ", lib, exit=True, pretend=config.pretend)
                 test_ld_preload_files.append(Path(lib).resolve())
 
         if not args.test_command:
@@ -1697,7 +1729,12 @@ def _main(
     kernel = None
     if args.kernel is not None:
         kernel = maybe_decompress(
-            Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"
+            Path(args.kernel),
+            force_decompression,
+            keep_archive=keep_compressed_images,
+            args=args,
+            what="kernel",
+            config=config,
         )
     diskimg = None
     if args.disk_image:
@@ -1707,6 +1744,7 @@ def _main(
             keep_archive=keep_compressed_images,
             args=args,
             what="disk image",
+            config=config,
         )
 
     boot_starttime = datetime.datetime.now()
@@ -1748,11 +1786,11 @@ def _main(
                 test_ld_preload_files=test_ld_preload_files,
             )
         except CheriBSDCommandFailed as e:
-            failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
+            qemu.failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
             tests_okay = False
         except KeyboardInterrupt:
-            failure("Tests interrupted!!!", exit=False)
+            qemu.failure("Tests interrupted!!!", exit=False)
             tests_okay = False
 
     if args.interact:
@@ -1773,7 +1811,7 @@ def _main(
     success("===> DONE")
     info("Total execution time: ", datetime.datetime.now() - starttime)
     if not tests_okay:
-        failure("ERROR: Some tests failed!", exit=False)
+        qemu.failure("ERROR: Some tests failed!", exit=False)
         sys.exit(2)  # different exit code for test failures
 
 

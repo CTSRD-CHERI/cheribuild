@@ -63,7 +63,7 @@ def add_args(parser: argparse.ArgumentParser):
 def adjust_args(args: argparse.Namespace):
     # We don't support parallel jobs but are reusing libcxx infrastructure -> set the expected vars
     if not args.test_command:
-        boot_cheribsd.failure("--test-command must be set!", exit=True)
+        boot_cheribsd.failure("--test-command must be set!", exit=True, pretend=args.pretend)
 
 
 if __name__ == "__main__":

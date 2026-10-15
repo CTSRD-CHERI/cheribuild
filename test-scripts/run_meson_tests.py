@@ -74,7 +74,7 @@ def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
             )
             # TODO: TAP protocol parsing instead of using 0/1 return code.
         except boot_cheribsd.CheriBSDCommandFailed as e:
-            boot_cheribsd.failure("Failed to run ", ti.name, ": ", str(e), exit=False)
+            qemu.failure("Failed to run ", ti.name, ": ", str(e), exit=False)
             if isinstance(e, boot_cheribsd.CheriBSDCommandTimeout):
                 t.result = junitparser.Failure(message="Command timed out")
                 # Send CTRL+C if the process timed out.
@@ -86,7 +86,7 @@ def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         t.time = (datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()
         suite.add_testcase(t)
         xml.add_testsuite(suite)
-    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)
+    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml, pretend=qemu.pretend)
 
 
 def add_args(parser: argparse.ArgumentParser):
@@ -114,7 +114,9 @@ def adjust_args(args: argparse.Namespace):
     # Parse the JSON file containing test information (see https://mesonbuild.com/IDE-integration.html)
     tests_json_path = Path(args.build_dir, "meson-info/intro-tests.json")
     if not tests_json_path.exists():
-        boot_cheribsd.failure("Could not find test information (", tests_json_path, ")", exit=True)
+        boot_cheribsd.failure(
+            "Could not find test information (", tests_json_path, ")", exit=True, pretend=args.pretend
+        )
     args.test_info = []
     with tests_json_path.open("r") as f:
         tests_json = json.load(f)
@@ -130,6 +132,7 @@ def adjust_args(args: argparse.Namespace):
                     ":",
                     test,
                     exit=True,
+                    pretend=args.pretend,
                 )
             args.test_info.append(
                 MesonTestInfo(

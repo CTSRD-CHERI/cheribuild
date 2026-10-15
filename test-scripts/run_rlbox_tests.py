@@ -46,10 +46,10 @@ def run_rlbox_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         try:
             qemu.checked_run(f"cd {args.build_dir} && ./{f.name}", timeout=5 * 60)
         except boot_cheribsd.CheriBSDCommandFailed as e:
-            boot_cheribsd.failure("Failed to run ", f, ": ", str(e), exit=False)
+            qemu.failure("Failed to run ", f, ": ", str(e), exit=False)
             failed_tests.append(f)
     if failed_tests:
-        boot_cheribsd.failure("The following tests failed:\n\t", "\n\t".join(x.name for x in failed_tests), exit=False)
+        qemu.failure("The following tests failed:\n\t", "\n\t".join(x.name for x in failed_tests), exit=False)
     return not failed_tests
 
 
