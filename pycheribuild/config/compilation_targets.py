@@ -1957,19 +1957,3 @@ class CompilationTargets(BasicCompilationTargets):
     # Special targets for use in freebsd/cheribsd-universe
     CHERIBSD_NOCPU = CrossCompileTarget("nocpu", CPUArchitecture.NOCPU, CheriBSDTargetInfo)
     FREEBSD_NOCPU = CrossCompileTarget("nocpu", CPUArchitecture.NOCPU, FreeBSDTargetInfo)
-
-    @staticmethod
-    def _dump_cheribsd_target_relations() -> None:
-        for target in (
-            CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
-            + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_HYBRID_ROOTFS_TARGETS
-            + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
-            + CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS
-            + CompilationTargets.ALL_CHERIBSD_PURECAP_FOR_HYBRID_ROOTFS_TARGETS
-        ):
-            # noinspection PyProtectedMember
-            target._dump_target_relations()
-
-
-# Uncomment for debugging target relations
-# CompilationTargets._dump_cheribsd_target_relations()
