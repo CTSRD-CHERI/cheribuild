@@ -854,9 +854,13 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
 
 
 class BuildRVYLLVM(BuildLLVMMonoRepoBase):
+    default_branch = "rvy-0910-wip"
     repository = GitRepository(
         "https://github.com/Capabilities-Limited/cheri-alliance-llvm-project.git",
-        default_branch="rvy-099-wip",
+        default_branch=default_branch,
+        old_branches={
+            "rvy-099-wip": default_branch,
+        },
     )
 
     default_directory_basename = "rvy-llvm-project"

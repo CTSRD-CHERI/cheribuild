@@ -405,9 +405,13 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
 class BuildRVYSailCheriRISCV(BuildSailCheriRISCV):
     target = "rvy-sail-riscv"
+    default_branch = "0.9.10-upgrade"
     repository = GitRepository(
         "https://github.com/Capabilities-Limited/sail-cheri-riscv",
-        default_branch="0.9.9-undo-branch-restriction",
+        default_branch=default_branch,
+        old_branches={
+            "0.9.9-undo-branch-restriction": default_branch,
+        },
     )
     native_install_dir = DefaultInstallDir.RVY_SDK
     _archs_to_build = ("RV64",)

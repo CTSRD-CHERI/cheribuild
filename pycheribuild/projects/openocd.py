@@ -65,4 +65,11 @@ class BuildAllianceOpenOCD(BuildOpenOCDBase):
 
 class BuildRVYOpenOCD(BuildOpenOCDBase):
     target = "rvy-openocd"
-    repository = GitRepository("https://github.com/Capabilities-Limited/openocd.git", default_branch="cva6-rvy-099")
+    default_branch = "cva6-rvy-0910"
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/openocd.git",
+        default_branch=default_branch,
+        old_branches={
+            "cva6-rvy-099": default_branch,
+        },
+    )
