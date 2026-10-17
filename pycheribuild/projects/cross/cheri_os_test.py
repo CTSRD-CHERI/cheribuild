@@ -37,11 +37,11 @@ from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
 
-class BuildCheriOSTest(CrossCompileMakefileProject):
+class BuildCheriOSTestBmake(CrossCompileMakefileProject):
     _supported_architectures = (
         CompilationTargets.ALL_LINUX_PURECAP_TARGETS + CompilationTargets.ALL_CHERIBSD_PURECAP_TARGETS
     )
-    target = "cheri-os-test"
+    target = "cheri-os-test-bmake"
     make_kind = MakeCommandKind.BsdMake
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")
 
@@ -115,11 +115,11 @@ class BuildCheriOSTest(CrossCompileMakefileProject):
         super().process()
 
 
-class BuildCheriOSTestCmake(CrossCompileCMakeProject):
+class BuildCheriOSTest(CrossCompileCMakeProject):
     _supported_architectures = (
         CompilationTargets.ALL_LINUX_PURECAP_TARGETS + CompilationTargets.ALL_CHERIBSD_PURECAP_TARGETS
     )
-    target = "cheri-os-test-cmake"
+    target = "cheri-os-test"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")
 
     @classmethod
