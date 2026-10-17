@@ -1869,10 +1869,13 @@ class BuildCHERIBSD(BuildFreeBSD):
     default_directory_basename: str = "cheribsd"
     target: str = "cheribsd"
     can_build_with_system_clang: bool = False  # We need CHERI LLVM for most architectures
-    _rvy_target_branch_info = TargetBranchInfo(branch="cheri-rv64y-098", directory_name="cheribsd-rvy")
+    _rvy_target_branch_info = TargetBranchInfo(branch="cheri-rv64y-0910", directory_name="cheribsd-rvy")
     repository: GitRepository = GitRepository(
         "https://github.com/CTSRD-CHERI/cheribsd.git",
-        old_branches={"master": "main"},
+        old_branches={
+            "master": "main",
+            "cheri-rv64y-098": _rvy_target_branch_info.branch,
+        },
         per_target_branches={
             CompilationTargets.CHERIBSD_RISCV_ZCHERI093_PURECAP: _rvy_target_branch_info,
             CompilationTargets.CHERIBSD_RISCV_Y_PURECAP: _rvy_target_branch_info,

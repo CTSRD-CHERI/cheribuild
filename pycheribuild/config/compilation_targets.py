@@ -376,7 +376,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
             if xtarget.is_riscv_y():
-                arch_string += "zyhybrid_zylevels1b"
+                arch_string += "zyhybrid_zylg"
             elif xtarget.is_experimental_cheri093_std():
                 arch_string += "zcherihybrid_zcherilevels"
             else:
