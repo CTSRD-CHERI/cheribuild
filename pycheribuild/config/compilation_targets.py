@@ -59,7 +59,7 @@ from .target_info import (
 )
 from ..processutils import extract_version, get_compiler_info, get_version_output
 from ..projects.simple_project import SimpleProject
-from ..utils import is_jenkins_build, warning_message
+from ..utils import OSInfo, is_jenkins_build, warning_message
 
 
 class BuildLLVMInterface(SimpleProject if typing.TYPE_CHECKING else object):
@@ -875,6 +875,26 @@ class LinuxTargetInfoBase(_ClangBasedTargetInfo, ABC):
     @property
     def cmake_system_name(self) -> str:
         return "Linux"
+
+    def cmake_extra_toolchain_file_code(self) -> str:
+        if (
+            self.target.is_riscv(include_purecap=True)
+            and OSInfo.is_ubuntu()
+            and tuple(int(x) for x in OSInfo.etc_os_release().get("VERSION_ID", "0").split(".")) < (24, 4)
+        ):
+            return """
+# Ubuntu < 24.04 carries a downstream patch in Modules/Platform/Linux.cmake (LP #1876814,
+# dropped in Ubuntu 24.04 / CMake 3.28) that appends " -latomic" to
+# CMAKE_C/CXX_STANDARD_LIBRARIES_INIT for RISC-V, which breaks linking against our
+# compiler-rt + musl sysroot. Since Platform/Linux.cmake is included after the toolchain
+# file, pre-populate the CMAKE_C/CXX_STANDARD_LIBRARIES cache variables so
+# CMakeC/CXXInformation.cmake does not initialize them from *_INIT.
+if(CMAKE_VERSION VERSION_LESS "3.28")
+    set(CMAKE_C_STANDARD_LIBRARIES "" CACHE STRING "" FORCE)
+    set(CMAKE_CXX_STANDARD_LIBRARIES "" CACHE STRING "" FORCE)
+endif()
+"""
+        return ""
 
     @classmethod
     def triple_for_target(cls, target, config, *, include_version: bool) -> str:
