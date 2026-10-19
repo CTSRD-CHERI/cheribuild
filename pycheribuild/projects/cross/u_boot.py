@@ -212,3 +212,32 @@ class BuildCheriAllianceUBoot(BuildUBoot):
             return "qemu-riscv64_smode_defconfig"
 
         assert False, "unhandled target"
+
+
+def rvy_uboot_install_dir(config: CheriConfig, project: "Project") -> Path:
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
+    return config.rvy_sdk_dir / ("u-boot" + project.build_dir_suffix) / dir_name
+
+
+class BuildRVYUBoot(BuildCheriAllianceUBoot):
+    target = "rvy-u-boot"
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/u-boot.git", default_branch="capltd-rvy-2026.10", force_branch=True
+    )
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=rvy_uboot_install_dir, as_string="$RVY_SDK_ROOT/u-boot/riscv{32,64}{-purecap,}"
+    )
+    dependencies = ("rvy-compiler-rt-builtins",)
+    default_build_type = BuildType.RELWITHDEBINFO
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
+    )
+
+    def default_defconfig(self) -> str:
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
+            return "qemu-riscv64_cheri_purecap_defconfig"
+        elif self.crosscompile_target.is_riscv():
+            return "qemu-riscv64_smode_defconfig"
+
+        assert False, "unhandled target"
