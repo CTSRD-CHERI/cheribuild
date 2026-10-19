@@ -29,7 +29,7 @@
 #
 from pathlib import Path
 
-from .u_boot import BuildCheriAllianceUBoot
+from .u_boot import BuildCheriAllianceUBoot, BuildRVYUBoot
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildRVYQEMU
 from ..project import (
     BuildType,
@@ -337,4 +337,37 @@ class BuildAllianceOpenSBIWithUBoot(BuildAllianceOpenSBI):
     def setup(self):
         super().setup()
         uboot = BuildCheriAllianceUBoot.get_install_dir(self)
+        self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
+
+
+def rvy_opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
+    return config.rvy_sdk_dir / ("opensbi" + project.build_dir_suffix) / dir_name
+
+
+class BuildRVYOpenSBI(BuildAllianceOpenSBI):
+    target = "rvy-opensbi"
+    repository = ReuseOtherProjectRepository(BuildAllianceOpenSBI, do_update=True)
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
+    )
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=rvy_opensbi_install_dir, as_string="$RVY_SDK_ROOT/opensbi/riscv{32,64}{-purecap,}"
+    )
+
+    def _qemu_install_dir(self) -> Path:
+        return BuildRVYQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+
+
+class BuildRVYOpenSBIWithUBoot(BuildRVYOpenSBI):
+    target = "rvy-opensbi-u-boot"
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return *super().dependencies(config), "rvy-u-boot"
+
+    def setup(self):
+        super().setup()
+        uboot = BuildRVYUBoot.get_install_dir(self)
         self.make_args.set(FW_PAYLOAD_PATH=uboot / "u-boot.bin")
