@@ -55,7 +55,7 @@ class BuildCheriseL4(CrossCompileProject):
     )
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
@@ -81,7 +81,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     _needs_sysroot = False
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
@@ -206,13 +206,13 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
                 "none",
                 "-nographic",
             ]
-        elif self.compiling_for_riscv(include_purecap=True) and self.crosscompile_target.is_experimental_cheri093_std():
+        elif self.compiling_for_riscv(include_purecap=True):
             qemu = BuildCheriAllianceQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
             bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self)
             qemu_cmd += [
                 qemu,
                 "-cpu",
-                "codasip-a730",
+                "rv64,Svyrg=true,Zylg=true",
                 "-m",
                 "2G",
                 "-smp",
@@ -317,7 +317,7 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
     target = "run-cheri-microkit"
     _supported_architectures = (
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
-        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
     )
     forward_ssh_port = False
     qemu_user_networking = False

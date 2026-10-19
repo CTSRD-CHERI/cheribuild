@@ -52,7 +52,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
 
     _supported_architectures = (
-        CompilationTargets.FREESTANDING_RISCV64_ZCHERI093_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
 
@@ -339,7 +339,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
             "-M",
             machine,
             "-cpu",
-            "codasip-a730",
+            "rv64,Svyrg=true,Zylg=true",
             "-smp",
             "1",
             *bios_args,
