@@ -32,7 +32,7 @@ import typing
 from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
-from .llvm import BuildCheriAllianceLLVM, BuildCheriLLVM, BuildMorelloLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriAllianceLLVM, BuildCheriLLVM, BuildMorelloLLVM, BuildRVYLLVM, BuildUpstreamLLVM
 from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
 from ...config.compilation_targets import LinuxTargetInfoBase
 from ...config.target_info import CPUArchitecture
@@ -267,6 +267,19 @@ class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
         *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
     )
     llvm_project = BuildCheriAllianceLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+
+
+class BuildRVYCompilerRtBuiltins(BuildCompilerRtBuiltins):
+    target = "rvy-compiler-rt-builtins"
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV32,
+        CompilationTargets.FREESTANDING_RISCV32_Y_PURECAP,
+        *CompilationTargets.ALL_CHERI_LINUX_TARGETS,
+    )
+    llvm_project = BuildRVYLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
 
 
