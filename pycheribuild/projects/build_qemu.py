@@ -674,7 +674,13 @@ class BuildCheriAllianceQEMU(BuildQEMU):
 
 class BuildRVYQEMU(BuildQEMU):
     target = "rvy-qemu"
-    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="user/qwattash/rvfi-fixes")
+    _default_branch = "user/qwattash/rvfi-fixes-0910"
+    repository = GitRepository(
+        "https://github.com/Capabilities-Limited/cheri-alliance-qemu.git",
+        default_branch=_default_branch,
+        old_urls=["https://github.com/CHERI-Alliance/qemu.git"],
+        old_branches={"user/qwattash/rvfi-fixes": _default_branch},
+    )
     native_install_dir = DefaultInstallDir.RVY_SDK
     default_targets = (
         "arm-softmmu,aarch64-softmmu,morello-softmmu,"
