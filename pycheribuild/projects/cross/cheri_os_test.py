@@ -121,9 +121,28 @@ class BuildCheriOSTest(CrossCompileCMakeProject):
     )
     target = "cheri-os-test"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")
+    default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             return ()  # No need for extra libraries
         return "libxo", "libbsd"
+
+    def install(self, **kwargs) -> None:
+        super().install(**kwargs)
+
+        # When building Linux targets, the rootfs is a subdirectory of sysroot. Therefore we have to copy
+        # cheri-os-test related files to the rootfs, as we do with other Linux targets such libxo and libmd.
+        if self.target_info.is_linux():
+            for sofile in self.install_dir.glob("bin/cheriostest*"):
+                self.install_file(sofile, self.sdk_sysroot / "rootfs/usr/local/bin/" / sofile.name, create_dirs=True)
+            for sofile in self.install_dir.glob("lib/libcheriostest*"):
+                self.install_file(sofile, self.sdk_sysroot / "rootfs/usr/local/lib/" / sofile.name, create_dirs=True)
+            for sofile in self.install_dir.glob("libexec/malloc_early_constructor*"):
+                self.install_file(
+                    sofile, self.sdk_sysroot / "rootfs/usr/local/libexec/" / sofile.name, create_dirs=True
+                )
+            self.create_symlink(
+                self.sdk_sysroot / "rootfs/usr/local/lib", self.sdk_sysroot / "rootfs/usr/local/lib64c", relative=True
+            )
