@@ -117,10 +117,10 @@ class BuildCheriOSTestBmake(CrossCompileMakefileProject):
 
 class BuildCheriOSTest(CrossCompileCMakeProject):
     _supported_architectures = (
-        CompilationTargets.ALL_LINUX_PURECAP_TARGETS + CompilationTargets.ALL_CHERIBSD_PURECAP_TARGETS
+        CompilationTargets.ALL_LINUX_PURECAP_TARGETS + CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
     )
     target = "cheri-os-test"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="purecap-freebsd-support")
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE_WITHOUT_ABI_SUBDIR
 
     @classmethod
