@@ -103,6 +103,7 @@ class BuildCheriOSTestBmake(CrossCompileMakefileProject):
             MAKEOBJDIRPREFIX=str(self.build_dir),
             # This property was added to _ClangBasedTargetInfo to support this specific use case.
             OBJCOPY=self.target_info.objcopy,
+            SYSROOT=self.cross_sysroot_path
         )
 
         self.run_make(cwd=self.source_dir / "cheriostest")
