@@ -62,12 +62,6 @@ class BuildCheriOSTestBmake(CrossCompileMakefileProject):
         return super().setup()
 
     def compile(self, **kwargs):
-        # The binaries will be put into /opt/cheri-api-tests
-        # This ensures Pyrefly that destdir won't be None
-        assert self.destdir is not None
-        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-test"
-        self.makedirs(self.destdir / "lib")
-
         if self.get_crosscompile_target().is_aarch64(include_purecap=True):
             self.make_args.set_env(MACHINE_ARCH="aarch64c")
         elif self.get_crosscompile_target().is_riscv(include_purecap=True):
@@ -87,6 +81,9 @@ class BuildCheriOSTestBmake(CrossCompileMakefileProject):
         if self.target_info.is_freebsd():
             self.make_args.set(TARGET_OS="FreeBSD")
         elif self.target_info.is_linux():
+            # The rootfs of the Linux targets is a subdirectory of the sysroot.
+            assert self.destdir is not None
+            self.destdir = self.destdir / "rootfs"
             self.make_args.set(TARGET_OS="Linux")
         else:
             self.fatal(f"Unsupported target OS: {self.target_info.shortname}")
@@ -109,6 +106,10 @@ class BuildCheriOSTestBmake(CrossCompileMakefileProject):
         self.run_make(cwd=self.source_dir / "cheriostest")
 
     def install(self, **kwargs):
+        prefix = "usr/local/"
+        self.makedirs(self.destdir / prefix / "bin")
+        self.makedirs(self.destdir / prefix / "lib")
+        self.makedirs(self.destdir / prefix / "libexec")
         self.run_make_install(cwd=self.source_dir / "cheriostest")
 
     def process(self):
