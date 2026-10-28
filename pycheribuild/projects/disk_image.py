@@ -1281,8 +1281,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         optional_libs += [
             # cheribsdbox depends on SSL
             "libcrypto.so.111",
+            "libcrypto.so.35",
             "libcrypto.so.30",
             "libssl.so.111",
+            "libssl.so.35",
             "libssl.so.30",
         ]
         # required, but version bumped in FreeBSD to add symbol versioning

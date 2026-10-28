@@ -1674,11 +1674,11 @@ class SimpleProjectBase(AbstractProject, ABC):
                 self.verbose_print("Checking for presence of old build dir", old_path)
                 if old_path.is_file() or old_path.is_symlink():
                     self.warning("Found old file", old_name, "that has since been renamed to", current_path.name)
-                    if self.query_yes_no("Would you like to remove the old file " + str(old_path)):
+                    if self.query_yes_no(f"Would you like to remove the old file {old_path}", default_result=True):
                         self.delete_file(old_path)
                 elif old_path.is_dir():
-                    self.warning("Found old directory", old_name, "that has since been renamed to", current_path.name)
-                    if self.query_yes_no("Would you like to remove the old directory " + str(old_path)):
+                    self.warning(f"Found old directory {old_name} that has since been renamed to {current_path.name}")
+                    if self.query_yes_no(f"Would you like to remove the old directory {old_path}", default_result=True):
                         self._delete_directories(old_path)
 
     def _dependency_message(

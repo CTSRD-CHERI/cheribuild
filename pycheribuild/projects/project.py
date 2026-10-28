@@ -1744,6 +1744,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         with cleaning_task:
             if not self.build_dir.is_dir():
                 self.makedirs(self.build_dir)
+            if self.target.startswith("cheri-alliance-"):
+                self._cleanup_renamed_files(self.build_dir, "cheri-alliance-", ["cheri-std093-"])
+                self._cleanup_renamed_files(self.config.cheri_alliance_sdk_dir, "cheri-alliance-", ["cheri-std093-"])
 
             # Clean has been performed -> write the last clean counter now (if needed).
             if required_clean_counter is not None and clean_counter_in_build_dir != required_clean_counter:
