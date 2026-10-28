@@ -405,7 +405,7 @@ class BuildQEMUBase(AutotoolsProject):
             # QEMU 7.2+ (since commit 5890258aeeba303704ec1adca415e46067800777) removed the slirp submodule
             # and requires a system installation of libslirp.
             # TODO: do we want to check for a minimum version here?
-            self.check_required_pkg_config("slirp", apt="libslirp-dev", freebsd="libslirp")
+            self.check_required_pkg_config("slirp", apt="libslirp-dev", freebsd="libslirp", homebrew="libslirp")
             self.configure_args.append("--enable-slirp")
         else:
             self.configure_args.append("--enable-slirp=git")
