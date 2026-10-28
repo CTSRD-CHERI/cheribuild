@@ -660,7 +660,7 @@ class BuildDiskImageBase(SimpleProject):
         # /dev/ufs/root), so until we boot with UEFI we have to use that
         if (
             not self.target_info.is_cheribsd()
-            and self.crosscompile_target.is_riscv()
+            and self.crosscompile_target.is_riscv(include_purecap=True)
             and self.source_project.kernel_config == "QEMU"
         ):
             return True
