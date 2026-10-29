@@ -751,7 +751,7 @@ class BuildFreeBSDBase(Project):
 
 class BuildFreeBSD(BuildFreeBSDBase):
     target: str = "freebsd"
-    repository: GitRepository = GitRepository("https://github.com/freebsd/freebsd.git")
+    repository: GitRepository = GitRepository("https://github.com/CHERI-Alliance/freebsd-src", default_branch="cheri")
     _needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     is_rootfs_target: typing.ClassVar[bool] = True  # All derived classes are also rootfs targets
     # We still allow building FreeBSD for MIPS64. While the main branch no longer has support, this allows building
