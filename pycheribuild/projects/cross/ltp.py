@@ -92,7 +92,7 @@ class BuildLTP(CrossCompileAutotoolsProject):
         ):
             # Build and install LTP in the target's rootfs' /opt/ltp directory
             self.run_cmd(
-                ["./build.sh", "-t", "cross", "-o", "out", "-ip", self.install_dir / "rootfs/opt/ltp"],
+                ["./build.sh", "-t", "cross", "-o", "out", "-ip", self.install_dir / "opt/ltp"],
                 cwd=self.source_dir,
             )
 

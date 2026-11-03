@@ -67,13 +67,6 @@ class BuildLibbsd(CrossCompileAutotoolsProject):
         if OSInfo.IS_MAC:
             self.check_required_system_tool("gsed", homebrew="gnu-sed")
 
-    def install(self, **kwargs) -> None:
-        self.run_make_install()
-
-        # Copy the libraries from the cross-compile sysroot into rootfs/lib
-        for sofile in self.install_dir.glob("lib/libbsd.so*"):
-            self.install_file(sofile, self.install_dir / "rootfs/lib/" / sofile.name, create_dirs=True)
-
     def process(self):
         new_path = os.getenv("PATH", "")
         # Needed until https://gitlab.freedesktop.org/libbsd/libbsd/-/merge_requests/35 lands
