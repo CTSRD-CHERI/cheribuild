@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject
@@ -47,6 +48,9 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
+    init_hostname = "cheribuild-linux"
+    init_welcome_message = "Welcome to Linux (busybox)!"
+    init_prompt = "Linux"
 
     @classproperty
     def default_install_dir(self):
@@ -77,7 +81,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
             OBJCOPY=self.sdk_bindir / "llvm-objcopy",
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
             # CONFIG_PREFIX is used to define the installation directory
-            CONFIG_PREFIX=self.install_dir / "rootfs",
+            CONFIG_PREFIX=self.install_dir,
         )
 
     def write_busybox_init(self, init_path: Path, hostname: str, prompt: str, welcome_message: str):
@@ -86,13 +90,13 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         This is derived (and modified) from an init C version located here:
         https://git.morello-project.org/morello/morello-sdk/-/blob/latest/morello/projects/init/init.c
         """
-        self.makedirs(init_path.parent)  # ensure rootfs/ exists
+        self.makedirs(init_path.parent)
 
         script = f"""#!/bin/sh
 # Minimal init script to replace the C init
 set -x
 
-PATH=/usr/sbin:/bin:/sbin
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
 # Mount devtmpfs before creating subdirectories in /dev
@@ -163,21 +167,57 @@ done
     def configure(self, **kwargs) -> None:
         self.run_make("defconfig", cwd=self.source_dir)
 
-    def make_initramfs(self, installdir: Path, out_file: Path):
-        self.makedirs(installdir)  # ensure path exists
+    @staticmethod
+    def should_include_in_initramfs(rel_path: Path, is_dir: bool) -> bool:
+        # Exclude kernel images in ./boot, build-only directories (headers, pkgconfig, cmake, docs),
+        # and static archives/disk images when packing the unified sysroot/rootfs into an initramfs.
+        if is_dir:
+            if rel_path.parts in (("boot",), ("morello-soc",)):
+                return False
+            if rel_path.name in ("include", "pkgconfig", "cmake"):
+                return False
+            if rel_path.parts[-2:] in (("share", "man"), ("share", "doc")):
+                return False
+            return True
+        return rel_path.suffix not in (".a", ".la", ".raw", ".xz")
+
+    @classmethod
+    def collect_initramfs_paths(cls, root_dir: Path) -> "list[str]":
+        cpio_paths = ["."]
+        for dirpath, dirnames, filenames in os.walk(root_dir):
+            rel_dir = Path(dirpath).relative_to(root_dir)
+            dirnames[:] = sorted(d for d in dirnames if cls.should_include_in_initramfs(rel_dir / d, is_dir=True))
+            for d in dirnames:
+                cpio_paths.append(str(rel_dir / d))
+            for f in sorted(filenames):
+                if cls.should_include_in_initramfs(rel_dir / f, is_dir=False):
+                    cpio_paths.append(str(rel_dir / f))
+        return cpio_paths
+
+    # TODO: Move initramfs generation into a dedicated initramfs-<arch> target (similar to disk-image-<arch>)
+    # so that run-minimal-* picks up newly installed packages without re-running busybox.
+    def make_initramfs(self, root_dir: Path, out_file: Path) -> None:
+        self.makedirs(root_dir)  # ensure path exists
         self.makedirs(out_file.parent)  # <-- ensure boot/ exists
+        cpio_paths = self.collect_initramfs_paths(root_dir)
         with (Path("/dev/null") if self.config.pretend else out_file).open("wb") as out:
-            self.run_cmd(["find . | cpio --verbose -o --format=newc | gzip"], shell=True, cwd=installdir, stdout=out)
+            self.run_cmd(
+                ["cpio --verbose -o --format=newc | gzip"],
+                input="\n".join(cpio_paths) + "\n",
+                shell=True,
+                cwd=root_dir,
+                stdout=out,
+            )
         self.info("Wrote", out_file)
 
     def install(self, **kwargs) -> None:
         self.run_make_install()
-        root = self.install_dir / "rootfs"
 
-        # If busybox is dynamically linked, we need to install the libc.so in Busybox' rootfs
+        # If busybox is dynamically linked, ensure the musl dynamic linker symlink exists in /lib
         libc_so = self.install_dir / "lib/libc.so"
         if libc_so.exists():
-            self.install_file(libc_so, self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1")
+            rtld = self.install_dir / f"lib/ld-musl-{self.triple_arch}.so.1"
+            self.create_symlink(libc_so, rtld)
 
             # XXX Morello Linux's driver expects _purecap suffix for the musl's rtld/interpreter, while
             # RVY does not. We don't support hybrid/legacy userspace in this cheribuild distro, it is either
@@ -185,17 +225,17 @@ done
             # Creating a symlink is workaround for Morello LLVM's morello-linux driver.
             if self.target_info.target.is_cheri_purecap([CPUArchitecture.AARCH64]):
                 self.create_symlink(
-                    self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1",
-                    self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}_purecap.so.1",
+                    rtld,
+                    self.install_dir / f"lib/ld-musl-{self.triple_arch}_purecap.so.1",
                 )
 
         self.write_busybox_init(
-            self.install_dir / "rootfs/init",
-            hostname="cheribuild-linux",
-            welcome_message="Welcome to Linux (busybox)!",
-            prompt="Linux",
+            self.install_dir / "init",
+            hostname=self.init_hostname,
+            welcome_message=self.init_welcome_message,
+            prompt=self.init_prompt,
         )
-        self.make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
+        self.make_initramfs(self.install_dir, self.install_dir / "boot/initramfs.cpio.gz")
 
 
 class BuildMorelloBusyBox(BuildBusyBox):
@@ -203,6 +243,9 @@ class BuildMorelloBusyBox(BuildBusyBox):
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
     _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
+    init_hostname = "morello"
+    init_welcome_message = "Welcome to Morello PCuABI environment (busybox)!"
+    init_prompt = "MORELLO"
 
     def setup(self) -> None:
         super().setup()
@@ -216,15 +259,6 @@ class BuildMorelloBusyBox(BuildBusyBox):
 
     def configure(self) -> None:
         self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
-
-    def install(self, **kwargs):
-        self.write_busybox_init(
-            self.install_dir / "rootfs/init",
-            hostname="morello",
-            welcome_message="Welcome to Morello PCuABI environment (busybox)!",
-            prompt="MORELLO",
-        )
-        super().install(**kwargs)
 
 
 class BuildAllianceBusyBox(BuildBusyBox):

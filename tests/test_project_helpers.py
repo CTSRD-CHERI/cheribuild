@@ -11,6 +11,7 @@ from pycheribuild.config.loader import ConfigOptionHandle
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
 from pycheribuild.processutils import CompilerInfo
 from pycheribuild.projects.cmake_project import CMakeProject
+from pycheribuild.projects.cross.busybox import BuildBusyBox
 from pycheribuild.projects.repository import ExternallyManagedSourceRepository
 from pycheribuild.projects.simple_project import (
     BoolConfigOption,
@@ -247,3 +248,29 @@ def test_subclass_option_inheritance_from_concrete_parent(tmp_path):
     # Both parent and child target classes should have their respective option registered in the config loader
     assert "parent-concrete/parent-option" in config.loader.option_handles
     assert "child-concrete/parent-option" in config.loader.option_handles
+
+
+def test_busybox_collect_initramfs_paths(tmp_path: Path):
+    # (relative_path, should_include_in_initramfs)
+    files = (
+        ("boot/Image", False),
+        ("include/stdio.h", False),
+        ("usr/include/linux/types.h", False),
+        ("opt/cheri-os-test/include/cheriostest.h", False),
+        ("lib/pkgconfig/libxo.pc", False),
+        ("usr/local/lib/cmake/foo/foo-config.cmake", False),
+        ("usr/local/share/man/man1/foo.1", False),
+        ("lib/libc.a", False),
+        ("lib/libc.so", True),
+        ("bin/busybox", True),
+        ("opt/cheri-os-test/bin/cheri_os_test", True),
+        ("init", True),
+    )
+    for rel_file, _ in files:
+        p = tmp_path / rel_file
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("test")
+
+    collected = set(BuildBusyBox.collect_initramfs_paths(tmp_path))
+    for rel_file, should_include in files:
+        assert (rel_file in collected) == should_include, rel_file

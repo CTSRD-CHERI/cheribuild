@@ -65,7 +65,7 @@ class BuildCheriOSTestBmake(CrossCompileMakefileProject):
         # The binaries will be put into /opt/cheri-api-tests
         # This ensures Pyrefly that destdir won't be None
         assert self.destdir is not None
-        self.destdir = self.destdir / "rootfs" / "opt" / "cheri-os-test"
+        self.destdir = self.destdir / "opt" / "cheri-os-test"
         self.makedirs(self.destdir / "lib")
 
         if self.get_crosscompile_target().is_aarch64(include_purecap=True):
