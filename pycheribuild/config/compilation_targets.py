@@ -876,6 +876,21 @@ class LinuxTargetInfoBase(_ClangBasedTargetInfo, ABC):
     def cmake_system_name(self) -> str:
         return "Linux"
 
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        if not self.project.needs_sysroot():
+            return []
+        return [
+            *self.pkgconfig_candidates(self.sysroot_dir),
+            *self.pkgconfig_candidates(self.sysroot_dir / "usr"),
+            *self.pkgconfig_candidates(self.sysroot_dir / "usr/local"),
+        ]
+
+    def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
+        if not self.project.needs_sysroot():
+            return []
+        return [self.sysroot_dir, self.sysroot_dir / "usr/local"]
+
     def cmake_extra_toolchain_file_code(self) -> str:
         if (
             self.target.is_riscv(include_purecap=True)
