@@ -1026,15 +1026,13 @@ class BuildDiskImageBase(SimpleProject):
             for filename in filenames:
                 full_path = Path(root, filename)
                 target_path = os.path.relpath(str(full_path), rootfs_str)
-                added = False
+                if target_path in self.mtree:
+                    continue
                 for prefix in self.auto_prefixes:
                     if target_path.startswith(prefix):
                         self.mtree.add_file(full_path, target_path, print_status=self.config.verbose)
-                        added = True
                         break
-                if added:
-                    continue
-                elif target_path not in self.mtree:
+                else:
                     # METALOG is not added to the disk image
                     if target_path not in ("METALOG", "METALOG.kernel", "METALOG.world"):
                         unlisted_files.append((full_path, target_path))
