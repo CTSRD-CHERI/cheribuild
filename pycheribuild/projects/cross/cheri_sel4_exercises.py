@@ -22,7 +22,7 @@ from typing import Union
 
 from .cheri_microkit import BuildCheriMicrokit
 from .crosscompileproject import CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
-from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
+from ..build_qemu import BuildQEMU, BuildRVYQEMU
 from ..project import ComputedDefaultValue
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import StringConfigOption
@@ -49,7 +49,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     dependencies = ("cheri-microkit",)
     is_sdk_target = False
     _needs_sysroot = False
-    native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
+    native_install_dir = DefaultInstallDir.RVY_SDK
 
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_Y_PURECAP,
@@ -95,7 +95,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     def configure(self, **kwargs) -> None:
         if self.crosscompile_target.is_riscv(include_purecap=True):
             # Build and test both baseline and purecap variants
-            self.targets = ["riscv64", "riscv64-purecap"]
+            self.targets = ["riscv64", "riscv64y-purecap"]
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
             self.targets = ["morello-aarch64", "morello-purecap"]
 
@@ -313,7 +313,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     def process(self):
         self.microkit_project = BuildCheriMicrokit.get_instance(self)
         if self.crosscompile_target.is_riscv(include_purecap=True):
-            os.environ["CHERIBUILD_SDK"] = str(self.config.cheri_alliance_sdk_dir)
+            os.environ["CHERIBUILD_SDK"] = str(self.config.rvy_sdk_dir)
             os.environ["MICROKIT_SDK"] = (
                 str(self.install_dir) + f"/microkit-sdk-{self.microkit_project.release_version}"
             )
@@ -421,14 +421,14 @@ class BuildCheriseL4Excercises(CrossCompileProject):
         """Boot built images under QEMU and validate expected outputs."""
         expected_exercise_output = {
             "cheri": {
-                "buffer-overflow-stack": "Bounds violation",
-                "buffer-overflow-global": "Bounds violation",
-                "cheri-tags": "Tag violation",
+                "buffer-overflow-stack": "CHERI Store/AMO Access Fault",
+                "buffer-overflow-global": "CHERI Store/AMO Access Fault",
+                "cheri-tags": "CHERI Load Access Fault",
                 "compile-and-run": "",
-                "cheri-allocator": "Bounds violation",
-                "control-flow-pointer": "Bounds violation",
-                "subobject-bounds": "Bounds violation",
-                "type-confusion": "Tag violation",
+                "cheri-allocator": "CHERI Store/AMO Access Fault",
+                "control-flow-pointer": "CHERI Store/AMO Access Fault",
+                "subobject-bounds": "CHERI Store/AMO Access Fault",
+                "type-confusion": "CHERI Load Access Fault",
             },
             "baseline": {
                 "buffer-overflow-stack": "upper[0] = b",
@@ -457,10 +457,9 @@ class BuildCheriseL4Excercises(CrossCompileProject):
             return
 
         # Select QEMU binary
-        if self.crosscompile_target.is_experimental_cheri093_std():
-            qemu_cmd = BuildCheriAllianceQEMU.qemu_binary(self)
-        else:
-            qemu_cmd = BuildQEMU.qemu_binary_for_target(CompilationTargets.FREESTANDING_MORELLO_PURECAP, self.config)
+        qemu_cmd = BuildQEMU.qemu_binary(self)
+        if self.compiling_for_riscv(include_purecap=True):
+            qemu_cmd = BuildRVYQEMU.qemu_binary(self)
 
         # Base QEMU options per architecture (never mutate these in loops)
         if self.crosscompile_target.is_riscv(include_purecap=True):
