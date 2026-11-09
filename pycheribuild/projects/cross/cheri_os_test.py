@@ -121,6 +121,8 @@ class BuildCheriOSTest(CrossCompileCMakeProject):
     )
     target = "cheri-os-test"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-os-test.git", default_branch="preview")
+    default_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    path_in_rootfs = "/opt/cheri-os-test"
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
