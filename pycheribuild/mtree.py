@@ -256,7 +256,7 @@ class MtreeFile:
 
     def load(self, file: "Union[io.StringIO,Path,typing.IO]", *, append: bool, contents_root: "Optional[Path]" = None):
         if isinstance(file, Path):
-            with file.open("r") as f:
+            with file.open("r", encoding="utf-8") as f:
                 self.load(f, contents_root=contents_root, append=append)
                 return
         if not append:
