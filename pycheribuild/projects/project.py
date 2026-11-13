@@ -928,7 +928,9 @@ class Project(SimpleProject):
                 "initial build dir != None for ReuseOtherProjectBuildDir"
             )
             self._initial_build_dir = self._build_dir.get_real_build_dir(self, self._initial_build_dir)
-        self.source_dir = self.repository.get_real_source_dir(self, self.source_dir)
+        # Keep the base source dir since per-target branches (git worktrees) use a different source dir.
+        self._base_source_dir: Path = self.source_dir
+        self.source_dir = self.repository.get_real_source_dir(self, self._base_source_dir)
         if self.build_in_source_dir:
             assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
             if self.config.debug_output:
@@ -1335,7 +1337,7 @@ class Project(SimpleProject):
         self.repository.update(
             self,
             src_dir=self.source_dir,
-            base_project_source_dir=self.source_dir,
+            base_project_source_dir=self._base_source_dir,
             revision=self.git_revision,
             skip_submodules=self.skip_git_submodules,
         )
@@ -1673,7 +1675,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 self.repository.ensure_cloned(
                     self,
                     src_dir=self.source_dir,
-                    base_project_source_dir=self.source_dir,
+                    base_project_source_dir=self._base_source_dir,
                     skip_submodules=self.skip_git_submodules,
                 )
         else:

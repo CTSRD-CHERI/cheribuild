@@ -471,3 +471,15 @@ def test_handle_old_urls_branch_exists(shared_remote: Path, local_repo: Path, tm
     # The new remote should be 'origin'
     assert "origin" in remotes
     assert str(shared_remote) in remotes
+
+
+def test_per_target_branch_creates_worktree(shared_remote: Path, tmp_path: Path):
+    """Project.update() should clone the base repository and add a git worktree for the per-target branch."""
+    project = setup_test_project(tmp_path / "local", shared_remote, force_branch=False)
+    base_dir = tmp_path / "mock-git-project"
+    worktree_dir = tmp_path / "dummy-dir"
+    assert project.source_dir == worktree_dir
+    project.update()
+    assert get_git_revision(base_dir, "HEAD") == "main"
+    assert get_git_revision(worktree_dir, "HEAD") == "target-branch"
+    assert (worktree_dir / ".git").is_file(), "should be a git worktree and not a separate clone"
