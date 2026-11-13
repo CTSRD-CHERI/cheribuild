@@ -650,7 +650,8 @@ class GitRepository(SourceRepository):
         current_project.run_cmd(["git", "checkout", *checkout_args], cwd=src_dir)
 
     def _handle_branch_switch(self, current_project: "Project", src_dir: Path) -> None:
-        if not (src_dir.exists() and (self.force_branch or self.old_branches)):
+        target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
+        if not (src_dir.exists() and (self.force_branch or self.old_branches or target_override)):
             return
 
         branch_info = self.get_branch_info(src_dir, config=current_project.config)
@@ -662,7 +663,12 @@ class GitRepository(SourceRepository):
             default_branch = self.get_default_branch(current_project, include_per_target=True)
             assert default_branch, "default_branch must be set if force_branch is true!"
         else:
-            default_branch = self.old_branches.get(current_branch)
+            default_branch = self.old_branches.get(current_branch) if self.old_branches else None
+            # A per-target checkout should never be on the base repository's default branch (e.g. due to a
+            # previous cheribuild bug that cloned the default branch instead of adding a worktree).
+            if default_branch is None and target_override is not None:
+                if current_branch == self.get_default_branch(current_project, include_per_target=False):
+                    default_branch = target_override.branch
 
         if default_branch and current_branch != default_branch:
             current_project.warning(
