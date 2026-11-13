@@ -73,9 +73,6 @@ from ...utils import OSInfo, ThreadJoiner, is_jenkins_build
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":
     def inner(config: CheriConfig, project: Project):
         xtarget = project.crosscompile_target
-        # Check that we don't accidentally inherit the FreeBSD install directories for CheriBSD
-        if not isinstance(project, BuildCHERIBSD) and xtarget.is_hybrid_or_purecap_cheri():
-            raise ValueError(f"{project.target} should not build for CHERI architectures")
         return config.output_root / (prefix + project.build_configuration_suffix(xtarget))
 
     return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
@@ -559,7 +556,6 @@ class BuildFreeBSDBase(Project):
     default_extra_make_options: "list[str]" = [
         # "-DWITHOUT_HTML",  # should not be needed
         # "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
-        # "-DWITHOUT_SVNLITE",  # no need for SVN
         # "-DWITHOUT_GAMES",  # not needed
         # "-DWITHOUT_MAN",  # seems to be a majority of the install time
         # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
@@ -675,8 +671,6 @@ class BuildFreeBSDBase(Project):
             self.make_args.set_with_options(
                 MAN=False,
                 KERBEROS=False,
-                SVN=False,
-                SVNLITE=False,
                 MAIL=False,
                 ZFS=False,
                 SENDMAIL=False,
@@ -907,11 +901,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
-        # Only handle FreeBSD native configs here
-        assert not xtarget.is_hybrid_or_purecap_cheri(), "Unexpected FreeBSD target"
         if platform is None:
             platform = self.get_default_kernel_platform()
-        config = CheriBSDConfigTable.get_default(self.config, xtarget, platform, KernelABI.NOCHERI, **filter_kwargs)
+        if xtarget.is_hybrid_or_purecap_cheri():
+            kernel_abi = KernelABI.PURECAP
+        else:
+            kernel_abi = KernelABI.NOCHERI
+        config = CheriBSDConfigTable.get_default(self.config, xtarget, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
     def _stdout_filter(self, line: bytes) -> None:
@@ -1087,6 +1083,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.destdir = self.install_dir
         self._install_prefix = Path("/")
         assert self.real_install_root_dir == self.destdir
+
+        if self.crosscompile_target.is_riscv_y():
+            # Hybrid compat not supported yet
+            self.make_args.set_with_options(LIB64=False)
 
     @cached_property
     def build_toolchain_root_dir(self) -> "Optional[Path]":

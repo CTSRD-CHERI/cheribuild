@@ -801,9 +801,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
             self.kernel_project = self.freebsd_class.get_instance(self)
 
         if self.kernel_config:
-            if self.kernel_config not in self._valid_kernel_configs():
-                self.fatal("Selected kernel configuration", self.kernel_config, "is not available")
-                self._list_kernel_configs()
+            # if self.kernel_config not in self._valid_kernel_configs():
+            #     self.warning("Selected kernel configuration", self.kernel_config, "is not recognised")
+            #     self._list_kernel_configs()
+            pass
         else:
             config_filters = {}
             if self.kernel_abi:
