@@ -404,23 +404,24 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
                 self.install_file(self.build_dir / file, self.install_dir / "bin" / Path(file).name, force=True)
 
 
-class BuildRVYSailCheriRISCV(BuildSailCheriRISCV):
+class BuildRVYSailCheriRISCV(BuildSailRISCV):
     target = "rvy-sail-riscv"
-    default_branch = "0.9.10-upgrade"
+    default_branch = "dev"
     repository = GitRepository(
-        "https://github.com/Capabilities-Limited/sail-cheri-riscv",
+        "https://github.com/Capabilities-Limited/cheri-alliance-sail-riscv",
         default_branch=default_branch,
         old_branches={
             "0.9.9-undo-branch-restriction": default_branch,
+            "0.9.10-upgrade": default_branch,
         },
     )
     native_install_dir = DefaultInstallDir.RVY_SDK
-    _archs_to_build = ("RV64",)
-    _targets_to_build = ("csim", "rvfi")
 
-    def check_system_dependencies(self):
-        super().check_system_dependencies()
-        self.check_required_pkg_config("zlib", apt="zlib1g-dev", zypper="zlib-devel")
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        self._cleanup_old_files(
+            self.config.rvy_sdk_dir / "bin/cheri_riscv_sim_RV64", self.config.rvy_sdk_dir / "bin/cheri_riscv_rvfi_RV64"
+        )
 
 
 class BuildSailMorello(ProjectUsingOpam):
