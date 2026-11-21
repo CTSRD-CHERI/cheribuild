@@ -315,6 +315,14 @@ class BuildGDB(BuildGDBBase):
         old_urls=["https://github.com/bsdjhb/gdb.git"],
     )
 
+    _supported_architectures = (
+        *CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID,
+        *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
+        *CompilationTargets.NON_CHERI_FREEBSD_TARGETS,
+        CompilationTargets.FREEBSD_MORELLO_PURECAP,
+        *CompilationTargets.ALL_NATIVE,
+    )
+
     def install(self, **kwargs):
         super().install(**kwargs)
         # Always install gdb as /usr/local/bin/gdb, so it's in $PATH
@@ -341,7 +349,7 @@ class BuildCheriAllianceGDB(BuildGDBBase):
         *CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS,
         CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
-        *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
+        CompilationTargets.FREEBSD_MORELLO_PURECAP,
         CompilationTargets.NATIVE_NON_PURECAP,
     )
     _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
@@ -364,6 +372,13 @@ class BuildRVYGDB(BuildGDBBase):
         old_branches={
             "rvy-099-wip": default_branch,
         },
+    )
+    _supported_architectures = (
+        *CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS,
+        *CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS,
+        CompilationTargets.CHERIBSD_RISCV_XCHERI_HYBRID_FOR_PURECAP_ROOTFS,
+        *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
+        CompilationTargets.NATIVE_NON_PURECAP,
     )
 
 
