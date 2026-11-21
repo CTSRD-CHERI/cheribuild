@@ -40,7 +40,7 @@ from .crosscompileproject import (
     DefaultInstallDir,
     GitRepository,
 )
-from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
+from ..build_qemu import BuildQEMU, BuildRVYQEMU
 from ..project import CheriConfig, CPUArchitecture
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import BoolConfigOption, OptionalStringConfigOption, StringConfigOption
@@ -76,8 +76,8 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     target = "cheri-microkit"
     release_version = "2.0.1-dev"
     dependencies = ("cheri-sel4",)
-    native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
-    is_sdk_target = False
+    native_install_dir = DefaultInstallDir.RVY_SDK
+    is_sdk_target = True
     _needs_sysroot = False
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
@@ -207,7 +207,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
                 "-nographic",
             ]
         elif self.compiling_for_riscv(include_purecap=True):
-            qemu = BuildCheriAllianceQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
+            qemu = BuildRVYQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
             bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self)
             qemu_cmd += [
                 qemu,
@@ -331,10 +331,10 @@ class LaunchCheriMicrokitQEMU(LaunchQEMUBase):
         result = tuple()
         result += ("cheri-microkit",)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-alliance-llvm",)
+            result += ("rvy-llvm",)
             result += ("cheri-alliance-opensbi",)
-            result += ("cheri-alliance-gdb-native",)
-            result += ("cheri-alliance-qemu",)
+            result += ("rvy-gdb-native",)
+            result += ("rvy-qemu",)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-llvm-native",)
             result += ("gdb-native",)
