@@ -2280,6 +2280,9 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
         # users check out ports using revision control.
         release_args.set(NOPORTS=True)
 
+        # Cross-built releases do not yet work with pkgbase.
+        release_args.set(NOPKGBASE=True)
+
         # DISTDIR contains OBJTOP already when doing the various recursive
         # makes, adding an extra level isn't needed and breaks things, and we
         # don't want installworld's. Ideally release/Makefile would just set
